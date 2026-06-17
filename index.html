@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GymTrack">
+<meta name="theme-color" content="#0f1115">
+<title>GymTrack</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header id="topbar">
+  <div class="brand">🏋️ GymTrack</div>
+  <div id="session-chip" class="hidden"></div>
+</header>
+<main id="app"></main>
+<div id="rest-banner" class="hidden"></div>
+<nav id="tabbar">
+  <button class="tab active" data-tab="workout"><span class="tab-icon">💪</span><span>Workout</span></button>
+  <button class="tab" data-tab="plan"><span class="tab-icon">📋</span><span>Plan</span></button>
+  <button class="tab" data-tab="history"><span class="tab-icon">📈</span><span>History</span></button>
+  <button class="tab" data-tab="claude"><span class="tab-icon">✳️</span><span>Claude</span></button>
+</nav>
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+<script src="app.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>

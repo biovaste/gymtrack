@@ -1,0 +1,14 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+.idea/
+.vscode/
+
+# Claude Code local preview config (machine-specific)
+.claude/launch.json
+
+# Logs / temp
+*.log
+tmp/
