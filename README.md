@@ -79,6 +79,32 @@ The link looks like
 > stored in the gist. Manual **Push**/**Pull** buttons are there if you turn auto-sync
 > off or want to force a sync.
 
+### Desktop → phone: push a plan with no copy-paste
+
+Because both devices share the same gist, you can hand a new plan to Claude on the
+desktop and have it **appear on your phone the next time you open the app** — nothing
+to paste or ferry between devices.
+
+How it works: the gist is the shared channel. The phone already pulls it on launch;
+on the desktop, a Claude Code session (where GitHub is authenticated with the `gist`
+scope) writes the new plan into that same gist using `tools/push-plan.mjs`. It does a
+safe read-modify-write — only the plan changes, your logged sessions and body weight
+are kept — and bumps the sync timestamp so the app knows to pull.
+
+```bash
+# in a desktop Claude Code session, after Claude produces a workout-plan JSON:
+node tools/push-plan.mjs path/to/plan.json      # or pipe the JSON via stdin
+```
+
+The script auto-discovers your GymTrack gist (the one containing `gymtrack-data.json`)
+on the authenticated account, so there's no gist ID to copy around. Pass `GIST_ID=<id>`
+to target a specific gist if you ever keep more than one.
+
+One-time prerequisite: enable cloud sync in the app on your phone once (Claude tab →
+paste a token → Save) so the gist exists. After that the loop is: *ask Claude on
+desktop → Claude pushes the plan → open the app on your phone.* Best to push when you
+aren't mid-session on the phone, so the app pulls the new plan cleanly on next launch.
+
 ### Plan JSON schema
 
 ```json
@@ -146,3 +172,4 @@ There is no build step — it's plain HTML/CSS/JS.
 | `sw.js` | Offline cache (stale-while-revalidate) |
 | `manifest.webmanifest` | PWA install metadata |
 | `icon-180.png` / `icon-512.png` | Home-screen icons |
+| `tools/push-plan.mjs` | Desktop helper: writes a new plan into your gist (keeps history) so the phone auto-loads it |
