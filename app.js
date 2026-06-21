@@ -505,22 +505,38 @@ function ghError(status) {
   if (status === 422) return 'rejected by GitHub (422)';
   return 'GitHub error ' + status;
 }
+// Pull-or-push depending on which side is newer / non-empty. Safe when connecting
+// a device to an existing gist — it never blindly overwrites cloud data.
+async function gistReconcile(opts = {}) {
+  const r = await gistFetch();
+  const localEmpty = sessions.length === 0 && bodyWeight.length === 0;
+  const remoteHasData = r.parsed && (((r.parsed.sessions || []).length) || ((r.parsed.bodyWeight || []).length) || r.parsed.plan);
+  if (r.updatedAt > dataUpdatedAt || (localEmpty && remoteHasData)) {
+    restoreBackup(r.raw); render();
+    if (!opts.silent) toast('Loaded latest from cloud ✓');
+    setSyncState('ok');
+    return 'pulled';
+  }
+  await gistPush({ silent: true });
+  return 'pushed';
+}
 // On launch: reconcile local data with the cloud (last-write-wins by timestamp).
 async function autoSyncOnLoad() {
   if (!settings.autoSync || !settings.gistToken || !settings.gistId || active) { syncReady = true; return; }
   setSyncState('syncing');
-  try {
-    const r = await gistFetch();
-    const localEmpty = sessions.length === 0 && bodyWeight.length === 0;
-    const remoteHasData = r.parsed && (((r.parsed.sessions || []).length) || ((r.parsed.bodyWeight || []).length) || r.parsed.plan);
-    if (r.updatedAt > dataUpdatedAt || (localEmpty && remoteHasData)) {
-      restoreBackup(r.raw); render(); toast('Loaded latest from cloud ✓');
-    } else if (dataUpdatedAt > r.updatedAt) {
-      await gistPush({ silent: true });
-    }
-    setSyncState('ok');
-  } catch (e) { setSyncState('error', e.message); }
+  try { await gistReconcile(); } catch (e) { setSyncState('error', e.message); }
   syncReady = true;
+}
+// Save/connect: create the gist if new, otherwise reconcile (so pointing a fresh
+// device at an existing gist pulls its data instead of clobbering it).
+async function gistConnect() {
+  if (!settings.gistToken) { toast('Enter a GitHub token first', 'err'); return; }
+  setSyncState('syncing');
+  try {
+    if (!settings.gistId) { await gistPush(); return; } // no remote yet → create it
+    const what = await gistReconcile({ silent: true });
+    toast(what === 'pulled' ? "Connected — loaded this gist's data ✓" : 'Connected & synced ✓');
+  } catch (e) { setSyncState('error', e.message); toast('Connect failed: ' + e.message, 'err'); }
 }
 
 /* ================= views ================= */
@@ -753,7 +769,7 @@ function viewClaude() {
       <div id="sync-status" class="mt8">${syncStatusHtml()}</div>
       <p class="small muted mt8">Backs up your data to an unlisted GitHub Gist and pushes after every workout, so Claude can read it by link. One-time setup: create a token with the <b>gist</b> scope at <code class="inline">github.com/settings/tokens</code>, paste it below, tap Save.</p>
       <label class="field mt8"><span>GitHub token</span><input id="gist-token" type="password" value="${esc(settings.gistToken)}" placeholder="github_pat_… or ghp_…"></label>
-      <label class="field"><span>Gist ID (filled in automatically on first sync)</span><input id="gist-id" value="${esc(settings.gistId)}" placeholder="auto"></label>
+      <label class="field"><span>Gist ID (leave blank to create one; to sync a 2nd device, paste your existing ID here before Save)</span><input id="gist-id" value="${esc(settings.gistId)}" placeholder="auto"></label>
       <div class="row">
         <button class="grow primary" data-action="gist-save">Save</button>
         <button class="grow" data-action="gist-push">⬆ Push</button>
@@ -1032,7 +1048,7 @@ document.addEventListener('click', e => {
     case 'toggle-autosync': settings.autoSync = !settings.autoSync; saveSettings(); render(); if (settings.autoSync && settings.gistToken) gistPush({ silent: true }); break;
     case 'gist-save': {
       settings.gistToken = mval('gist-token'); settings.gistId = mval('gist-id'); saveSettings(); render();
-      if (settings.gistToken) gistPush(); else toast('Saved');
+      if (settings.gistToken) gistConnect(); else toast('Saved');
       break;
     }
     case 'gist-push': settings.gistToken = mval('gist-token'); settings.gistId = mval('gist-id'); saveSettings(); gistPush(); break;
