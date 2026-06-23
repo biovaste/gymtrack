@@ -930,7 +930,7 @@ document.addEventListener('click', e => {
   switch (a) {
     /* navigation */
     case 'modal-dismiss': if (e.target === el) closeModal(); break; // only when tapping the backdrop itself
-    case 'modal-btn': { const fn = modalActions[el.dataset.idx]; closeModal(); if (fn) fn(); break; }
+    case 'modal-btn': { const fn = modalActions[el.dataset.idx]; if (fn) fn(); closeModal(); break; }
 
     /* rest timer */
     case 'rest-add': adjustRest(15); break;
