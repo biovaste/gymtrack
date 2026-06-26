@@ -132,17 +132,26 @@ and body weight are kept — and bumps the sync timestamp so the app pulls it on
 
 ## Development & updates
 
-This repo is hosted on GitHub. To ship a change:
+The app is hosted on **Cloudflare Pages** at `https://gymtrack.hithitpull.fi`.
+The sync API runs as a **Cloudflare Worker** at `https://api.gymtrack.hithitpull.fi`.
+
+To ship a change to the static app:
 
 ```bash
 git add -A
 git commit -m "Describe the change"
-git push
+git push   # Cloudflare Pages auto-deploys on push to main
 ```
 
-If the app is served from **GitHub Pages**, the push is the deploy — Pages rebuilds
-automatically. Because of the service worker, an update lands the *second* time the
-app is opened after deploy (first open refreshes the cache in the background).
+To update the Worker (sync API):
+
+```bash
+cd worker
+wrangler deploy
+```
+
+Because of the service worker, an app update lands the *second* time the app is
+opened after deploy (first open refreshes the cache in the background).
 
 Local preview: `python -m http.server 8765` then open `http://localhost:8765`.
 There is no build step — it's plain HTML/CSS/JS.
