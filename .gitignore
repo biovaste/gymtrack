@@ -9,6 +9,9 @@ desktop.ini
 # Claude Code local preview config (machine-specific)
 .claude/launch.json
 
+# Cloudflare Worker build cache (contains account token)
+worker/.wrangler/
+
 # Logs / temp
 *.log
 tmp/

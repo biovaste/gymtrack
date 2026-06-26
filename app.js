@@ -100,7 +100,15 @@ let plan = store.get('plan', null) || defaultPlan();
 let sessions = store.get('sessions', []);
 let active = store.get('active', null);
 let bodyWeight = store.get('bw', []);
-let settings = Object.assign({ unit: 'kg', sound: true, vibrate: true, autoSync: true, gistToken: '', gistId: '', gistOwner: '' }, store.get('settings', {}));
+let settings = Object.assign({ unit: 'kg', sound: true, vibrate: true, autoSync: true }, store.get('settings', {}));
+delete settings.gistToken; delete settings.gistId; delete settings.gistOwner;
+
+const WORKER_URL = 'https://gymtrack.henri-haukkovaara.workers.dev';
+let gymUUID = (() => {
+  let id = localStorage.getItem('gymtrack_uuid');
+  if (!id) { id = crypto.randomUUID(); localStorage.setItem('gymtrack_uuid', id); }
+  return id;
+})();
 let tab = 'workout';
 let expandedDay = null;       // plan view expansion
 let expandedSession = null;   // history view expansion
@@ -168,8 +176,8 @@ async function syncWakeLock() {
 }
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') { syncWakeLock(); }
-  else if (syncReady && settings.autoSync && settings.gistToken && dataUpdatedAt > lastSyncedAt) {
-    clearTimeout(syncTimer); gistPush({ silent: true }); // flush unsynced changes before backgrounding
+  else if (syncReady && settings.autoSync && dataUpdatedAt > lastSyncedAt) {
+    clearTimeout(syncTimer); workerPush({ silent: true }); // flush unsynced changes before backgrounding
   }
 });
 
@@ -323,11 +331,11 @@ function finishSession() {
   const setCount = record.exercises.reduce((n, e) => n + e.sets.length, 0);
   let html = `<p>Saved <b>${esc(record.dayName)}</b> — ${setCount} sets in ${fmtDur(durationMin)}.</p>`;
   if (prs.length) html += `<p class="mt8">🏆 New PRs: ${prs.map(p => `<span class="pr-badge">${esc(p)}</span>`).join(' ')}</p>`;
-  const syncing = settings.autoSync && settings.gistToken;
+  const syncing = settings.autoSync;
   html += `<p class="muted small mt8">${syncing ? '☁️ Syncing to the cloud for Claude…' : 'Head to the Claude tab to export this for your next plan update.'}</p>`;
   showModal('Workout complete 🎉', html);
   beep(2, 1100);
-  if (syncing) gistPush({ silent: true }); // push the finished session right away
+  if (syncing) workerPush({ silent: true }); // push the finished session right away
 }
 function detectPRs(record) {
   const prs = [];
@@ -353,7 +361,6 @@ function buildExport() {
   }, null, 2);
 }
 function buildBackup() {
-  // NOTE: never includes the GitHub token — the gist content is readable by anyone with the link.
   return JSON.stringify({
     type: 'gymtrack-backup', version: 1, exportedAt: new Date().toISOString(),
     updatedAt: dataUpdatedAt,
@@ -418,10 +425,8 @@ async function copyText(text) {
   }
 }
 
-/* ================= gist sync ================= */
-// Stable, auth-free URL Claude can read for a secret gist (latest revision).
-const gistRawUrl = () => settings.gistOwner && settings.gistId
-  ? `https://gist.githubusercontent.com/${settings.gistOwner}/${settings.gistId}/raw/gymtrack-data.json` : '';
+/* ================= worker sync ================= */
+const workerShareUrl = () => `${WORKER_URL}/data/${gymUUID}`;
 
 function relTime(ts) {
   if (!ts) return '';
@@ -433,12 +438,11 @@ function relTime(ts) {
   return Math.round(h / 24) + 'd ago';
 }
 function syncStatusHtml() {
-  if (!settings.gistToken) return '<span class="muted small">⚪ Not connected — add a token below</span>';
-  if (!settings.autoSync) return '<span class="muted small">⏸ Auto-sync off — use Push / Pull manually</span>';
+  if (!settings.autoSync) return '<span class="muted small">⏸ Auto-sync off</span>';
   if (syncState === 'syncing') return '<span class="small amber">⟳ Syncing…</span>';
   if (syncState === 'error') return '<span class="small red">⚠ ' + esc(lastSyncMsg || 'Sync error') + '</span>';
   if (lastSyncedAt) return '<span class="small green">✓ Synced ' + relTime(lastSyncedAt) + '</span>';
-  return '<span class="muted small">🔗 Connected — waiting for first sync</span>';
+  return '<span class="muted small">🔗 Connected — syncing on launch</span>';
 }
 function setSyncState(state, msg) {
   syncState = state;
@@ -448,95 +452,52 @@ function setSyncState(state, msg) {
   if (el) el.innerHTML = syncStatusHtml();
 }
 function scheduleSync() {
-  if (!settings.autoSync || !settings.gistToken) return;
+  if (!settings.autoSync) return;
   clearTimeout(syncTimer);
-  syncTimer = setTimeout(() => gistPush({ silent: true }), 1500);
+  syncTimer = setTimeout(() => workerPush({ silent: true }), 1500);
 }
-const ghHeaders = () => ({ 'Authorization': 'Bearer ' + settings.gistToken, 'Accept': 'application/vnd.github+json' });
 
-async function gistPush(opts = {}) {
+async function workerPush(opts = {}) {
   clearTimeout(syncTimer);
-  if (!settings.gistToken) { if (!opts.silent) toast('Enter a GitHub token first', 'err'); return false; }
   setSyncState('syncing');
   try {
-    const body = { description: 'GymTrack workout data', files: { 'gymtrack-data.json': { content: buildBackup() } } };
-    if (!settings.gistId) body.public = false; // create as a secret gist
-    const res = await fetch('https://api.github.com/gists' + (settings.gistId ? '/' + settings.gistId : ''), {
-      method: settings.gistId ? 'PATCH' : 'POST',
-      headers: Object.assign(ghHeaders(), { 'Content-Type': 'application/json' }),
-      body: JSON.stringify(body)
+    const res = await fetch(`${WORKER_URL}/data/${gymUUID}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: buildBackup()
     });
-    if (!res.ok) throw new Error(ghError(res.status));
-    const j = await res.json();
-    let changed = false;
-    if (!settings.gistId && j.id) { settings.gistId = j.id; changed = true; }
-    if (j.owner && j.owner.login && settings.gistOwner !== j.owner.login) { settings.gistOwner = j.owner.login; changed = true; }
-    if (changed) { saveSettings(); if (tab === 'claude') render(); }
+    if (!res.ok) throw new Error('Sync error ' + res.status);
     setSyncState('ok');
     if (!opts.silent) toast('Synced to cloud ✓');
     return true;
-  } catch (e) { setSyncState('error', e.message); if (!opts.silent) toast('Push failed: ' + e.message, 'err'); return false; }
+  } catch (e) { setSyncState('error', e.message); if (!opts.silent) toast('Sync failed: ' + e.message, 'err'); return false; }
 }
-async function gistFetch() {
-  const res = await fetch('https://api.github.com/gists/' + settings.gistId, { headers: ghHeaders() });
-  if (!res.ok) throw new Error(ghError(res.status));
-  const j = await res.json();
-  if (j.owner && j.owner.login && settings.gistOwner !== j.owner.login) { settings.gistOwner = j.owner.login; saveSettings(); }
-  const f = j.files && j.files['gymtrack-data.json'];
-  if (!f) throw new Error('gymtrack-data.json not found in this gist');
-  let content = f.content;
-  if (f.truncated && f.raw_url) content = await (await fetch(f.raw_url)).text(); // large gists are truncated inline
-  let parsed = {}; try { parsed = JSON.parse(content); } catch (e) {}
-  return { raw: content, updatedAt: parsed.updatedAt || 0, parsed };
+async function workerFetch() {
+  const res = await fetch(`${WORKER_URL}/data/${gymUUID}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error('Fetch error ' + res.status);
+  const text = await res.text();
+  let parsed = {}; try { parsed = JSON.parse(text); } catch (e) {}
+  return { raw: text, updatedAt: parsed.updatedAt || 0, parsed };
 }
-async function gistPull() {
-  if (!settings.gistToken || !settings.gistId) { toast('Enter your token and gist ID first', 'err'); return; }
-  setSyncState('syncing');
-  try {
-    const r = await gistFetch();
-    restoreBackup(r.raw);
-    render(); setSyncState('ok'); toast('Restored from cloud ✓');
-  } catch (e) { setSyncState('error', e.message); toast('Pull failed: ' + e.message, 'err'); }
-}
-function ghError(status) {
-  if (status === 401) return 'unauthorized (check the token)';
-  if (status === 403) return 'forbidden (token missing the "gist" scope?)';
-  if (status === 404) return 'not found (wrong gist ID?)';
-  if (status === 422) return 'rejected by GitHub (422)';
-  return 'GitHub error ' + status;
-}
-// Pull-or-push depending on which side is newer / non-empty. Safe when connecting
-// a device to an existing gist — it never blindly overwrites cloud data.
-async function gistReconcile(opts = {}) {
-  const r = await gistFetch();
+// Pull-or-push depending on which side is newer / non-empty (last-write-wins).
+async function workerReconcile() {
+  const r = await workerFetch();
+  if (!r) { await workerPush({ silent: true }); return 'pushed'; }
   const localEmpty = sessions.length === 0 && bodyWeight.length === 0;
   const remoteHasData = r.parsed && (((r.parsed.sessions || []).length) || ((r.parsed.bodyWeight || []).length) || r.parsed.plan);
-  if (r.updatedAt > dataUpdatedAt || (localEmpty && remoteHasData)) {
-    restoreBackup(r.raw); render();
-    if (!opts.silent) toast('Loaded latest from cloud ✓');
-    setSyncState('ok');
+  if (remoteHasData && (r.updatedAt > dataUpdatedAt || localEmpty)) {
+    restoreBackup(r.raw); render(); setSyncState('ok');
     return 'pulled';
   }
-  await gistPush({ silent: true });
+  await workerPush({ silent: true });
   return 'pushed';
 }
-// On launch: reconcile local data with the cloud (last-write-wins by timestamp).
 async function autoSyncOnLoad() {
-  if (!settings.autoSync || !settings.gistToken || !settings.gistId || active) { syncReady = true; return; }
+  if (!settings.autoSync || active) { syncReady = true; return; }
   setSyncState('syncing');
-  try { await gistReconcile(); } catch (e) { setSyncState('error', e.message); }
+  try { await workerReconcile(); } catch (e) { setSyncState('error', e.message); }
   syncReady = true;
-}
-// Save/connect: create the gist if new, otherwise reconcile (so pointing a fresh
-// device at an existing gist pulls its data instead of clobbering it).
-async function gistConnect() {
-  if (!settings.gistToken) { toast('Enter a GitHub token first', 'err'); return; }
-  setSyncState('syncing');
-  try {
-    if (!settings.gistId) { await gistPush(); return; } // no remote yet → create it
-    const what = await gistReconcile({ silent: true });
-    toast(what === 'pulled' ? "Connected — loaded this gist's data ✓" : 'Connected & synced ✓');
-  } catch (e) { setSyncState('error', e.message); toast('Connect failed: ' + e.message, 'err'); }
 }
 
 /* ================= views ================= */
@@ -760,30 +721,27 @@ function viewClaude() {
       <button class="primary wide mt8" data-action="import-plan">Import plan</button>
     </div>
 
-    <h2 class="section">Cloud sync & Claude access</h2>
+    <h2 class="section">Cloud sync & AI access</h2>
     <div class="card">
       <div class="row between">
-        <span class="bold">Auto-sync to GitHub Gist</span>
+        <span class="bold">Auto-sync</span>
         <button class="icon-btn ${settings.autoSync ? 'success' : ''}" data-action="toggle-autosync">${settings.autoSync ? 'On' : 'Off'}</button>
       </div>
       <div id="sync-status" class="mt8">${syncStatusHtml()}</div>
-      <p class="small muted mt8">Backs up your data to an unlisted GitHub Gist and pushes after every workout, so Claude can read it by link. One-time setup: create a token with the <b>gist</b> scope at <code class="inline">github.com/settings/tokens</code>, paste it below, tap Save.</p>
-      <label class="field mt8"><span>GitHub token</span><input id="gist-token" type="password" value="${esc(settings.gistToken)}" placeholder="github_pat_… or ghp_…"></label>
-      <label class="field"><span>Gist ID (leave blank to create one; to sync a 2nd device, paste your existing ID here before Save)</span><input id="gist-id" value="${esc(settings.gistId)}" placeholder="auto"></label>
-      <div class="row">
-        <button class="grow primary" data-action="gist-save">Save</button>
-        <button class="grow" data-action="gist-push">⬆ Push</button>
-        <button class="grow" data-action="gist-pull">⬇ Pull</button>
-      </div>
-      ${gistRawUrl() ? `
-        <div class="divider"></div>
-        <p class="small muted">Give Claude this link any time to read your latest data:</p>
-        <code class="inline" style="word-break:break-all;display:block;margin-top:6px">${esc(gistRawUrl())}</code>
-        <div class="row mt8">
-          <button class="grow" data-action="copy-gist-url">🔗 Copy link</button>
-          <button class="grow primary" data-action="copy-gist-prompt">📋 Copy prompt + link</button>
-        </div>
-        <p class="small muted mt8">Anyone with this link can read the data (it has no password), but the URL is unguessable and never listed publicly.</p>` : ''}
+      <p class="small muted mt8">Syncs automatically after every workout — no setup needed.</p>
+      <div class="divider"></div>
+      <p class="small muted"><b>Share with AI</b></p>
+      <button class="primary wide mt8" data-action="share-ai">🔗 Share with AI</button>
+      <p class="small muted mt8">Copies a link you can paste into Claude, ChatGPT, or Gemini. The AI fetches your latest training data automatically.</p>
+      <div class="divider"></div>
+      <p class="small muted"><b>Your backup code</b></p>
+      <code class="inline" style="word-break:break-all;display:block;margin-top:6px;user-select:all">${esc(gymUUID)}</code>
+      <button class="ghost wide mt8" data-action="copy-uuid">Copy backup code</button>
+      <p class="small muted mt8">Save this somewhere safe. If you lose your phone or clear the app, paste it into Restore below to recover all your data on a new device.</p>
+      <div class="divider"></div>
+      <p class="small muted"><b>Restore from backup code</b></p>
+      <input id="restore-uuid-input" class="mt8" placeholder="Paste your backup code or full share URL" style="width:100%;box-sizing:border-box">
+      <button class="ghost wide mt8" data-action="restore-uuid">Restore</button>
     </div>
 
     <h2 class="section">Settings</h2>
@@ -811,7 +769,7 @@ function viewClaude() {
       </div>
       <button class="ghost wide danger mt8" data-action="reset-all">Reset everything</button>
     </div>
-    <p class="muted small" style="text-align:center">GymTrack v1 · data lives on this device${settings.gistId ? ' + auto-synced to your gist' : ''}</p>`;
+    <p class="muted small" style="text-align:center">GymTrack v1 · data lives on this device${settings.autoSync ? ' + auto-synced to cloud' : ''}</p>`;
 }
 
 /* ================= modals for plan editing ================= */
@@ -1045,16 +1003,27 @@ document.addEventListener('click', e => {
       } catch (err) { toast('Invalid plan: ' + err.message, 'err'); }
       break;
     }
-    case 'toggle-autosync': settings.autoSync = !settings.autoSync; saveSettings(); render(); if (settings.autoSync && settings.gistToken) gistPush({ silent: true }); break;
-    case 'gist-save': {
-      settings.gistToken = mval('gist-token'); settings.gistId = mval('gist-id'); saveSettings(); render();
-      if (settings.gistToken) gistConnect(); else toast('Saved');
+    case 'toggle-autosync': settings.autoSync = !settings.autoSync; saveSettings(); render(); if (settings.autoSync) workerPush({ silent: true }); break;
+    case 'share-ai': copyText(workerShareUrl()).then(ok => toast(ok ? 'Link copied — paste into any AI chat' : 'Copy failed', ok ? 'ok' : 'err')); break;
+    case 'copy-uuid': copyText(gymUUID).then(ok => toast(ok ? 'Backup code copied' : 'Copy failed', ok ? 'ok' : 'err')); break;
+    case 'restore-uuid': {
+      const raw = mval('restore-uuid-input');
+      if (!raw) { toast('Paste your backup code first', 'err'); break; }
+      const match = raw.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+      if (!match) { toast('Invalid backup code', 'err'); break; }
+      const newUUID = match[1].toLowerCase();
+      localStorage.setItem('gymtrack_uuid', newUUID);
+      gymUUID = newUUID;
+      setSyncState('syncing');
+      (async () => {
+        try {
+          const r = await workerFetch();
+          if (!r) { toast('No data found for this backup code', 'err'); setSyncState('error', 'Not found'); return; }
+          restoreBackup(r.raw); render(); setSyncState('ok'); toast('Restored ✓');
+        } catch (e) { setSyncState('error', e.message); toast('Restore failed: ' + e.message, 'err'); }
+      })();
       break;
     }
-    case 'gist-push': settings.gistToken = mval('gist-token'); settings.gistId = mval('gist-id'); saveSettings(); gistPush(); break;
-    case 'gist-pull': settings.gistToken = mval('gist-token'); settings.gistId = mval('gist-id'); saveSettings(); gistPull(); break;
-    case 'copy-gist-url': copyText(gistRawUrl()).then(ok => toast(ok ? 'Link copied' : 'Copy failed', ok ? 'ok' : 'err')); break;
-    case 'copy-gist-prompt': copyText(CLAUDE_URL_PROMPT(gistRawUrl())).then(ok => toast(ok ? 'Prompt + link copied — paste to Claude' : 'Copy failed', ok ? 'ok' : 'err')); break;
     case 'toggle-sound': settings.sound = !settings.sound; saveSettings(); render(); break;
     case 'toggle-vibrate': settings.vibrate = !settings.vibrate; saveSettings(); render(); break;
     case 'test-sound': beep(3); buzz(); toast('That\'s the rest-timer cue'); break;
@@ -1071,7 +1040,7 @@ document.addEventListener('click', e => {
         [{ label: 'Reset', cls: 'danger', fn: () => {
             ['plan', 'sessions', 'active', 'bw', 'settings', 'updatedAt'].forEach(k => store.del(k));
             plan = defaultPlan(); sessions = []; active = null; bodyWeight = []; dataUpdatedAt = 0;
-            settings = { unit: 'kg', sound: true, vibrate: true, autoSync: true, gistToken: '', gistId: '', gistOwner: '' };
+            settings = { unit: 'kg', sound: true, vibrate: true, autoSync: true };
             stopRest(); render(); toast('Fresh start');
           } }, { label: 'Cancel' }]);
       break;

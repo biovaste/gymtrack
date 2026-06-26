@@ -1,51 +1,51 @@
 #!/usr/bin/env node
 /*
- * push-plan.mjs — push a workout plan from this desktop into the GymTrack
- * GitHub gist, so the mobile app loads it automatically on next launch.
+ * push-plan.mjs — push a workout plan from this desktop to the GymTrack Worker,
+ * so the mobile app loads it automatically on next launch.
  *
  * It does a safe read-modify-write: only the `plan` is replaced; your logged
- * sessions and body-weight history in the gist are preserved. The sync
- * timestamp is bumped so the app knows the cloud copy is newer and pulls it.
+ * sessions and body-weight history are preserved. The sync timestamp is bumped
+ * so the app knows the cloud copy is newer and pulls it.
+ *
+ * How to find your UUID:
+ *   - From the app: Claude tab → copy the "Your backup code" value
+ *   - Or: localStorage.getItem('gymtrack_uuid') in browser devtools on the installed app
+ *
+ * UUID resolution order:
+ *   1. GYMTRACK_UUID environment variable
+ *   2. --uuid <value> CLI argument
+ *   3. .gymtrack-uuid file in the project root
  *
  * Usage:
- *   node tools/push-plan.mjs path/to/plan.json     # plan from a file
+ *   node tools/push-plan.mjs path/to/plan.json          # plan from a file
+ *   node tools/push-plan.mjs --uuid <uuid> plan.json    # explicit UUID
  *   echo '<workout-plan json>' | node tools/push-plan.mjs   # or via stdin
- *
- * Env vars:
- *   GIST_ID   optional — skip auto-discovery and target this gist id
- *   GH        optional — path to the gh executable
- *
- * Requires the GitHub CLI (`gh`) authenticated with the `gist` scope.
  */
-import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync, unlinkSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
 
-const GH = process.env.GH || (process.platform === 'win32' ? 'C:\\Program Files\\GitHub CLI\\gh.exe' : 'gh');
-const FILENAME = 'gymtrack-data.json';
+const WORKER_URL = 'https://gymtrack.henri-haukkovaara.workers.dev';
 
-function gh(args, input) {
-  return execFileSync(GH, args, { input, encoding: 'utf8', maxBuffer: 1 << 25 });
-}
-const ghJson = path => JSON.parse(gh(['api', path, '-H', 'Accept: application/vnd.github+json']));
-
-function findGistId() {
-  if (process.env.GIST_ID) return process.env.GIST_ID;
-  const list = ghJson('/gists?per_page=100'); // newest first
-  const hit = list.find(g => g.files && g.files[FILENAME]);
-  if (!hit) {
-    console.error('✗ No GymTrack gist found on this GitHub account.\n' +
-      '  Enable cloud sync in the app on your phone first (Claude tab → paste a\n' +
-      '  token with the "gist" scope → Save), then run this again. Or pass GIST_ID=<id>.');
-    process.exit(1);
-  }
-  return hit.id;
+function resolveUUID() {
+  if (process.env.GYMTRACK_UUID) return process.env.GYMTRACK_UUID.trim();
+  const uuidArg = process.argv.indexOf('--uuid');
+  if (uuidArg !== -1 && process.argv[uuidArg + 1]) return process.argv[uuidArg + 1].trim();
+  try { return readFileSync('.gymtrack-uuid', 'utf8').trim(); } catch {}
+  console.error(
+    '✗ UUID not found.\n' +
+    '  From the app: Claude tab → copy "Your backup code".\n' +
+    '  Then: set GYMTRACK_UUID=<uuid>, pass --uuid <uuid>, or save it in .gymtrack-uuid'
+  );
+  process.exit(1);
 }
 
 function readNewPlan() {
-  const file = process.argv[2];
-  let raw = (file ? readFileSync(file, 'utf8') : readFileSync(0, 'utf8'));
+  // Skip --uuid <val> pair; the first remaining arg is the plan file (or read stdin).
+  let fileArg = null;
+  for (let i = 2; i < process.argv.length; i++) {
+    if (process.argv[i] === '--uuid') { i++; continue; }
+    fileArg = process.argv[i]; break;
+  }
+  let raw = fileArg ? readFileSync(fileArg, 'utf8') : readFileSync(0, 'utf8');
   raw = raw.replace(/^﻿/, '').trim().replace(/^```(json)?/i, '').replace(/```$/, '').trim();
   const plan = JSON.parse(raw);
   if (plan.type && plan.type !== 'workout-plan') throw new Error('Plan JSON "type" must be "workout-plan".');
@@ -54,34 +54,39 @@ function readNewPlan() {
 }
 
 async function main() {
-  const id = findGistId();
-  const gist = ghJson('/gists/' + id);
-  const f = gist.files && gist.files[FILENAME];
-  if (!f) throw new Error(`Gist ${id} has no ${FILENAME}.`);
-
-  let content = f.content;
-  if (f.truncated && f.raw_url) content = await (await fetch(f.raw_url)).text(); // >1MB gists are truncated inline
-
-  let backup;
-  try { backup = JSON.parse(content); } catch { backup = null; }
-  if (!backup || backup.type !== 'gymtrack-backup') throw new Error('Gist content is not a GymTrack backup.');
-
+  const uuid = resolveUUID();
   const newPlan = readNewPlan();
+
+  // Fetch current backup
+  const getRes = await fetch(`${WORKER_URL}/data/${uuid}`);
+  if (!getRes.ok && getRes.status !== 404) {
+    throw new Error(`Failed to fetch current data: HTTP ${getRes.status}`);
+  }
+
+  let backup = null;
+  if (getRes.ok) {
+    try { backup = JSON.parse(await getRes.text()); } catch {}
+  }
+  if (!backup || backup.type !== 'gymtrack-backup') {
+    throw new Error('No existing backup found. Open the app on your phone and let it sync first.');
+  }
+
   const keptSessions = (backup.sessions || []).length;
   const keptBw = (backup.bodyWeight || []).length;
   const oldPlan = backup.plan && backup.plan.name;
 
-  backup.plan = newPlan;                       // app normalizes this on pull
-  backup.updatedAt = Date.now();               // mark cloud copy as newest
+  backup.plan = newPlan;
+  backup.updatedAt = Date.now();
   backup.exportedAt = new Date().toISOString();
 
-  const body = { files: { [FILENAME]: { content: JSON.stringify(backup, null, 2) } } };
-  const tmp = join(tmpdir(), 'gymtrack-push-' + Date.now() + '.json');
-  writeFileSync(tmp, JSON.stringify(body));
-  try { gh(['api', '-X', 'PATCH', '/gists/' + id, '--input', tmp]); }
-  finally { unlinkSync(tmp); }
+  const postRes = await fetch(`${WORKER_URL}/data/${uuid}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(backup, null, 2),
+  });
+  if (!postRes.ok) throw new Error(`Failed to push: HTTP ${postRes.status}`);
 
-  console.log(`✓ Pushed plan "${newPlan.name || '(unnamed)'}" — ${newPlan.days.length} day(s) — to gist ${id}.`);
+  console.log(`✓ Pushed plan "${newPlan.name || '(unnamed)'}" — ${newPlan.days.length} day(s).`);
   console.log(`  Kept ${keptSessions} session(s) and ${keptBw} body-weight entr${keptBw === 1 ? 'y' : 'ies'}; replaced previous plan "${oldPlan || '—'}".`);
   console.log('  Open the GymTrack app on your phone — it loads the new plan on launch.');
 }

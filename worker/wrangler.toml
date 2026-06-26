@@ -1,0 +1,8 @@
+name = "gymtrack"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "GYMTRACK_DATA"
+id = "3c520df89d3e48c7a11a8741bb9c2728"
+preview_id = "8eae6b1bcf2046008307d50773d07e9c"

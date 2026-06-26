@@ -2,8 +2,8 @@
 
 A gym workout tracker built as an installable web app (PWA) for iPhone, designed to
 exchange workout plans and training logs with Claude via JSON. No accounts, no
-dependencies, no build step — your data lives on your device (plus an optional
-private GitHub Gist).
+dependencies, no build step — your data lives on your device and syncs automatically
+to the cloud.
 
 ## Features
 
@@ -23,9 +23,9 @@ private GitHub Gist).
   log, all included in the Claude export.
 - **Claude exchange** — one button copies a coaching prompt + your last 15 sessions,
   body weight and current plan; paste Claude's reply back to import the next plan.
-- **Automatic cloud sync** — once you add a GitHub token, the app keeps an unlisted
-  Gist in sync: it pulls your latest data on launch and pushes after every workout.
-  Claude can read the same data from a stable link, no copy/paste needed.
+- **Automatic cloud sync** — works on first launch with no setup. The app pulls your
+  latest data on launch and pushes after every workout. Share a link to let any AI
+  read your training data directly.
 - **Offline** — full offline support via a service worker once installed.
 
 ## Getting it on your iPhone
@@ -56,54 +56,39 @@ weight, your current plan, and instructions telling Claude to reply with a
 **Load the new plan:** copy Claude's JSON block → Claude tab → paste into
 **Import a plan from Claude** → Import. History is always kept.
 
-### Automatic cloud sync (recommended — no copy/paste)
+### Automatic cloud sync — no setup required
 
-One-time setup:
+Sync starts automatically on first launch. The app:
+- Pulls your latest data when you open it
+- Pushes after every saved workout
+- Shows "✓ Synced …" in the status line
 
-1. Create a GitHub token with the **gist** scope at
-   <https://github.com/settings/tokens> (classic token → check `gist`, or a
-   fine-grained token with read/write access to Gists).
-2. In the app: **Claude tab → Cloud sync → GitHub token →** paste it → **Save**.
-   The app creates an *unlisted* (secret) gist automatically and fills in the Gist ID.
-3. After that it syncs by itself: pulls your latest data when you open the app,
-   pushes after every saved workout. The status line shows "✓ Synced …".
+### Sharing data with an AI
 
-To get a plan from Claude, tap **Copy prompt + link** and paste it into any Claude
-chat — Claude fetches your live data from the gist link and replies with a new plan.
-The link looks like
-`https://gist.githubusercontent.com/<user>/<gist-id>/raw/gymtrack-data.json`.
+Claude tab → **Share with AI** → copies a URL you paste into any AI chat. Claude,
+ChatGPT, and Gemini can all fetch the JSON from that link and reply with a new plan.
 
-> The gist is *secret*, not private: it isn't listed anywhere and the URL is
-> unguessable, but anyone who has the link can read it (no token needed — that's how
-> Claude reads it). The data is your workouts + body weight; the token is **never**
-> stored in the gist. Manual **Push**/**Pull** buttons are there if you turn auto-sync
-> off or want to force a sync.
+### Data recovery
+
+Claude tab → **Your backup code** shows your unique UUID. Save it somewhere safe
+(notes app, password manager). On a new device, open the app → Claude tab →
+**Restore from backup code** → paste your UUID — your full history is restored.
 
 ### Desktop → phone: push a plan with no copy-paste
 
-Because both devices share the same gist, you can hand a new plan to Claude on the
-desktop and have it **appear on your phone the next time you open the app** — nothing
-to paste or ferry between devices.
-
-How it works: the gist is the shared channel. The phone already pulls it on launch;
-on the desktop, a Claude Code session (where GitHub is authenticated with the `gist`
-scope) writes the new plan into that same gist using `tools/push-plan.mjs`. It does a
-safe read-modify-write — only the plan changes, your logged sessions and body weight
-are kept — and bumps the sync timestamp so the app knows to pull.
+Claude can push a plan from your desktop directly to your phone — the phone picks it
+up automatically on next launch.
 
 ```bash
-# in a desktop Claude Code session, after Claude produces a workout-plan JSON:
+# set your UUID once (copy it from Claude tab → "Your backup code"):
+set GYMTRACK_UUID=<your-uuid>
+
+# then push a plan:
 node tools/push-plan.mjs path/to/plan.json      # or pipe the JSON via stdin
 ```
 
-The script auto-discovers your GymTrack gist (the one containing `gymtrack-data.json`)
-on the authenticated account, so there's no gist ID to copy around. Pass `GIST_ID=<id>`
-to target a specific gist if you ever keep more than one.
-
-One-time prerequisite: enable cloud sync in the app on your phone once (Claude tab →
-paste a token → Save) so the gist exists. After that the loop is: *ask Claude on
-desktop → Claude pushes the plan → open the app on your phone.* Best to push when you
-aren't mid-session on the phone, so the app pulls the new plan cleanly on next launch.
+The script does a safe read-modify-write — only the plan changes, your logged sessions
+and body weight are kept — and bumps the sync timestamp so the app pulls it on launch.
 
 ### Plan JSON schema
 
@@ -142,8 +127,8 @@ aren't mid-session on the phone, so the app pulls the new plan cleanly on next l
   background notification would require a native app).
 - Vibration depends on iOS version/settings; the beep is the primary cue.
 - Data lives in browser storage for the installed app. iOS can purge storage of
-  apps unused for many weeks — enabling cloud sync (above) protects against this
-  since your data is restored from the gist on next launch.
+  apps unused for many weeks — cloud sync protects against this since your data
+  is restored from the cloud on next launch.
 
 ## Development & updates
 
@@ -167,9 +152,10 @@ There is no build step — it's plain HTML/CSS/JS.
 | File | Purpose |
 |---|---|
 | `index.html` | App shell, tab bar, service-worker registration |
-| `app.js` | All logic: state, session tracking, rest timer, plan editing, history, Claude import/export, Gist sync |
+| `app.js` | All logic: state, session tracking, rest timer, plan editing, history, Claude import/export, Worker sync |
 | `styles.css` | Dark, mobile-first UI |
 | `sw.js` | Offline cache (stale-while-revalidate) |
 | `manifest.webmanifest` | PWA install metadata |
 | `icon-180.png` / `icon-512.png` | Home-screen icons |
-| `tools/push-plan.mjs` | Desktop helper: writes a new plan into your gist (keeps history) so the phone auto-loads it |
+| `tools/push-plan.mjs` | Desktop helper: pushes a new plan to the cloud (keeps history) so the phone auto-loads it |
+| `worker/` | Cloudflare Worker backend (KV storage, sync API) |
