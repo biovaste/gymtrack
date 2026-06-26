@@ -23,7 +23,7 @@
  */
 import { readFileSync } from 'node:fs';
 
-const WORKER_URL = 'https://gymtrack.henri-haukkovaara.workers.dev';
+const WORKER_URL = 'https://api.gymtrack.hithitpull.fi';
 
 function resolveUUID() {
   if (process.env.GYMTRACK_UUID) return process.env.GYMTRACK_UUID.trim();

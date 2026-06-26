@@ -103,7 +103,7 @@ let bodyWeight = store.get('bw', []);
 let settings = Object.assign({ unit: 'kg', sound: true, vibrate: true, autoSync: true }, store.get('settings', {}));
 delete settings.gistToken; delete settings.gistId; delete settings.gistOwner;
 
-const WORKER_URL = 'https://gymtrack.henri-haukkovaara.workers.dev';
+const WORKER_URL = 'https://api.gymtrack.hithitpull.fi';
 let gymUUID = (() => {
   let id = localStorage.getItem('gymtrack_uuid');
   if (!id) { id = crypto.randomUUID(); localStorage.setItem('gymtrack_uuid', id); }
