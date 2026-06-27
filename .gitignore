@@ -6,8 +6,9 @@ desktop.ini
 .idea/
 .vscode/
 
-# Claude Code local preview config (machine-specific)
+# Claude Code local config (machine-specific)
 .claude/launch.json
+.claude/settings.local.json
 
 # Cloudflare Worker build cache (contains account token)
 worker/.wrangler/

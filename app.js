@@ -298,6 +298,7 @@ function startSession(dayId) {
   unlockAudio();
   active = {
     id: uid(), dayId: day.id, dayName: day.name, startedAt: Date.now(), notes: '',
+    readiness: {},
     exercises: day.exercises.map(e => ({
       name: e.name, planId: e.id, swappedFrom: null,
       plannedSets: e.sets, plannedReps: e.reps, plannedWeight: e.weight,
@@ -320,10 +321,14 @@ function finishSession() {
     id: active.id, date: new Date(active.startedAt).toISOString(), dayName: active.dayName,
     durationMin, notes: active.notes,
     exercises: active.exercises
-      .map(e => ({ name: e.name, swappedFrom: e.swappedFrom, notes: e.notes,
+      .map(e => ({ name: e.name, plannedSets: e.plannedSets, plannedReps: e.plannedReps,
+        plannedWeight: e.plannedWeight, targetRpe: e.targetRpe,
+        swappedFrom: e.swappedFrom, notes: e.notes,
         sets: e.sets.filter(s => s.done).map(s => ({ weight: s.weight, reps: s.reps, rpe: s.rpe })) }))
       .filter(e => e.sets.length)
   };
+  const rd = active.readiness || {};
+  if (rd.cmjCm != null || rd.broadJumpCm != null || rd.subjectiveEnergy != null) record.readiness = rd;
   const prs = detectPRs(record);
   sessions.push(record); saveSessions();
   active = null; saveActive(); stopRest(); syncWakeLock();
@@ -539,6 +544,26 @@ function viewActiveSession() {
     <div class="row between">
       <h2 class="section" style="margin:4px">${esc(active.dayName)}</h2>
       <button class="danger icon-btn" data-action="confirm-finish">Finish</button>
+    </div>
+    <h2 class="section">Pre-session readiness <span class="muted small">(optional)</span></h2>
+    <div class="card">
+      <div class="row" style="gap:12px">
+        <label style="flex:1">
+          <span class="small muted">CMJ (cm)</span>
+          <input type="number" step="0.1" min="0" max="100" data-bind="readiness-cmj"
+            value="${active.readiness?.cmjCm ?? ''}" placeholder="—">
+        </label>
+        <label style="flex:1">
+          <span class="small muted">Broad jump (cm)</span>
+          <input type="number" step="1" min="0" max="400" data-bind="readiness-broad"
+            value="${active.readiness?.broadJumpCm ?? ''}" placeholder="—">
+        </label>
+        <label style="flex:1">
+          <span class="small muted">Energy (1–10)</span>
+          <input type="number" step="1" min="1" max="10" data-bind="readiness-energy"
+            value="${active.readiness?.subjectiveEnergy ?? ''}" placeholder="—">
+        </label>
+      </div>
     </div>
     ${active.exercises.map((e, ei) => exerciseCard(e, ei)).join('')}
     <h2 class="section">Session notes</h2>
@@ -1065,6 +1090,12 @@ document.addEventListener('input', e => {
     saveActive();
   } else if (bind === 'session-notes' && active) {
     active.notes = el.value; saveActive();
+  } else if (bind === 'readiness-cmj' && active) {
+    const v = parseFloat(el.value); active.readiness.cmjCm = isNaN(v) ? null : v; saveActive();
+  } else if (bind === 'readiness-broad' && active) {
+    const v = parseFloat(el.value); active.readiness.broadJumpCm = isNaN(v) ? null : v; saveActive();
+  } else if (bind === 'readiness-energy' && active) {
+    const v = parseInt(el.value, 10); active.readiness.subjectiveEnergy = isNaN(v) ? null : Math.min(10, Math.max(1, v)); saveActive();
   }
 });
 document.addEventListener('change', e => {
