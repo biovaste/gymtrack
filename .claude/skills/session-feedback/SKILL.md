@@ -11,6 +11,12 @@ Analyse a completed workout and produce concise, evidence-based coaching feedbac
 
 ---
 
+## Setup
+
+**Before analysing:** Read `../shared/schema-reference.md` and `../shared/science-reference.md`. These contain the field definitions, confidence tiers, derived metric formulas, STaR framework, VLA thresholds, and external focus rule that this skill depends on.
+
+---
+
 ## Invocation
 
 The user provides data in one of three ways:
@@ -106,6 +112,6 @@ CONFIDENCE: High / Medium / Low
 
 | File | Contents |
 |------|----------|
-| `science-reference.md` | STaR framework, VLA formula + thresholds, external focus rule, BW modifier, citations |
-| `schema-reference.md` | GymTrack JSON field definitions, confidence tiers, derived metric formulas, generic data guidance |
+| `../shared/science-reference.md` | STaR framework, VLA formula + thresholds, external focus rule, BW modifier, citations |
+| `../shared/schema-reference.md` | GymTrack JSON field definitions, confidence tiers, derived metric formulas, generic data guidance |
 | `examples.md` | Three worked examples: power session (High confidence), mechanical pain cutoff, generic text input |
