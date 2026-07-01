@@ -163,6 +163,18 @@ label.field > span { display: block; margin-bottom: 5px; }
 .toast.ok { border-color: var(--green); }
 .toast.err { border-color: var(--red); }
 
+/* ----- service worker update banner ----- */
+#update-banner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 70;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: var(--accent); color: #fff; font-weight: 600; font-size: 14px;
+  padding: calc(10px + var(--safe-top)) 16px 10px;
+}
+#update-banner button {
+  background: #fff; color: var(--accent); border: none; padding: 6px 14px;
+  border-radius: 999px; font-weight: 700; font-size: 13px;
+}
+
 /* ----- misc ----- */
 .hidden { display: none !important; }
 .day-pill { background: var(--bg2); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; font-size: 12px; color: var(--muted); }

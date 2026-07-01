@@ -1,5 +1,5 @@
 /* GymTrack service worker — cache-first app shell for full offline use. */
-const CACHE = 'gymtrack-v1';
+const CACHE = 'gymtrack-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -11,7 +11,14 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  // No skipWaiting() here — the new worker stays in "waiting" until the page
+  // asks it to activate (see the update banner in app.js), so users get an
+  // explicit "update available" prompt instead of a silent second-open update.
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+});
+
+self.addEventListener('message', e => {
+  if (e.data === 'skipWaiting') self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {

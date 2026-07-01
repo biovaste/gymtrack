@@ -29,10 +29,5 @@
 <div id="modal-root"></div>
 <div id="toast-root"></div>
 <script src="app.js"></script>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
-}
-</script>
 </body>
 </html>

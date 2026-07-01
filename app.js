@@ -182,15 +182,16 @@ document.addEventListener('visibilitychange', () => {
 });
 
 /* ================= rest timer ================= */
-let rest = null; // { endsAt, total, label, fired }
+let rest = store.get('rest', null); // { endsAt, total, label, fired } — persisted so a reload mid-rest doesn't lose the countdown
+const saveRest = () => rest ? store.set('rest', rest) : store.del('rest');
 function startRest(seconds, label) {
   if (!seconds || seconds <= 0) return;
   unlockAudio();
   rest = { endsAt: Date.now() + seconds * 1000, total: seconds, label: label || 'Rest', fired: false };
-  renderRest();
+  saveRest(); renderRest();
 }
-function adjustRest(delta) { if (rest) { rest.endsAt += delta * 1000; rest.total = Math.max(rest.total + delta, 1); renderRest(); } }
-function stopRest() { rest = null; renderRest(); }
+function adjustRest(delta) { if (rest) { rest.endsAt += delta * 1000; rest.total = Math.max(rest.total + delta, 1); saveRest(); renderRest(); } }
+function stopRest() { rest = null; saveRest(); renderRest(); }
 function renderRest() {
   const el = document.getElementById('rest-banner');
   if (!rest) { el.classList.add('hidden'); el.classList.remove('over'); return; }
@@ -213,8 +214,8 @@ function renderRest() {
 setInterval(() => {
   if (rest) {
     const remain = (rest.endsAt - Date.now()) / 1000;
-    if (remain <= 0 && !rest.fired) { rest.fired = true; beep(3); buzz(); }
-    if (remain <= -30) { rest = null; }  // auto-dismiss 30s after firing
+    if (remain <= 0 && !rest.fired) { rest.fired = true; saveRest(); beep(3); buzz(); }
+    if (remain <= -30) { rest = null; saveRest(); }  // auto-dismiss 30s after firing
     renderRest();
   }
   // live session clock
@@ -485,14 +486,33 @@ async function workerFetch() {
   let parsed = {}; try { parsed = JSON.parse(text); } catch (e) {}
   return { raw: text, updatedAt: parsed.updatedAt || 0, parsed };
 }
-// Pull-or-push depending on which side is newer / non-empty (last-write-wins).
+// Union two arrays by key: local entries are kept unless remote has the same
+// key, in which case remote wins. This preserves local-only unsynced records
+// (e.g. logged offline on one device) instead of a remote pull wiping them out.
+function mergeByKey(remoteArr, localArr, keyFn) {
+  const merged = new Map();
+  for (const item of localArr) merged.set(keyFn(item), item);
+  for (const item of remoteArr) merged.set(keyFn(item), item);
+  return Array.from(merged.values());
+}
+// Pull-or-push depending on which side is newer / non-empty (last-write-wins),
+// merging sessions/bodyWeight by id/date so a pull can't silently drop
+// local-only records that hadn't synced yet.
 async function workerReconcile() {
   const r = await workerFetch();
   if (!r) { await workerPush({ silent: true }); return 'pushed'; }
   const localEmpty = sessions.length === 0 && bodyWeight.length === 0;
   const remoteHasData = r.parsed && (((r.parsed.sessions || []).length) || ((r.parsed.bodyWeight || []).length) || r.parsed.plan);
   if (remoteHasData && (r.updatedAt > dataUpdatedAt || localEmpty)) {
-    restoreBackup(r.raw); render(); setSyncState('ok');
+    const remoteSessions = r.parsed.sessions || [], remoteBW = r.parsed.bodyWeight || [];
+    const mergedSessions = mergeByKey(remoteSessions, sessions, s => s.id);
+    const mergedBW = mergeByKey(remoteBW, bodyWeight, b => b.date);
+    const hadLocalOnly = mergedSessions.length > remoteSessions.length || mergedBW.length > remoteBW.length;
+    restoreBackup(r.raw);
+    sessions = mergedSessions; bodyWeight = mergedBW;
+    store.set('sessions', sessions); store.set('bw', bodyWeight);
+    render(); setSyncState('ok');
+    if (hadLocalOnly) { touch(); await workerPush({ silent: true }); }
     return 'pulled';
   }
   await workerPush({ silent: true });
@@ -503,6 +523,38 @@ async function autoSyncOnLoad() {
   setSyncState('syncing');
   try { await workerReconcile(); } catch (e) { setSyncState('error', e.message); }
   syncReady = true;
+}
+
+/* ================= service worker updates ================= */
+// sw.js intentionally does NOT call skipWaiting() on install, so a newly
+// installed worker sits in "waiting" until the user taps the banner below —
+// this replaces the old silent "updates land on the second app open" behavior.
+let swWaiting = null;
+function showUpdateBanner() {
+  if (document.getElementById('update-banner')) return;
+  const el = document.createElement('div');
+  el.id = 'update-banner'; el.className = 'update-banner';
+  el.innerHTML = `<span>New version available</span><button data-action="update-app">Update</button>`;
+  document.body.prepend(el);
+}
+function initServiceWorkerUpdates() {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    if (reg.waiting && reg.active) { swWaiting = reg.waiting; showUpdateBanner(); }
+    reg.addEventListener('updatefound', () => {
+      const nw = reg.installing;
+      if (!nw) return;
+      nw.addEventListener('statechange', () => {
+        if (nw.state === 'installed' && navigator.serviceWorker.controller) { swWaiting = nw; showUpdateBanner(); }
+      });
+    });
+  }).catch(() => {});
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloading) return;
+    reloading = true;
+    window.location.reload();
+  });
 }
 
 /* ================= views ================= */
@@ -584,6 +636,7 @@ function exerciseCard(e, ei) {
         ${e.swappedFrom ? `<div class="swap-note">↺ swapped from ${esc(e.swappedFrom)}</div>` : ''}
       </div>
       <button class="icon-btn" data-action="ex-info" data-ei="${ei}" title="Explain">ℹ️</button>
+      <button class="icon-btn" data-action="plate-calc" data-ei="${ei}" title="Plate calculator">🏋️</button>
       <button class="icon-btn" data-action="ex-swap" data-ei="${ei}" title="Swap">🔁</button>
     </div>
     <div class="set-grid">
@@ -894,6 +947,27 @@ function exInfoModal(ei) {
   showModal(e.name, `<p>${esc(desc)}</p>
     <p class="muted small mt12">Target: ${e.plannedSets}×${esc(e.plannedReps)} @ ${e.plannedWeight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''}</p>`);
 }
+function showPlateCalculator(weight) {
+  const isLb = unit() === 'lb';
+  const barWeight = isLb ? 45 : 20;
+  const plates = isLb ? [45, 35, 25, 10, 5, 2.5] : [25, 20, 15, 10, 5, 2.5, 1.25];
+  weight = weight || 0;
+  if (weight <= barWeight) {
+    showModal('Plate calculator', `<p class="muted">Target ${weight}${unit()} is at or below the bar (${barWeight}${unit()}) — no plates needed.</p>`);
+    return;
+  }
+  let perSide = (weight - barWeight) / 2;
+  const rows = [];
+  for (const p of plates) {
+    const count = Math.floor(perSide / p + 1e-9);
+    if (count > 0) { rows.push({ p, count }); perSide -= count * p; }
+  }
+  showModal('Plate calculator', `
+    <p class="muted small">Target ${weight}${unit()} · bar ${barWeight}${unit()} · ${((weight - barWeight) / 2).toFixed(2)}${unit()} per side</p>
+    <div class="divider"></div>
+    ${rows.length ? rows.map(r => `<div class="row between mt8"><span class="bold">${r.p}${unit()}</span><span>× ${r.count} per side</span></div>`).join('') : '<p class="muted small">Just the bar.</p>'}
+    ${perSide > 0.01 ? `<p class="muted small mt12">${perSide.toFixed(2)}${unit()} per side can't be made with these plates.</p>` : ''}`);
+}
 function exNoteModal(ei) {
   const e = active.exercises[ei];
   showModal('Note — ' + e.name, `<textarea id="ex-note-area" placeholder="e.g. felt heavy, slight knee pain, used safety bar…">${esc(e.notes)}</textarea>`,
@@ -914,6 +988,7 @@ document.addEventListener('click', e => {
     /* navigation */
     case 'modal-dismiss': if (e.target === el) closeModal(); break; // only when tapping the backdrop itself
     case 'modal-btn': { const fn = modalActions[el.dataset.idx]; if (fn) fn(); else closeModal(); break; }
+    case 'update-app': if (swWaiting) swWaiting.postMessage('skipWaiting'); break;
 
     /* rest timer */
     case 'rest-add': adjustRest(15); break;
@@ -958,6 +1033,7 @@ document.addEventListener('click', e => {
     case 'ex-info': exInfoModal(+el.dataset.ei); break;
     case 'ex-swap': sessionSwapModal(+el.dataset.ei); break;
     case 'ex-note': exNoteModal(+el.dataset.ei); break;
+    case 'plate-calc': showPlateCalculator(active.exercises[+el.dataset.ei].plannedWeight); break;
     case 'session-swap-pick': {
       const ei = +el.dataset.ei;
       doSessionSwap(ei, active.exercises[ei].alternates[+el.dataset.ai]);
@@ -1108,4 +1184,6 @@ document.addEventListener('change', e => {
 store.set('plan', plan); // persist the default plan on first run WITHOUT bumping the sync clock
 syncWakeLock();
 render();
+renderRest();
+window.addEventListener('load', initServiceWorkerUpdates);
 autoSyncOnLoad(); // reconcile with the cloud, then enable auto-push

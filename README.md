@@ -13,7 +13,10 @@ to the cloud.
   alternate options (busy equipment? tap 🔁 to swap mid-workout, or type any exercise).
 - **Logging** — actual weight, reps and RPE per set; check a set off to log it.
 - **Rest timer with audio cue** — starts automatically when you complete a set, beeps
-  and vibrates when time is up, with +15s and skip controls.
+  and vibrates when time is up, with +15s and skip controls. Survives a reload —
+  the countdown resumes at the correct time instead of resetting.
+- **Plate calculator** — 🏋️ on any exercise shows the per-side plate breakdown for
+  its planned weight.
 - **Session length** — live timer in the header, duration saved with each session.
 - **Exercise explanations** — ℹ️ shows the plan's description, with a built-in
   fallback library of ~35 common lifts.
@@ -43,8 +46,9 @@ The app is plain static files, so any HTTPS static host works:
 To test on this PC: `python -m http.server 8765` in this folder, then open
 `http://localhost:8765`.
 
-> **Updating after a deploy:** the service worker refreshes files in the background;
-> an update is picked up the *second* time you open the app.
+> **Updating after a deploy:** the service worker refreshes files in the background
+> and shows a "New version available" banner as soon as the update is ready — tap
+> **Update** to reload on the new version immediately.
 
 ## Using it with Claude
 
@@ -62,6 +66,8 @@ Sync starts automatically on first launch. The app:
 - Pulls your latest data when you open it
 - Pushes after every saved workout
 - Shows "✓ Synced …" in the status line
+- Merges sessions and body-weight entries by id/date on pull, so a session logged
+  offline on one device isn't lost if another device syncs first
 
 ### Sharing data with an AI
 
@@ -150,8 +156,9 @@ cd worker
 wrangler deploy
 ```
 
-Because of the service worker, an app update lands the *second* time the app is
-opened after deploy (first open refreshes the cache in the background).
+The service worker refreshes the cache in the background and shows an in-app
+"New version available" banner as soon as the new version is ready — tapping
+**Update** activates it and reloads immediately (no need to reopen the app).
 
 Local preview: `python -m http.server 8765` then open `http://localhost:8765`.
 There is no build step — it's plain HTML/CSS/JS.
@@ -160,10 +167,10 @@ There is no build step — it's plain HTML/CSS/JS.
 
 | File | Purpose |
 |---|---|
-| `index.html` | App shell, tab bar, service-worker registration |
-| `app.js` | All logic: state, session tracking, rest timer, plan editing, history, Claude import/export, Worker sync |
+| `index.html` | App shell, tab bar |
+| `app.js` | All logic: state, session tracking, rest timer, plan editing, history, Claude import/export, Worker sync, service-worker registration & update banner |
 | `styles.css` | Dark, mobile-first UI |
-| `sw.js` | Offline cache (stale-while-revalidate) |
+| `sw.js` | Offline cache (stale-while-revalidate); waits for user confirmation before activating a new version |
 | `manifest.webmanifest` | PWA install metadata |
 | `icon-180.png` / `icon-512.png` | Home-screen icons |
 | `tools/push-plan.mjs` | Desktop helper: pushes a new plan to the cloud (keeps history) so the phone auto-loads it |
