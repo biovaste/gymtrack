@@ -17,6 +17,11 @@ const fmtDate = iso => new Date(iso).toLocaleDateString(undefined, { weekday: 's
 const today = () => new Date().toISOString().slice(0, 10);
 const est1RM = (w, reps) => reps > 0 ? Math.round(w * (1 + reps / 30) * 10) / 10 : w;
 
+/* ================= CMJ flight-time math ================= */
+const G_MS2 = 9.81;
+const FPS_PRESETS = [30, 60, 120, 240];
+const computeJumpHeightCm = flightTimeSec => (G_MS2 * flightTimeSec * flightTimeSec / 8) * 100;
+
 /* ================= built-in exercise explanations (fallback) ================= */
 const EX_LIBRARY = {
   'bench press': 'Lie on a flat bench, grip the bar slightly wider than shoulder width, lower it to mid-chest with elbows ~45–70°, press back up. Keep shoulder blades pinched and feet planted.',
@@ -616,6 +621,7 @@ function viewActiveSession() {
             value="${active.readiness?.subjectiveEnergy ?? ''}" placeholder="—">
         </label>
       </div>
+      <button class="ghost wide mt8" data-action="cmj-open">🎥 Measure CMJ via video</button>
     </div>
     ${active.exercises.map((e, ei) => exerciseCard(e, ei)).join('')}
     <h2 class="section">Session notes</h2>
@@ -977,6 +983,210 @@ function exNoteModal(ei) {
     ]);
 }
 
+/* ================= CMJ video measurement ================= */
+// Lives outside the render cycle like `rest` — mutated directly, with
+// targeted DOM writes, rather than routed through the app's render().
+let cmjState = null; // { objectUrl, video, canvas, ctx, fps, seeking, lastMediaTime, takeoffTime, landingTime, pollTimer }
+
+function cmjVideoModal() {
+  cmjState = { objectUrl: null, video: null, canvas: null, ctx: null, fps: 30, seeking: false, lastMediaTime: 0, takeoffTime: null, landingTime: null, pollTimer: null };
+  showModal('Measure CMJ via video', `
+    <input type="file" id="cmj-file-input" accept="video/*" capture="environment">
+    <div id="cmj-fps-row" class="hidden mt8">
+      <span class="small muted">Recording frame rate</span>
+      <div class="cmj-fps-group mt8">
+        ${FPS_PRESETS.map(f => `<button type="button" data-fps="${f}" class="ghost icon-btn ${f === 30 ? 'active' : ''}">${f} fps</button>`).join('')}
+      </div>
+    </div>
+    <div id="cmj-stage" class="hidden mt12">
+      <div class="cmj-video-wrap"><canvas id="cmj-canvas" class="cmj-canvas"></canvas></div>
+      <input type="range" id="cmj-scrub" min="0" max="1" step="0.001" value="0" class="mt8" style="width:100%">
+      <div class="row between mt8">
+        <button type="button" class="ghost icon-btn" id="cmj-step-back">◀ frame</button>
+        <span id="cmj-time-readout" class="small muted">0:00.000 · frame 0</span>
+        <button type="button" class="ghost icon-btn" id="cmj-step-fwd">frame ▶</button>
+      </div>
+      <div class="cmj-marker-row mt12">
+        <button type="button" id="cmj-set-takeoff">Set takeoff</button>
+        <button type="button" id="cmj-set-landing">Set landing</button>
+      </div>
+      <div id="cmj-markers" class="small muted mt8"></div>
+      <div id="cmj-result" class="cmj-result hidden"></div>
+    </div>`,
+    [
+      { label: 'Use this value', cls: 'primary', fn: cmjAccept },
+      { label: 'Cancel', fn: cmjCancel }
+    ]);
+  cmjInitListeners();
+  const acceptBtn = document.querySelector('[data-idx="m0"]');
+  if (acceptBtn) acceptBtn.disabled = true;
+}
+
+function cmjInitListeners() {
+  const fileInput = document.getElementById('cmj-file-input');
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files && fileInput.files[0];
+    if (file) cmjOnFileSelected(file);
+  });
+  document.querySelectorAll('.cmj-fps-group [data-fps]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      cmjState.fps = parseInt(btn.dataset.fps, 10);
+      document.querySelectorAll('.cmj-fps-group [data-fps]').forEach(b => b.classList.toggle('active', b === btn));
+    });
+  });
+  document.getElementById('cmj-scrub').addEventListener('input', e => cmjOnScrubInput(parseFloat(e.target.value)));
+  document.getElementById('cmj-step-back').addEventListener('click', () => cmjSeekBy(-1));
+  document.getElementById('cmj-step-fwd').addEventListener('click', () => cmjSeekBy(1));
+  document.getElementById('cmj-set-takeoff').addEventListener('click', cmjSetTakeoff);
+  document.getElementById('cmj-set-landing').addEventListener('click', cmjSetLanding);
+}
+
+function cmjOnFileSelected(file) {
+  if (cmjState.objectUrl) URL.revokeObjectURL(cmjState.objectUrl);
+  cmjState.takeoffTime = null; cmjState.landingTime = null;
+  document.getElementById('cmj-result').classList.add('hidden');
+  document.getElementById('cmj-markers').innerHTML = '';
+  const acceptBtn = document.querySelector('[data-idx="m0"]');
+  if (acceptBtn) acceptBtn.disabled = true;
+
+  cmjState.objectUrl = URL.createObjectURL(file);
+  if (!cmjState.video) {
+    const video = document.createElement('video');
+    video.muted = true; video.playsInline = true; video.preload = 'auto';
+    video.addEventListener('error', () => {
+      toast('Could not load this video', 'err');
+      document.getElementById('cmj-stage').classList.add('hidden');
+    });
+    cmjState.video = video;
+  }
+  const video = cmjState.video;
+  video.src = cmjState.objectUrl;
+  video.addEventListener('loadedmetadata', function onMeta() {
+    video.removeEventListener('loadedmetadata', onMeta);
+    document.getElementById('cmj-fps-row').classList.remove('hidden');
+    document.getElementById('cmj-stage').classList.remove('hidden');
+    const canvas = document.getElementById('cmj-canvas');
+    canvas.width = video.videoWidth || 640; canvas.height = video.videoHeight || 360;
+    cmjState.canvas = canvas; cmjState.ctx = canvas.getContext('2d');
+    const scrub = document.getElementById('cmj-scrub');
+    scrub.max = String(video.duration || 1);
+    cmjState.seeking = true;
+    video.currentTime = 0;
+    cmjAfterSeek(cmjDrawFrame);
+  }, { once: true });
+}
+
+function cmjRvfcSupported() { return 'requestVideoFrameCallback' in HTMLVideoElement.prototype; }
+
+function cmjAfterSeek(cb) {
+  const video = cmjState.video;
+  if (cmjRvfcSupported()) {
+    video.requestVideoFrameCallback((now, metadata) => {
+      cmjState.lastMediaTime = metadata.mediaTime;
+      cmjState.seeking = false;
+      cb();
+    });
+  } else {
+    video.addEventListener('seeked', function onSeeked() {
+      video.removeEventListener('seeked', onSeeked);
+      cmjState.lastMediaTime = video.currentTime;
+      cmjState.seeking = false;
+      cb();
+    }, { once: true });
+  }
+}
+
+function cmjSeekBy(deltaFrames) {
+  if (!cmjState || !cmjState.video || cmjState.seeking) return;
+  const video = cmjState.video;
+  const next = Math.max(0, Math.min(video.duration || 0, video.currentTime + deltaFrames / cmjState.fps));
+  cmjState.seeking = true;
+  video.currentTime = next;
+  cmjAfterSeek(cmjDrawFrame);
+}
+
+function cmjOnScrubInput(value) {
+  if (!cmjState || !cmjState.video || cmjState.seeking) return;
+  cmjState.seeking = true;
+  cmjState.video.currentTime = value;
+  cmjAfterSeek(cmjDrawFrame);
+}
+
+function cmjDrawFrame() {
+  const { video, canvas, ctx, fps, lastMediaTime } = cmjState;
+  if (!video || !canvas || !ctx) return;
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  document.getElementById('cmj-scrub').value = String(lastMediaTime);
+  document.getElementById('cmj-time-readout').textContent = `${lastMediaTime.toFixed(3)}s · frame ${Math.round(lastMediaTime * fps)}`;
+}
+
+function cmjSetTakeoff() {
+  if (!cmjState) return;
+  cmjState.takeoffTime = cmjState.lastMediaTime;
+  cmjUpdateResultUI();
+}
+function cmjSetLanding() {
+  if (!cmjState) return;
+  cmjState.landingTime = cmjState.lastMediaTime;
+  cmjUpdateResultUI();
+}
+
+function cmjUpdateResultUI() {
+  const { takeoffTime, landingTime, fps } = cmjState;
+  const markersEl = document.getElementById('cmj-markers');
+  const resultEl = document.getElementById('cmj-result');
+  const acceptBtn = document.querySelector('[data-idx="m0"]');
+  const fmt = t => t == null ? '—' : `${t.toFixed(3)}s (frame ${Math.round(t * fps)})`;
+  markersEl.innerHTML = `Takeoff: ${fmt(takeoffTime)} &nbsp;·&nbsp; Landing: ${fmt(landingTime)}`;
+
+  if (takeoffTime == null || landingTime == null) {
+    resultEl.classList.add('hidden');
+    if (acceptBtn) acceptBtn.disabled = true;
+    return;
+  }
+  if (landingTime <= takeoffTime) {
+    resultEl.classList.remove('hidden');
+    resultEl.innerHTML = `<p class="small red">Landing must be after takeoff — re-mark one of the frames.</p>`;
+    if (acceptBtn) acceptBtn.disabled = true;
+    return;
+  }
+  const flightTimeSec = landingTime - takeoffTime;
+  const heightCm = computeJumpHeightCm(flightTimeSec);
+  const plausible = heightCm >= 3 && heightCm <= 180;
+  resultEl.classList.remove('hidden');
+  resultEl.innerHTML = `
+    <div class="big">${heightCm.toFixed(1)} cm</div>
+    <div class="small muted">flight time ${Math.round(flightTimeSec * 1000)} ms</div>
+    ${plausible ? '' : '<p class="small amber mt8">That seems unusually low/high — double check your markers.</p>'}`;
+  cmjState.resultHeightCm = heightCm;
+  cmjState.resultFlightTimeMs = Math.round(flightTimeSec * 1000);
+  if (acceptBtn) acceptBtn.disabled = false;
+}
+
+function cmjAccept() {
+  if (!cmjState || cmjState.resultHeightCm == null || !active) { cmjCancel(); return; }
+  active.readiness.cmjCm = Math.round(cmjState.resultHeightCm * 10) / 10;
+  active.readiness.flightTimeMs = cmjState.resultFlightTimeMs;
+  active.readiness.method = 'video';
+  saveActive();
+  cmjCleanup();
+  closeModal(); render();
+  toast('CMJ height set from video ✓');
+}
+
+function cmjCancel() {
+  cmjCleanup();
+  closeModal();
+}
+
+function cmjCleanup() {
+  if (!cmjState) return;
+  if (cmjState.objectUrl) URL.revokeObjectURL(cmjState.objectUrl);
+  if (cmjState.pollTimer) clearInterval(cmjState.pollTimer);
+  if (cmjState.video) cmjState.video.src = '';
+  cmjState = null;
+}
+
 /* ================= event wiring ================= */
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-action]');
@@ -986,7 +1196,7 @@ document.addEventListener('click', e => {
 
   switch (a) {
     /* navigation */
-    case 'modal-dismiss': if (e.target === el) closeModal(); break; // only when tapping the backdrop itself
+    case 'modal-dismiss': if (e.target === el) { closeModal(); if (cmjState) cmjCleanup(); } break; // only when tapping the backdrop itself
     case 'modal-btn': { const fn = modalActions[el.dataset.idx]; if (fn) fn(); else closeModal(); break; }
     case 'update-app': if (swWaiting) swWaiting.postMessage('skipWaiting'); break;
 
@@ -1034,6 +1244,7 @@ document.addEventListener('click', e => {
     case 'ex-swap': sessionSwapModal(+el.dataset.ei); break;
     case 'ex-note': exNoteModal(+el.dataset.ei); break;
     case 'plate-calc': showPlateCalculator(active.exercises[+el.dataset.ei].plannedWeight); break;
+    case 'cmj-open': cmjVideoModal(); break;
     case 'session-swap-pick': {
       const ei = +el.dataset.ei;
       doSessionSwap(ei, active.exercises[ei].alternates[+el.dataset.ai]);

@@ -152,6 +152,17 @@ label.field > span { display: block; margin-bottom: 5px; }
 .sheet h3 { font-size: 18px; margin-bottom: 12px; }
 .sheet .actions { display: flex; gap: 8px; margin-top: 14px; }
 .sheet .actions button { flex: 1; padding: 13px; }
+.sheet .actions button:disabled { opacity: .4; }
+
+/* ----- CMJ video modal ----- */
+.cmj-video-wrap { position: relative; background: #000; border-radius: 10px; overflow: hidden; }
+.cmj-canvas { display: block; width: 100%; height: auto; }
+.cmj-fps-group { display: flex; gap: 6px; flex-wrap: wrap; }
+.cmj-fps-group button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.cmj-marker-row { display: flex; gap: 8px; }
+.cmj-marker-row button { flex: 1; }
+.cmj-result { text-align: center; padding: 10px; }
+.cmj-result .big { font-size: 32px; font-weight: 800; }
 
 /* ----- toast ----- */
 #toast-root { position: fixed; top: calc(60px + var(--safe-top)); left: 0; right: 0; z-index: 60; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
