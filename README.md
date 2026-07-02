@@ -52,13 +52,13 @@ To test on this PC: `python -m http.server 8765` in this folder, then open
 
 ## Using it with Claude
 
-**Get your next plan:** Claude tab → **Copy coaching prompt + data** → paste into any
+**Get your next plan:** AI Coach tab → **Copy coaching prompt + data** → paste into any
 Claude chat. It contains your recent sessions (actual weights/reps/RPE), notes, body
 weight, your current plan, and instructions telling Claude to reply with a
 `workout-plan` JSON block.
 
-**Load the new plan:** copy Claude's JSON block → Claude tab → paste into
-**Import a plan from Claude** → Import. History is always kept.
+**Load the new plan:** copy Claude's JSON block → AI Coach tab → paste into
+**Import a plan** → Import. History is always kept.
 
 ### Automatic cloud sync — no setup required
 
@@ -71,13 +71,13 @@ Sync starts automatically on first launch. The app:
 
 ### Sharing data with an AI
 
-Claude tab → **Share with AI** → copies a URL you paste into any AI chat. Claude,
+AI Coach tab → **Share with AI** → copies a URL you paste into any AI chat. Claude,
 ChatGPT, and Gemini can all fetch the JSON from that link and reply with a new plan.
 
 ### Data recovery
 
-Claude tab → **Your backup code** shows your unique UUID. Save it somewhere safe
-(notes app, password manager). On a new device, open the app → Claude tab →
+Settings (gear icon, top right) → **Your backup code** shows your unique UUID. Save it
+somewhere safe (notes app, password manager). On a new device, open the app → Settings →
 **Restore from backup code** → paste your UUID — your full history is restored.
 
 ### Desktop → phone: push a plan with no copy-paste
@@ -86,7 +86,7 @@ Claude can push a plan from your desktop directly to your phone — the phone pi
 up automatically on next launch.
 
 ```bash
-# set your UUID once (copy it from Claude tab → "Your backup code"):
+# set your UUID once (copy it from Settings → "Your backup code"):
 set GYMTRACK_UUID=<your-uuid>
 
 # then push a plan:

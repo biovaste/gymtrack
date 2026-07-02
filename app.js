@@ -17,6 +17,32 @@ const fmtDate = iso => new Date(iso).toLocaleDateString(undefined, { weekday: 's
 const today = () => new Date().toISOString().slice(0, 10);
 const est1RM = (w, reps) => reps > 0 ? Math.round(w * (1 + reps / 30) * 10) / 10 : w;
 
+/* ================= inline SVG icons ================= */
+const ICONS = {
+  dumbbell: '<path d="M6.5 6.5v11M3.5 8.5v7M17.5 6.5v11M20.5 8.5v7M6.5 12h11"/>',
+  list: '<path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
+  chart: '<path d="M3 3v18h18M7.5 14.5l4-4.5 3 3 5.5-6.5"/>',
+  sparkle: '<path d="M12 3l2 5.6L19.5 10 14 12l-2 5.6L10 12 4.5 10 10 8.6 12 3z"/><path d="M19 15l.9 2.4 2.1.9-2.1.9L19 21.5l-.9-2.3-2.1-.9 2.1-.9L19 15z"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.08a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.08a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.08a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5h.01"/>',
+  plate: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/>',
+  swap: '<path d="M17 2.5l4 4-4 4M21 6.5H8a4 4 0 0 0-4 4M7 21.5l-4-4 4-4M3 17.5h13a4 4 0 0 0 4-4"/>',
+  note: '<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>',
+  back: '<path d="M15 18l-6-6 6-6"/>',
+  chevRight: '<path d="M9 18l6-6-6-6"/>',
+  chevDown: '<path d="M6 9l6 6 6-6"/>',
+  video: '<rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="M15.5 11l6-3.5v9l-6-3.5"/>',
+  copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>'
+};
+const icon = (name, size = 20) =>
+  `<svg class="icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
+function mountStaticIcons() {
+  document.querySelectorAll('[data-icon]').forEach(el => {
+    el.innerHTML = icon(el.dataset.icon, el.classList.contains('tab-icon') ? 22 : 20);
+  });
+}
+
 /* ================= CMJ flight-time math ================= */
 const G_MS2 = 9.81;
 const FPS_PRESETS = [30, 60, 120, 240];
@@ -114,10 +140,14 @@ let gymUUID = (() => {
   if (!id) { id = crypto.randomUUID(); localStorage.setItem('gymtrack_uuid', id); }
   return id;
 })();
+let aliases = store.get('aliases', {}); // { aliasLowercase: 'Canonical Name' } — display-time merge of exercise names
 let tab = 'workout';
+let prevTab = 'workout';      // where the settings view returns to
 let expandedDay = null;       // plan view expansion
 let expandedSession = null;   // history view expansion
 let historyExercise = '';     // history exercise picker
+let exExpanded = new Set();   // manually re-expanded completed exercises in the active session
+let readinessOpen = null;     // null = auto (open until data/sets exist), true/false = manual override
 
 /* cloud-sync runtime state */
 let dataUpdatedAt = store.get('updatedAt', 0); // last meaningful local change (for last-write-wins)
@@ -134,6 +164,7 @@ function touch() {
   if (syncReady) scheduleSync();
 }
 const savePlan = () => { store.set('plan', plan); touch(); };
+const saveAliases = () => { store.set('aliases', aliases); touch(); };
 const saveSessions = () => { store.set('sessions', sessions); touch(); };
 const saveActive = () => active ? store.set('active', active) : store.del('active'); // intentionally not synced (local until finished)
 const saveBW = () => { store.set('bw', bodyWeight); touch(); };
@@ -297,6 +328,25 @@ function normalizePlan(raw) {
   return p;
 }
 
+/* ================= exercise name aliases ================= */
+// Aliases merge name variants ("Bench Pres", "BB Bench") into one canonical
+// exercise at read time — session records themselves are never rewritten.
+function canonicalName(name) {
+  const n = String(name || '').trim();
+  return aliases[n.toLowerCase()] || n;
+}
+const sameExercise = (a, b) => canonicalName(a).toLowerCase() === canonicalName(b).toLowerCase();
+// Most recent logged performance of an exercise (alias-aware), for the
+// "Last:" line on session cards.
+function lastPerformance(name) {
+  for (let i = sessions.length - 1; i >= 0; i--) {
+    for (const e of sessions[i].exercises) {
+      if (sameExercise(e.name, name) && e.sets.length) return { date: sessions[i].date, sets: e.sets };
+    }
+  }
+  return null;
+}
+
 /* ================= session logic ================= */
 function startSession(dayId) {
   const day = plan.days.find(d => d.id === dayId);
@@ -313,6 +363,7 @@ function startSession(dayId) {
       sets: Array.from({ length: e.sets }, () => ({ weight: e.weight, reps: parseRepsLow(e.reps), rpe: e.targetRpe, done: false }))
     }))
   };
+  exExpanded = new Set(); readinessOpen = null;
   saveActive(); syncWakeLock(); render();
   toast('Session started — go crush it 💪');
 }
@@ -338,12 +389,13 @@ function finishSession() {
   const prs = detectPRs(record);
   sessions.push(record); saveSessions();
   active = null; saveActive(); stopRest(); syncWakeLock();
+  exExpanded = new Set(); readinessOpen = null;
   closeModal(); render();
   const setCount = record.exercises.reduce((n, e) => n + e.sets.length, 0);
   let html = `<p>Saved <b>${esc(record.dayName)}</b> — ${setCount} sets in ${fmtDur(durationMin)}.</p>`;
   if (prs.length) html += `<p class="mt8">🏆 New PRs: ${prs.map(p => `<span class="pr-badge">${esc(p)}</span>`).join(' ')}</p>`;
   const syncing = settings.autoSync;
-  html += `<p class="muted small mt8">${syncing ? '☁️ Syncing to the cloud for Claude…' : 'Head to the Claude tab to export this for your next plan update.'}</p>`;
+  html += `<p class="muted small mt8">${syncing ? '☁️ Syncing to the cloud for your AI coach…' : 'Head to the AI Coach tab to export this for your next plan update.'}</p>`;
   showModal('Workout complete 🎉', html);
   beep(2, 1100);
   if (syncing) workerPush({ silent: true }); // push the finished session right away
@@ -354,10 +406,10 @@ function detectPRs(record) {
     const newBest = Math.max(...e.sets.map(s => est1RM(s.weight, s.reps)));
     let oldBest = 0;
     for (const s of sessions) for (const ex of s.exercises) {
-      if (ex.name.toLowerCase() === e.name.toLowerCase())
+      if (sameExercise(ex.name, e.name))
         for (const set of ex.sets) oldBest = Math.max(oldBest, est1RM(set.weight, set.reps));
     }
-    if (newBest > oldBest && oldBest > 0) prs.push(e.name);
+    if (newBest > oldBest && oldBest > 0) prs.push(canonicalName(e.name));
   }
   return prs;
 }
@@ -375,7 +427,7 @@ function buildBackup() {
   return JSON.stringify({
     type: 'gymtrack-backup', version: 1, exportedAt: new Date().toISOString(),
     updatedAt: dataUpdatedAt,
-    plan, sessions, bodyWeight, settings: { unit: settings.unit, sound: settings.sound, vibrate: settings.vibrate }
+    plan, sessions, bodyWeight, aliases, settings: { unit: settings.unit, sound: settings.sound, vibrate: settings.vibrate }
   }, null, 2);
 }
 function restoreBackup(raw) {
@@ -383,10 +435,11 @@ function restoreBackup(raw) {
   if (b.type !== 'gymtrack-backup') throw new Error('Not a GymTrack backup (expected type "gymtrack-backup").');
   plan = normalizePlan(b.plan); sessions = Array.isArray(b.sessions) ? b.sessions : [];
   bodyWeight = Array.isArray(b.bodyWeight) ? b.bodyWeight : [];
+  aliases = b.aliases && typeof b.aliases === 'object' ? b.aliases : {};
   if (b.settings) Object.assign(settings, { unit: b.settings.unit, sound: b.settings.sound, vibrate: b.settings.vibrate });
   // Adopt the source timestamp so we don't immediately bounce the same data back.
   dataUpdatedAt = b.updatedAt || Date.now();
-  store.set('plan', plan); store.set('sessions', sessions); store.set('bw', bodyWeight);
+  store.set('plan', plan); store.set('sessions', sessions); store.set('bw', bodyWeight); store.set('aliases', aliases);
   store.set('updatedAt', dataUpdatedAt); saveSettings();
 }
 const CLAUDE_PROMPT = () => `You are my strength coach. Below is my recent training data exported from my GymTrack app (JSON). Review my actual sets, reps, weights, RPE, notes and body weight, then write my next workout plan.
@@ -530,6 +583,47 @@ async function autoSyncOnLoad() {
   syncReady = true;
 }
 
+/* ================= restore from backup code ================= */
+// Shared by the settings view and the onboarding "I have a backup code" flow.
+function restoreFromCode(raw) {
+  if (!raw) { toast('Paste your backup code first', 'err'); return; }
+  const match = raw.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+  if (!match) { toast('Invalid backup code', 'err'); return; }
+  const newUUID = match[1].toLowerCase();
+  localStorage.setItem('gymtrack_uuid', newUUID);
+  gymUUID = newUUID;
+  setSyncState('syncing');
+  (async () => {
+    try {
+      const r = await workerFetch();
+      if (!r) { toast('No data found for this backup code', 'err'); setSyncState('error', 'Not found'); return; }
+      restoreBackup(r.raw); closeModal(); render(); setSyncState('ok'); toast('Restored ✓');
+    } catch (e) { setSyncState('error', e.message); toast('Restore failed: ' + e.message, 'err'); }
+  })();
+}
+
+/* ================= first-run onboarding ================= */
+function showOnboarding() {
+  showModal('Welcome to GymTrack', `
+    <div class="onboard-row">${icon('dumbbell', 22)}<div><b>Log your workouts</b><div class="muted small">Sets, reps, RPE — with a rest timer that runs itself.</div></div></div>
+    <div class="onboard-row">${icon('sparkle', 22)}<div><b>Your AI coach writes the next plan</b><div class="muted small">Share your training data with Claude, ChatGPT or Gemini in one tap.</div></div></div>
+    <div class="onboard-row">${icon('link', 22)}<div><b>Everything syncs automatically</b><div class="muted small">Your backup code (in Settings) restores it all on any device.</div></div></div>
+    <p class="small muted mt12">A starter Push / Pull / Legs plan is loaded — edit it in the Plan tab or import your own.</p>`,
+    [
+      { label: 'Get started', cls: 'primary', fn: () => { store.set('onboarded', 1); closeModal(); } },
+      { label: 'I have a backup code', fn: () => {
+          store.set('onboarded', 1);
+          showModal('Restore your data', `
+            <p class="small muted">Paste the backup code (or share URL) from your old device.</p>
+            <input id="restore-uuid-input" class="mt8" placeholder="Paste your backup code" style="width:100%;box-sizing:border-box">`,
+            [
+              { label: 'Restore', cls: 'primary', fn: () => restoreFromCode(mval('restore-uuid-input')) },
+              { label: 'Cancel' }
+            ]);
+        } }
+    ]);
+}
+
 /* ================= service worker updates ================= */
 // sw.js intentionally does NOT call skipWaiting() on install, so a newly
 // installed worker sits in "waiting" until the user taps the banner below —
@@ -564,12 +658,14 @@ function initServiceWorkerUpdates() {
 
 /* ================= views ================= */
 function render() {
+  hideStepper(); // any focused set input is about to be replaced
   const app = document.getElementById('app');
   document.querySelectorAll('#tabbar .tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   if (tab === 'workout') app.innerHTML = active ? viewActiveSession() : viewStart();
   else if (tab === 'plan') app.innerHTML = viewPlan();
   else if (tab === 'history') app.innerHTML = viewHistory();
-  else app.innerHTML = viewClaude();
+  else if (tab === 'settings') app.innerHTML = viewSettings();
+  else app.innerHTML = viewCoach();
 }
 
 /* ---- workout: pick a day ---- */
@@ -597,12 +693,26 @@ function viewStart() {
 
 /* ---- workout: active session ---- */
 function viewActiveSession() {
+  const totalSets = active.exercises.reduce((n, e) => n + e.sets.length, 0);
+  const doneSets = active.exercises.reduce((n, e) => n + e.sets.filter(s => s.done).length, 0);
+  const pct = totalSets ? Math.round((doneSets / totalSets) * 100) : 0;
+  const r = active.readiness || {};
+  const hasReadiness = r.cmjCm != null || r.broadJumpCm != null || r.subjectiveEnergy != null;
+  const readinessExpanded = readinessOpen != null ? readinessOpen : !(hasReadiness || doneSets > 0);
+  const readinessSummary = hasReadiness
+    ? [r.cmjCm != null ? `CMJ ${r.cmjCm}` : '', r.broadJumpCm != null ? `Broad ${r.broadJumpCm}` : '', r.subjectiveEnergy != null ? `Energy ${r.subjectiveEnergy}` : ''].filter(Boolean).join(' · ')
+    : 'tap to log CMJ / energy';
   return `
     <div class="row between">
       <h2 class="section" style="margin:4px">${esc(active.dayName)}</h2>
       <button class="danger icon-btn" data-action="confirm-finish">Finish</button>
     </div>
-    <h2 class="section">Pre-session readiness <span class="muted small">(optional)</span></h2>
+    <div class="session-progress">
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <span class="small muted progress-label">${doneSets}/${totalSets} sets</span>
+    </div>
+    ${readinessExpanded ? `
+    <h2 class="section tappable" data-action="readiness-toggle">Pre-session readiness <span class="muted small">(optional)</span> <span class="chev">${icon('chevDown', 14)}</span></h2>
     <div class="card">
       <div class="row" style="gap:12px">
         <label style="flex:1">
@@ -621,8 +731,14 @@ function viewActiveSession() {
             value="${active.readiness?.subjectiveEnergy ?? ''}" placeholder="—">
         </label>
       </div>
-      <button class="ghost wide mt8" data-action="cmj-open">🎥 Measure CMJ via video</button>
-    </div>
+      <button class="ghost wide mt8" data-action="cmj-open">${icon('video', 16)} Measure CMJ via video</button>
+    </div>` : `
+    <div class="card collapsed-ex tappable" data-action="readiness-toggle">
+      <div class="row between">
+        <div class="grow"><span class="bold small">Readiness</span> <span class="muted small">· ${esc(readinessSummary)}</span></div>
+        <span class="chev">${icon('chevRight', 16)}</span>
+      </div>
+    </div>`}
     ${active.exercises.map((e, ei) => exerciseCard(e, ei)).join('')}
     <h2 class="section">Session notes</h2>
     <div class="card">
@@ -633,17 +749,31 @@ function viewActiveSession() {
 function exerciseCard(e, ei) {
   const doneCount = e.sets.filter(s => s.done).length;
   const allDone = doneCount === e.sets.length && e.sets.length > 0;
+  if (allDone && !exExpanded.has(ei)) {
+    const best = e.sets.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
+    return `
+    <div class="card collapsed-ex tappable" data-action="ex-expand" data-ei="${ei}">
+      <div class="row between">
+        <div class="grow"><span class="green bold">✓</span> <span class="bold">${esc(e.name)}</span>
+          <span class="muted small">· ${e.sets.length} sets · best ${best.weight}×${best.reps}</span></div>
+        <span class="chev">${icon('chevDown', 18)}</span>
+      </div>
+    </div>`;
+  }
+  const lastP = lastPerformance(e.name);
+  const lastRpe = lastP ? Math.max(0, ...lastP.sets.map(s => s.rpe || 0)) : 0;
   return `
   <div class="card">
     <div class="row between">
       <div class="grow">
         <div class="ex-name">${allDone ? '✅ ' : ''}${esc(e.name)}</div>
         <div class="target-line">Plan: ${e.plannedSets}×${esc(e.plannedReps)} @ ${e.plannedWeight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''} · rest ${fmtClock(e.restSeconds)}</div>
+        ${lastP ? `<div class="last-line">Last: ${lastP.sets.map(s => `${s.weight}×${s.reps}`).join(' · ')}${lastRpe ? ` @RPE ${lastRpe}` : ''} — ${fmtDate(lastP.date)}</div>` : ''}
         ${e.swappedFrom ? `<div class="swap-note">↺ swapped from ${esc(e.swappedFrom)}</div>` : ''}
       </div>
-      <button class="icon-btn" data-action="ex-info" data-ei="${ei}" title="Explain">ℹ️</button>
-      <button class="icon-btn" data-action="plate-calc" data-ei="${ei}" title="Plate calculator">🏋️</button>
-      <button class="icon-btn" data-action="ex-swap" data-ei="${ei}" title="Swap">🔁</button>
+      <button class="icon-btn" data-action="ex-info" data-ei="${ei}" title="Explain">${icon('info', 18)}</button>
+      <button class="icon-btn" data-action="plate-calc" data-ei="${ei}" title="Plate calculator">${icon('plate', 18)}</button>
+      <button class="icon-btn" data-action="ex-swap" data-ei="${ei}" title="Swap">${icon('swap', 18)}</button>
     </div>
     <div class="set-grid">
       <div class="head">#</div><div class="head">${unit()}</div><div class="head">Reps</div><div class="head">RPE</div><div class="head">✓</div>
@@ -651,13 +781,13 @@ function exerciseCard(e, ei) {
         <div class="set-no">${si + 1}</div>
         <input class="${s.done ? 'set-row-done-i' : ''}" type="number" inputmode="decimal" step="0.5" value="${s.weight != null ? s.weight : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="weight" ${s.done ? 'style="border-color:var(--green)"' : ''}>
         <input type="number" inputmode="numeric" value="${s.reps != null ? s.reps : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="reps" ${s.done ? 'style="border-color:var(--green)"' : ''}>
-        <input type="number" inputmode="decimal" step="0.5" min="1" max="10" value="${s.rpe != null ? s.rpe : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="rpe" ${s.done ? 'style="border-color:var(--green)"' : ''}>
+        <button class="rpe-btn ${s.rpe != null ? '' : 'muted'}" data-action="rpe-pick" data-ei="${ei}" data-si="${si}" ${s.done ? 'style="border-color:var(--green)"' : ''}>${s.rpe != null ? s.rpe : '—'}</button>
         <button class="set-done-btn ${s.done ? 'success' : ''}" data-action="set-done" data-ei="${ei}" data-si="${si}">${s.done ? '✓' : '○'}</button>`).join('')}
     </div>
     <div class="row mt12">
       <button class="ghost icon-btn" data-action="set-add" data-ei="${ei}">+ Set</button>
       <button class="ghost icon-btn" data-action="set-remove" data-ei="${ei}">− Set</button>
-      <button class="ghost icon-btn grow" data-action="ex-note" data-ei="${ei}">${e.notes ? '📝 ' + esc(e.notes.slice(0, 24)) + (e.notes.length > 24 ? '…' : '') : '📝 Note'}</button>
+      <button class="ghost icon-btn grow note-btn" data-action="ex-note" data-ei="${ei}">${icon('note', 15)} ${e.notes ? esc(e.notes.slice(0, 24)) + (e.notes.length > 24 ? '…' : '') : 'Note'}</button>
     </div>
   </div>`;
 }
@@ -680,7 +810,7 @@ function viewPlan() {
         <div class="row between tappable" data-action="day-toggle" data-id="${d.id}">
           <div class="bold grow">${esc(d.name)}</div>
           <span class="day-pill">${d.exercises.length} exercise${d.exercises.length === 1 ? '' : 's'}</span>
-          <span class="chev">${open ? '▾' : '▸'}</span>
+          <span class="chev">${icon(open ? 'chevDown' : 'chevRight', 16)}</span>
         </div>
         ${open ? `
           <div class="divider"></div>
@@ -690,7 +820,7 @@ function viewPlan() {
                 <div class="bold">${esc(e.name)}</div>
                 <div class="muted small">${e.sets}×${esc(e.reps)} @ ${e.weight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''} · rest ${fmtClock(e.restSeconds)}${e.alternates.length ? ' · ' + e.alternates.length + ' alt' : ''}</div>
               </div>
-              <span class="chev">›</span>
+              <span class="chev">${icon('chevRight', 16)}</span>
             </div>`).join('')}
           <div class="row mt8">
             <button class="ghost icon-btn" data-action="ex-add" data-day="${d.id}">+ Exercise</button>
@@ -700,37 +830,102 @@ function viewPlan() {
       </div>`;
     }).join('')}
     <button class="wide mt8" data-action="day-add">+ Add day</button>
-    <p class="muted small mt12" style="text-align:center">Tap an exercise to edit targets, swap alternates, or read how to do it.<br>Import a whole new plan from Claude in the ✳️ tab.</p>`;
+    <p class="muted small mt12" style="text-align:center">Tap an exercise to edit targets, swap alternates, or read how to do it.<br>Import a whole new plan in the AI Coach tab.</p>`;
 }
 
 /* ---- history view ---- */
 function exerciseHistory(name) {
   const rows = [];
   for (const s of sessions) for (const e of s.exercises) {
-    if (e.name.toLowerCase() === name.toLowerCase() && e.sets.length) {
+    if (sameExercise(e.name, name) && e.sets.length) {
       const best = e.sets.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
       rows.push({ date: s.date, best, e1rm: est1RM(best.weight, best.reps), sets: e.sets });
     }
   }
   return rows;
 }
-function sparkline(values, w = 300, h = 46) {
-  if (values.length < 2) return '';
-  const min = Math.min(...values), max = Math.max(...values), span = (max - min) || 1;
-  const pts = values.map((v, i) => `${(i / (values.length - 1)) * (w - 8) + 4},${h - 6 - ((v - min) / span) * (h - 12)}`).join(' ');
-  return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+// Line chart with min/max value labels and first/last date labels.
+// points: [{ v: number, d: dateIso }]
+function chartSvg(points, w = 320, h = 84) {
+  if (points.length < 2) return '';
+  const vals = points.map(p => p.v);
+  const min = Math.min(...vals), max = Math.max(...vals), span = (max - min) || 1;
+  const padL = 38, padR = 10, top = 10, bottom = 20;
+  const plotW = w - padL - padR, plotH = h - top - bottom;
+  const x = i => padL + (i / (points.length - 1)) * plotW;
+  const y = v => top + plotH - ((v - min) / span) * plotH;
+  const pts = points.map((p, i) => `${x(i)},${y(p.v)}`).join(' ');
+  const fmtD = iso => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const fmtV = v => String(Math.round(v * 10) / 10);
+  return `<svg class="spark" width="100%" viewBox="0 0 ${w} ${h}">
+    <line x1="${padL}" y1="${y(max)}" x2="${w - padR}" y2="${y(max)}" stroke="var(--border)" stroke-dasharray="3 4"/>
+    ${max !== min ? `<line x1="${padL}" y1="${y(min)}" x2="${w - padR}" y2="${y(min)}" stroke="var(--border)" stroke-dasharray="3 4"/>` : ''}
+    <text x="${padL - 6}" y="${y(max) + 3.5}" text-anchor="end" class="chart-label">${fmtV(max)}</text>
+    ${max !== min ? `<text x="${padL - 6}" y="${y(min) + 3.5}" text-anchor="end" class="chart-label">${fmtV(min)}</text>` : ''}
     <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-    ${values.map((v, i) => `<circle cx="${(i / (values.length - 1)) * (w - 8) + 4}" cy="${h - 6 - ((v - min) / span) * (h - 12)}" r="3" fill="var(--accent)"/>`).join('')}
+    ${points.map((p, i) => `<circle cx="${x(i)}" cy="${y(p.v)}" r="3" fill="var(--accent)"/>`).join('')}
+    <text x="${padL}" y="${h - 4}" class="chart-label">${fmtD(points[0].d)}</text>
+    <text x="${w - padR}" y="${h - 4}" text-anchor="end" class="chart-label">${fmtD(points[points.length - 1].d)}</text>
+  </svg>`;
+}
+/* weekly totals for the last N weeks (Monday-based) */
+function weeklyStats(weeks = 8) {
+  const thisMon = new Date(); thisMon.setHours(0, 0, 0, 0);
+  thisMon.setDate(thisMon.getDate() - ((thisMon.getDay() + 6) % 7));
+  const out = [];
+  for (let i = weeks - 1; i >= 0; i--) {
+    const start = new Date(thisMon); start.setDate(start.getDate() - i * 7);
+    out.push({ start, sessions: 0, sets: 0, volume: 0 });
+  }
+  for (const s of sessions) {
+    const t = new Date(s.date);
+    for (const wk of out) {
+      if (t >= wk.start && t < new Date(wk.start.getTime() + 7 * 864e5)) {
+        wk.sessions++;
+        for (const e of s.exercises) {
+          wk.sets += e.sets.length;
+          for (const st of e.sets) wk.volume += (st.weight || 0) * (st.reps || 0);
+        }
+      }
+    }
+  }
+  return out;
+}
+function weeklyBarsSvg(stats, w = 320, h = 96) {
+  const maxSets = Math.max(1, ...stats.map(s => s.sets));
+  const padL = 6, padR = 6, top = 14, bottom = 18;
+  const plotH = h - top - bottom;
+  const bw = (w - padL - padR) / stats.length;
+  const label = d => d.getDate() + '.' + (d.getMonth() + 1) + '.';
+  return `<svg class="spark" width="100%" viewBox="0 0 ${w} ${h}">
+    ${stats.map((s, i) => {
+      const bh = (s.sets / maxSets) * plotH;
+      const x = padL + i * bw + bw * 0.18, width = bw * 0.64;
+      const y = top + plotH - bh;
+      return `
+        ${s.sets ? `<rect x="${x}" y="${y}" width="${width}" height="${Math.max(bh, 2)}" rx="3" fill="${i === stats.length - 1 ? 'var(--accent)' : 'var(--accent2)'}"/>
+        <text x="${x + width / 2}" y="${y - 4}" text-anchor="middle" class="chart-label">${s.sets}</text>` : ''}
+        <text x="${x + width / 2}" y="${h - 4}" text-anchor="middle" class="chart-label">${label(s.start)}</text>`;
+    }).join('')}
   </svg>`;
 }
 function viewHistory() {
-  const exNames = [...new Set(sessions.flatMap(s => s.exercises.map(e => e.name)))].sort();
+  const exNames = [...new Set(sessions.flatMap(s => s.exercises.map(e => canonicalName(e.name))))].sort();
   if (historyExercise && !exNames.includes(historyExercise)) historyExercise = '';
   const sel = historyExercise || exNames[0] || '';
   const hist = sel ? exerciseHistory(sel) : [];
   const prBest = hist.length ? Math.max(...hist.map(r => r.e1rm)) : 0;
   const bwLast = bodyWeight[bodyWeight.length - 1];
+  const weeks = sessions.length ? weeklyStats(8) : [];
+  const thisWeek = weeks[weeks.length - 1];
   return `
+    ${sessions.length ? `
+    <h2 class="section">Weekly training</h2>
+    <div class="card">
+      ${weeklyBarsSvg(weeks)}
+      <div class="muted small mt8">This week: <b class="green">${thisWeek.sessions} session${thisWeek.sessions === 1 ? '' : 's'}</b> · ${thisWeek.sets} sets · ${Math.round(thisWeek.volume).toLocaleString()} ${unit()} lifted</div>
+    </div>` : ''}
+
     <h2 class="section">Body weight</h2>
     <div class="card">
       <div class="row">
@@ -739,7 +934,7 @@ function viewHistory() {
         <button class="primary grow" data-action="bw-add">Log today</button>
       </div>
       ${bodyWeight.length ? `
-        ${sparkline(bodyWeight.slice(-15).map(b => b.weight))}
+        ${chartSvg(bodyWeight.slice(-15).map(b => ({ v: b.weight, d: b.date })))}
         <div class="muted small mt8">Latest: <b class="green">${bwLast.weight} ${unit()}</b> on ${fmtDate(bwLast.date)} · ${bodyWeight.length} entries
           <button class="ghost icon-btn small" data-action="bw-undo" style="float:right">undo last</button></div>` : ''}
     </div>
@@ -749,7 +944,7 @@ function viewHistory() {
       ${exNames.length ? `
         <select data-bind="history-ex">${exNames.map(n => `<option ${n === sel ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
         ${hist.length ? `
-          ${sparkline(hist.slice(-12).map(r => r.e1rm))}
+          ${chartSvg(hist.slice(-12).map(r => ({ v: r.e1rm, d: r.date })))}
           <div class="muted small mt8">Best est. 1RM: <b class="amber">${prBest} ${unit()}</b></div>
           <div class="divider"></div>
           ${hist.slice(-8).reverse().map(r => `
@@ -757,7 +952,8 @@ function viewHistory() {
               <span class="muted small">${fmtDate(r.date)}</span>
               <span class="small">${r.sets.map(s => `${s.weight}×${s.reps}`).join(' · ')}</span>
               <span class="small bold ${r.e1rm >= prBest ? 'amber' : ''}">${r.e1rm >= prBest ? '🏆 ' : ''}e1RM ${r.e1rm}</span>
-            </div>`).join('')}` : '<p class="muted mt8">No logged sets for this exercise yet.</p>'}`
+            </div>`).join('')}` : '<p class="muted mt8">No logged sets for this exercise yet.</p>'}
+        ${exNames.length > 1 || Object.keys(aliases).length ? `<button class="ghost wide mt8 small" data-action="merge-names" data-name="${esc(sel)}">Merge names…</button>` : ''}`
       : '<p class="empty"><span class="big">📈</span>Finish your first workout and your progress will show up here.</p>'}
     </div>
 
@@ -772,7 +968,7 @@ function viewHistory() {
             <div class="bold">${esc(s.dayName)}</div>
             <div class="muted small">${fmtDate(s.date)} · ${fmtDur(s.durationMin)} · ${setCount} sets</div>
           </div>
-          <span class="chev">${open ? '▾' : '▸'}</span>
+          <span class="chev">${icon(open ? 'chevDown' : 'chevRight', 16)}</span>
         </div>
         ${open ? `
           <div class="divider"></div>
@@ -788,47 +984,70 @@ function viewHistory() {
     }).join('') : '<p class="empty"><span class="big">🗓️</span>No sessions yet.</p>'}`;
 }
 
-/* ---- claude tab ---- */
-function viewClaude() {
+/* ---- merge exercise names (aliases) ---- */
+function mergeNamesModal(selName) {
+  const sel = canonicalName(selName);
+  const others = [...new Set(sessions.flatMap(s => s.exercises.map(e => canonicalName(e.name))))]
+    .filter(n => n.toLowerCase() !== sel.toLowerCase()).sort();
+  const currentAliases = Object.keys(aliases).filter(k => aliases[k].toLowerCase() === sel.toLowerCase()).sort();
+  showModal('Merge into "' + sel + '"', `
+    <p class="small muted">Tick names that are really the same exercise as <b>${esc(sel)}</b> (typos, abbreviations). Their history shows up under this name — the original logs are untouched.</p>
+    ${others.length ? others.map(n => `
+      <label class="merge-row"><input type="checkbox" class="merge-cb" value="${esc(n)}"><span>${esc(n)}</span></label>`).join('')
+      : '<p class="muted small mt8">No other exercise names in your history.</p>'}
+    ${currentAliases.length ? `<div class="divider"></div><p class="small muted">Already merged into this name:</p>
+      ${currentAliases.map(k => `<div class="row between mt8"><span class="small">${esc(k)}</span><button class="ghost icon-btn red" data-action="unmerge-alias" data-k="${esc(k)}" data-name="${esc(sel)}">Remove</button></div>`).join('')}` : ''}`,
+    [
+      { label: 'Merge', cls: 'primary', fn: () => {
+          const checked = [...document.querySelectorAll('.merge-cb:checked')].map(c => c.value);
+          if (!checked.length) { closeModal(); return; }
+          for (const n of checked) {
+            aliases[n.toLowerCase()] = sel;
+            // repoint anything that already aliased to the merged name
+            for (const k of Object.keys(aliases)) if (aliases[k].toLowerCase() === n.toLowerCase()) aliases[k] = sel;
+          }
+          historyExercise = sel;
+          saveAliases(); closeModal(); render();
+          toast('Merged under ' + sel + ' ✓');
+        } },
+      { label: 'Cancel' }
+    ]);
+}
+
+/* ---- AI coach tab ---- */
+function viewCoach() {
   return `
-    <h2 class="section">Get your data to Claude</h2>
+    <h2 class="section">Share with AI</h2>
     <div class="card">
-      <p class="small muted">Copies a coaching prompt + your last 15 sessions, body weight and current plan. Paste it into any Claude chat and ask for your next plan.</p>
-      <button class="primary wide mt12" data-action="copy-coach">📋 Copy coaching prompt + data</button>
+      <button class="primary wide" data-action="share-ai">${icon('link', 18)} Share with AI</button>
+      <p class="small muted mt8">Copies a link you can paste into Claude, ChatGPT, or Gemini. The AI fetches your latest training data automatically — ask it to review your training or write your next plan.</p>
+      <div id="sync-status" class="mt8">${syncStatusHtml()}</div>
+    </div>
+
+    <h2 class="section">Or copy your data directly</h2>
+    <div class="card">
+      <p class="small muted">Copies a coaching prompt + your last 15 sessions, body weight and current plan. Paste it into any AI chat.</p>
+      <button class="wide mt12" data-action="copy-coach">${icon('copy', 18)} Copy coaching prompt + data</button>
       <button class="ghost wide mt8" data-action="copy-data">Copy raw data only</button>
     </div>
 
-    <h2 class="section">Import a plan from Claude</h2>
+    <h2 class="section">Import a plan</h2>
     <div class="card">
-      <p class="small muted">Paste the <code class="inline">workout-plan</code> JSON code block Claude gives you. It replaces your current plan (history is kept).</p>
+      <p class="small muted">Paste the <code class="inline">workout-plan</code> JSON code block your AI coach gives you. It replaces your current plan (history is kept).</p>
       <textarea id="import-area" class="mt8" placeholder='{"type":"workout-plan", "days":[...]}'></textarea>
       <button class="primary wide mt8" data-action="import-plan">Import plan</button>
+    </div>`;
+}
+
+/* ---- settings view (reached via the topbar gear, not a tab) ---- */
+function viewSettings() {
+  return `
+    <div class="row settings-head">
+      <button class="icon-btn ghost" data-action="settings-back" aria-label="Back">${icon('back', 22)}</button>
+      <h2 class="settings-title">Settings</h2>
     </div>
 
-    <h2 class="section">Cloud sync & AI access</h2>
-    <div class="card">
-      <div class="row between">
-        <span class="bold">Auto-sync</span>
-        <button class="icon-btn ${settings.autoSync ? 'success' : ''}" data-action="toggle-autosync">${settings.autoSync ? 'On' : 'Off'}</button>
-      </div>
-      <div id="sync-status" class="mt8">${syncStatusHtml()}</div>
-      <p class="small muted mt8">Syncs automatically after every workout — no setup needed.</p>
-      <div class="divider"></div>
-      <p class="small muted"><b>Share with AI</b></p>
-      <button class="primary wide mt8" data-action="share-ai">🔗 Share with AI</button>
-      <p class="small muted mt8">Copies a link you can paste into Claude, ChatGPT, or Gemini. The AI fetches your latest training data automatically.</p>
-      <div class="divider"></div>
-      <p class="small muted"><b>Your backup code</b></p>
-      <code class="inline" style="word-break:break-all;display:block;margin-top:6px;user-select:all">${esc(gymUUID)}</code>
-      <button class="ghost wide mt8" data-action="copy-uuid">Copy backup code</button>
-      <p class="small muted mt8">Save this somewhere safe. If you lose your phone or clear the app, paste it into Restore below to recover all your data on a new device.</p>
-      <div class="divider"></div>
-      <p class="small muted"><b>Restore from backup code</b></p>
-      <input id="restore-uuid-input" class="mt8" placeholder="Paste your backup code or full share URL" style="width:100%;box-sizing:border-box">
-      <button class="ghost wide mt8" data-action="restore-uuid">Restore</button>
-    </div>
-
-    <h2 class="section">Settings</h2>
+    <h2 class="section">Preferences</h2>
     <div class="card">
       <div class="row between" style="padding:6px 0">
         <span>Weight unit</span>
@@ -843,6 +1062,25 @@ function viewClaude() {
         <button class="icon-btn ${settings.vibrate ? 'success' : ''}" data-action="toggle-vibrate">${settings.vibrate ? 'On' : 'Off'}</button>
       </div>
       <button class="ghost wide mt8" data-action="test-sound">🔊 Test the rest-timer sound</button>
+    </div>
+
+    <h2 class="section">Cloud sync</h2>
+    <div class="card">
+      <div class="row between">
+        <span class="bold">Auto-sync</span>
+        <button class="icon-btn ${settings.autoSync ? 'success' : ''}" data-action="toggle-autosync">${settings.autoSync ? 'On' : 'Off'}</button>
+      </div>
+      <div id="sync-status" class="mt8">${syncStatusHtml()}</div>
+      <p class="small muted mt8">Syncs automatically after every workout — no setup needed.</p>
+      <div class="divider"></div>
+      <p class="small muted"><b>Your backup code</b></p>
+      <code class="inline" style="word-break:break-all;display:block;margin-top:6px;user-select:all">${esc(gymUUID)}</code>
+      <button class="ghost wide mt8" data-action="copy-uuid">Copy backup code</button>
+      <p class="small muted mt8">Save this somewhere safe. If you lose your phone or clear the app, paste it into Restore below to recover all your data on a new device.</p>
+      <div class="divider"></div>
+      <p class="small muted"><b>Restore from backup code</b></p>
+      <input id="restore-uuid-input" class="mt8" placeholder="Paste your backup code or full share URL" style="width:100%;box-sizing:border-box">
+      <button class="ghost wide mt8" data-action="restore-uuid">Restore</button>
     </div>
 
     <h2 class="section">Backup</h2>
@@ -883,15 +1121,16 @@ function exEditModal(dayId, i) {
     </div>
     <div class="row">
       <label class="field grow"><span>Weight (${unit()})</span><input id="f-weight" type="number" inputmode="decimal" step="0.5" value="${e.weight}"></label>
-      <label class="field grow"><span>Target RPE</span><input id="f-rpe" type="number" inputmode="decimal" step="0.5" min="1" max="10" value="${e.targetRpe != null ? e.targetRpe : ''}"></label>
+      <label class="field grow"><span>Target RPE</span><button type="button" id="f-rpe" class="rpe-btn" data-action="edit-rpe-pick" data-v="${e.targetRpe != null ? e.targetRpe : ''}">${e.targetRpe != null ? e.targetRpe : '—'}</button></label>
       <label class="field grow"><span>Rest (sec)</span><input id="f-rest" type="number" inputmode="numeric" value="${e.restSeconds}"></label>
     </div>
     <label class="field"><span>How-to / description (optional)</span><textarea id="f-desc" style="min-height:60px">${esc(e.description)}</textarea></label>`,
     [
       { label: 'Save', cls: 'primary', fn: () => {
           const name = mval('f-name'); if (!name) { toast('Name is required', 'err'); return; }
+          const rpeRaw = document.getElementById('f-rpe').dataset.v;
           const upd = { name, sets: Math.max(1, mnum('f-sets', 3)), reps: mval('f-reps') || '8-12', weight: mnum('f-weight'),
-            targetRpe: mval('f-rpe') ? mnum('f-rpe') : null, restSeconds: Math.max(0, mnum('f-rest', 120)), description: mval('f-desc') };
+            targetRpe: rpeRaw ? parseFloat(rpeRaw) : null, restSeconds: Math.max(0, mnum('f-rest', 120)), description: mval('f-desc') };
           if (i != null) Object.assign(day.exercises[i], upd);
           else day.exercises.push(Object.assign({ id: uid(), notes: '', alternates: [] }, upd));
           savePlan(); closeModal(); render();
@@ -949,7 +1188,7 @@ function doSessionSwap(ei, alt) {
 }
 function exInfoModal(ei) {
   const e = active.exercises[ei];
-  const desc = e.description || lookupExplanation(e.name) || 'No description available — ask Claude to include a "description" for each exercise in your next plan.';
+  const desc = e.description || lookupExplanation(e.name) || 'No description available — ask your AI coach to include a "description" for each exercise in your next plan.';
   showModal(e.name, `<p>${esc(desc)}</p>
     <p class="muted small mt12">Target: ${e.plannedSets}×${esc(e.plannedReps)} @ ${e.plannedWeight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''}</p>`);
 }
@@ -981,6 +1220,90 @@ function exNoteModal(ei) {
       { label: 'Save', cls: 'primary', fn: () => { e.notes = mval('ex-note-area'); saveActive(); closeModal(); render(); } },
       { label: 'Cancel' }
     ]);
+}
+
+/* ================= RPE picker ================= */
+// Renders into #picker-root (its own overlay layer) so it can open on top of
+// a sheet modal (e.g. the plan's exercise-edit modal) without replacing it.
+const RPE_SCALE = [
+  [10, 'Max effort — nothing left'],
+  [9.5, 'Maybe half a rep left'],
+  [9, 'Could have done 1 more rep'],
+  [8.5, '1–2 reps left'],
+  [8, '2 reps left'],
+  [7.5, '2–3 reps left'],
+  [7, '3 reps left — bar still fast'],
+  [6.5, '3–4 reps left'],
+  [6, '4+ reps left / warm-up']
+];
+let rpePickCb = null;
+function showRpePicker(current, onPick, title = 'How hard was that set?') {
+  rpePickCb = onPick;
+  document.getElementById('picker-root').innerHTML = `
+    <div class="overlay" data-action="picker-dismiss">
+      <div class="sheet">
+        <h3>${esc(title)}</h3>
+        <div class="modal-body">
+          ${RPE_SCALE.map(([v, txt]) => `
+            <button class="rpe-opt ${current === v ? 'active' : ''}" data-action="rpe-opt" data-v="${v}">
+              <span class="rpe-val">${v}</span><span class="muted small">${txt}</span></button>`).join('')}
+          <button class="rpe-opt" data-action="rpe-opt" data-v=""><span class="rpe-val muted">—</span><span class="muted small">Clear / skip</span></button>
+        </div>
+      </div>
+    </div>`;
+}
+function closeRpePicker() { document.getElementById('picker-root').innerHTML = ''; rpePickCb = null; }
+
+/* ================= weight/reps stepper bar ================= */
+// Accessory bar shown while a set weight/reps input is focused: ±2.5 kg/lb or
+// ±1 rep without retyping. Positioned above the keyboard via visualViewport.
+let stepperTarget = null;
+let stepperHideTimer = null;
+function stepperStep(el) {
+  if (!el || !el.dataset || el.dataset.bind !== 'set') return null;
+  return el.dataset.f === 'weight' ? 2.5 : el.dataset.f === 'reps' ? 1 : null;
+}
+function positionStepper() {
+  if (!stepperTarget) return;
+  const bar = document.getElementById('stepper-bar');
+  const vv = window.visualViewport;
+  const keyboard = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+  bar.style.bottom = Math.max(keyboard + 8, 74) + 'px';
+}
+function showStepper(el) {
+  const step = stepperStep(el);
+  if (step == null) return;
+  clearTimeout(stepperHideTimer);
+  stepperTarget = el;
+  const bar = document.getElementById('stepper-bar');
+  bar.innerHTML = `
+    <button data-step="-1">−${step}</button>
+    <span class="muted small">${el.dataset.f === 'weight' ? unit() : 'reps'}</span>
+    <button data-step="1">+${step}</button>`;
+  bar.classList.remove('hidden');
+  positionStepper();
+}
+function hideStepper() {
+  stepperTarget = null;
+  document.getElementById('stepper-bar').classList.add('hidden');
+}
+document.addEventListener('focusin', e => showStepper(e.target));
+document.addEventListener('focusout', e => {
+  if (e.target === stepperTarget) stepperHideTimer = setTimeout(hideStepper, 150);
+});
+document.getElementById('stepper-bar').addEventListener('pointerdown', e => {
+  const btn = e.target.closest('[data-step]');
+  if (!btn || !stepperTarget) return;
+  e.preventDefault(); // keep the input focused (no blur, keyboard stays up)
+  const delta = stepperStep(stepperTarget) * parseInt(btn.dataset.step, 10);
+  const cur = parseFloat(stepperTarget.value);
+  const next = Math.max(0, Math.round(((isNaN(cur) ? 0 : cur) + delta) * 100) / 100);
+  stepperTarget.value = next;
+  stepperTarget.dispatchEvent(new Event('input', { bubbles: true })); // reuse the data-bind update path
+});
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', positionStepper);
+  window.visualViewport.addEventListener('scroll', positionStepper);
 }
 
 /* ================= CMJ video measurement ================= */
@@ -1199,6 +1522,8 @@ document.addEventListener('click', e => {
     case 'modal-dismiss': if (e.target === el) { closeModal(); if (cmjState) cmjCleanup(); } break; // only when tapping the backdrop itself
     case 'modal-btn': { const fn = modalActions[el.dataset.idx]; if (fn) fn(); else closeModal(); break; }
     case 'update-app': if (swWaiting) swWaiting.postMessage('skipWaiting'); break;
+    case 'settings-open': if (tab !== 'settings') { prevTab = tab; tab = 'settings'; render(); window.scrollTo(0, 0); } break;
+    case 'settings-back': tab = prevTab; render(); window.scrollTo(0, 0); break;
 
     /* rest timer */
     case 'rest-add': adjustRest(15); break;
@@ -1219,14 +1544,45 @@ document.addEventListener('click', e => {
 
     /* set logging */
     case 'set-done': {
-      const ex = active.exercises[+el.dataset.ei], s = ex.sets[+el.dataset.si];
+      const ei = +el.dataset.ei;
+      const ex = active.exercises[ei], s = ex.sets[+el.dataset.si];
       s.done = !s.done;
+      if (s.done && ex.sets.every(y => y.done)) exExpanded.delete(ei); // auto-collapse the finished exercise
       saveActive(); render();
       if (s.done) {
         const remaining = active.exercises.some(x => x.sets.some(y => !y.done));
         if (remaining) startRest(ex.restSeconds, 'Rest — ' + ex.name);
         buzz([60]);
       }
+      break;
+    }
+    case 'ex-expand': exExpanded.add(+el.dataset.ei); render(); break;
+    case 'readiness-toggle': {
+      const r = active.readiness || {};
+      const hasReadiness = r.cmjCm != null || r.broadJumpCm != null || r.subjectiveEnergy != null;
+      const anyDone = active.exercises.some(x => x.sets.some(y => y.done));
+      const shown = readinessOpen != null ? readinessOpen : !(hasReadiness || anyDone);
+      readinessOpen = !shown;
+      render();
+      break;
+    }
+    case 'rpe-pick': {
+      const s = active.exercises[+el.dataset.ei].sets[+el.dataset.si];
+      showRpePicker(s.rpe, v => { s.rpe = v; saveActive(); render(); });
+      break;
+    }
+    case 'edit-rpe-pick': {
+      const btn = el;
+      showRpePicker(btn.dataset.v ? parseFloat(btn.dataset.v) : null,
+        v => { btn.dataset.v = v != null ? v : ''; btn.textContent = v != null ? v : '—'; }, 'Target RPE');
+      break;
+    }
+    case 'picker-dismiss': if (e.target === el) closeRpePicker(); break;
+    case 'rpe-opt': {
+      const v = el.dataset.v === '' ? null : parseFloat(el.dataset.v);
+      const cb = rpePickCb;
+      closeRpePicker();
+      if (cb) cb(v);
       break;
     }
     case 'set-add': {
@@ -1287,7 +1643,7 @@ document.addEventListener('click', e => {
     case 'session-toggle': expandedSession = expandedSession === el.dataset.id ? null : el.dataset.id; render(); break;
     case 'session-delete': {
       const id = el.dataset.id;
-      showModal('Delete this session?', '<p>This permanently removes it from your history and Claude exports.</p>',
+      showModal('Delete this session?', '<p>This permanently removes it from your history and AI exports.</p>',
         [{ label: 'Delete', cls: 'danger', fn: () => { sessions = sessions.filter(s => s.id !== id); saveSessions(); render(); } }, { label: 'Cancel' }]);
       break;
     }
@@ -1300,6 +1656,13 @@ document.addEventListener('click', e => {
       break;
     }
     case 'bw-undo': bodyWeight.pop(); saveBW(); render(); break;
+    case 'merge-names': mergeNamesModal(el.dataset.name); break;
+    case 'unmerge-alias': {
+      delete aliases[el.dataset.k];
+      saveAliases(); render();
+      mergeNamesModal(el.dataset.name); // reopen with the updated list
+      break;
+    }
 
     /* claude tab */
     case 'copy-coach': copyText(CLAUDE_PROMPT() + buildExport()).then(ok => toast(ok ? 'Coaching prompt copied — paste it to Claude' : 'Copy failed', ok ? 'ok' : 'err')); break;
@@ -1318,24 +1681,7 @@ document.addEventListener('click', e => {
     case 'toggle-autosync': settings.autoSync = !settings.autoSync; saveSettings(); render(); if (settings.autoSync) workerPush({ silent: true }); break;
     case 'share-ai': copyText(workerShareUrl()).then(ok => toast(ok ? 'Link copied — paste into any AI chat' : 'Copy failed', ok ? 'ok' : 'err')); break;
     case 'copy-uuid': copyText(gymUUID).then(ok => toast(ok ? 'Backup code copied' : 'Copy failed', ok ? 'ok' : 'err')); break;
-    case 'restore-uuid': {
-      const raw = mval('restore-uuid-input');
-      if (!raw) { toast('Paste your backup code first', 'err'); break; }
-      const match = raw.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
-      if (!match) { toast('Invalid backup code', 'err'); break; }
-      const newUUID = match[1].toLowerCase();
-      localStorage.setItem('gymtrack_uuid', newUUID);
-      gymUUID = newUUID;
-      setSyncState('syncing');
-      (async () => {
-        try {
-          const r = await workerFetch();
-          if (!r) { toast('No data found for this backup code', 'err'); setSyncState('error', 'Not found'); return; }
-          restoreBackup(r.raw); render(); setSyncState('ok'); toast('Restored ✓');
-        } catch (e) { setSyncState('error', e.message); toast('Restore failed: ' + e.message, 'err'); }
-      })();
-      break;
-    }
+    case 'restore-uuid': restoreFromCode(mval('restore-uuid-input')); break;
     case 'toggle-sound': settings.sound = !settings.sound; saveSettings(); render(); break;
     case 'toggle-vibrate': settings.vibrate = !settings.vibrate; saveSettings(); render(); break;
     case 'test-sound': beep(3); buzz(); toast('That\'s the rest-timer cue'); break;
@@ -1393,8 +1739,10 @@ document.addEventListener('change', e => {
 
 /* boot */
 store.set('plan', plan); // persist the default plan on first run WITHOUT bumping the sync clock
+mountStaticIcons();
 syncWakeLock();
 render();
 renderRest();
+if (!store.get('onboarded', false) && sessions.length === 0) showOnboarding();
 window.addEventListener('load', initServiceWorkerUpdates);
 autoSyncOnLoad(); // reconcile with the cloud, then enable auto-push

@@ -15,18 +15,23 @@
 </head>
 <body>
 <header id="topbar">
-  <div class="brand">🏋️ GymTrack</div>
-  <div id="session-chip" class="hidden"></div>
+  <div class="brand"><span class="brand-icon" data-icon="dumbbell"></span>GymTrack</div>
+  <div class="topbar-right">
+    <div id="session-chip" class="hidden"></div>
+    <button id="settings-btn" class="icon-btn ghost" data-action="settings-open" aria-label="Settings" data-icon="gear"></button>
+  </div>
 </header>
 <main id="app"></main>
+<div id="stepper-bar" class="hidden"></div>
 <div id="rest-banner" class="hidden"></div>
 <nav id="tabbar">
-  <button class="tab active" data-tab="workout"><span class="tab-icon">💪</span><span>Workout</span></button>
-  <button class="tab" data-tab="plan"><span class="tab-icon">📋</span><span>Plan</span></button>
-  <button class="tab" data-tab="history"><span class="tab-icon">📈</span><span>History</span></button>
-  <button class="tab" data-tab="claude"><span class="tab-icon">✳️</span><span>Claude</span></button>
+  <button class="tab active" data-tab="workout"><span class="tab-icon" data-icon="dumbbell"></span><span>Workout</span></button>
+  <button class="tab" data-tab="plan"><span class="tab-icon" data-icon="list"></span><span>Plan</span></button>
+  <button class="tab" data-tab="history"><span class="tab-icon" data-icon="chart"></span><span>History</span></button>
+  <button class="tab" data-tab="coach"><span class="tab-icon" data-icon="sparkle"></span><span>AI Coach</span></button>
 </nav>
 <div id="modal-root"></div>
+<div id="picker-root"></div>
 <div id="toast-root"></div>
 <script src="app.js"></script>
 </body>

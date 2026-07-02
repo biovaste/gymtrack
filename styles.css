@@ -34,7 +34,18 @@ html, body {
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
 }
-.brand { font-weight: 700; font-size: 18px; letter-spacing: .3px; }
+.brand { font-weight: 700; font-size: 18px; letter-spacing: .3px; display: flex; align-items: center; gap: 8px; }
+.brand-icon { display: flex; color: var(--accent); }
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+#settings-btn { color: var(--muted); display: flex; align-items: center; }
+#settings-btn:active { color: var(--text); }
+
+/* ----- inline SVG icons ----- */
+.icon { flex: none; vertical-align: -4px; }
+button .icon { pointer-events: none; }
+.icon-btn .icon { display: block; }
+.note-btn { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.chev .icon { display: block; }
 
 #session-chip {
   font-variant-numeric: tabular-nums;
@@ -93,6 +104,55 @@ label.field > span { display: block; margin-bottom: 5px; }
 /* ----- exercise card / set grid ----- */
 .ex-name { font-weight: 700; font-size: 17px; }
 .target-line { color: var(--muted); font-size: 14px; margin-top: 2px; }
+.last-line { color: var(--green); font-size: 13px; margin-top: 2px; opacity: .85; }
+.collapsed-ex { padding: 11px 14px; }
+.collapsed-ex:active { background: var(--card2); }
+
+/* ----- session progress ----- */
+.session-progress { display: flex; align-items: center; gap: 10px; margin: 2px 4px 12px; }
+.progress-track { flex: 1; height: 6px; background: var(--card); border-radius: 99px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--green); border-radius: 99px; transition: width .3s ease; }
+.progress-label { flex: none; font-variant-numeric: tabular-nums; }
+
+/* ----- RPE button + picker ----- */
+.rpe-btn {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+  padding: 9px 4px; font-weight: 600; text-align: center; width: 100%;
+}
+.rpe-btn.muted { color: var(--muted); font-weight: 400; }
+#picker-root .overlay { z-index: 55; }
+.rpe-opt {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  background: var(--card); margin-top: 8px; padding: 11px 14px;
+}
+.rpe-opt.active { border-color: var(--accent); }
+.rpe-opt .rpe-val { font-weight: 800; font-size: 17px; min-width: 34px; font-variant-numeric: tabular-nums; }
+
+/* ----- weight/reps stepper bar ----- */
+#stepper-bar {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 40;
+  bottom: calc(74px + var(--safe-bottom));
+  display: flex; align-items: center; gap: 14px;
+  background: var(--card2); border: 1px solid var(--border); border-radius: 999px;
+  padding: 6px 10px; box-shadow: 0 8px 30px rgba(0,0,0,.5);
+}
+#stepper-bar button { border-radius: 999px; padding: 8px 18px; font-size: 16px; font-variant-numeric: tabular-nums; }
+#stepper-bar span { min-width: 34px; text-align: center; }
+
+/* ----- merge names ----- */
+.merge-row { display: flex; align-items: center; gap: 10px; padding: 9px 2px; font-size: 15px; }
+.merge-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); }
+
+/* ----- onboarding ----- */
+.onboard-row { display: flex; gap: 12px; align-items: flex-start; padding: 9px 0; }
+.onboard-row .icon { color: var(--accent); margin-top: 1px; }
+
+/* ----- settings view ----- */
+.settings-head { margin: 2px 0 4px; gap: 6px; }
+.settings-title { font-size: 20px; font-weight: 700; }
+
+/* ----- charts ----- */
+.chart-label { fill: var(--muted); font-size: 10px; font-family: inherit; }
 
 .set-grid { display: grid; grid-template-columns: 30px 1fr 1fr 1fr 46px; gap: 6px; align-items: center; margin-top: 10px; }
 .set-grid .head { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); text-align: center; }
@@ -118,7 +178,7 @@ label.field > span { display: block; margin-bottom: 5px; }
   padding: 9px 0 7px; font-size: 11px; font-weight: 600; color: var(--muted);
 }
 #tabbar .tab.active { color: var(--accent); }
-.tab-icon { font-size: 20px; }
+.tab-icon { display: flex; height: 22px; align-items: center; }
 
 /* ----- rest timer banner ----- */
 #rest-banner {
@@ -136,7 +196,7 @@ label.field > span { display: block; margin-bottom: 5px; }
 #rest-banner.over .rest-bar > div { background: var(--green); }
 
 /* ----- modal ----- */
-#modal-root .overlay {
+#modal-root .overlay, #picker-root .overlay {
   position: fixed; inset: 0; z-index: 50;
   background: rgba(0,0,0,.6); backdrop-filter: blur(3px);
   display: flex; align-items: flex-end; justify-content: center;
