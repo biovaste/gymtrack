@@ -688,7 +688,8 @@ function viewStart() {
         </div>
         <button class="primary wide mt12" data-action="start-session" data-id="${d.id}">Start ${esc(d.name.split('—')[0].trim())}</button>
       </div>`).join('')}
-    ${last ? `<p class="muted small" style="text-align:center">Last workout: ${esc(last.dayName)} · ${fmtDate(last.date)}</p>` : ''}`;
+    ${last ? `<p class="muted small" style="text-align:center">Last workout: ${esc(last.dayName)} · ${fmtDate(last.date)}</p>` : ''}
+    <button class="ghost wide mt12" data-action="cmj-open">${icon('video', 16)} Test CMJ measurement</button>`;
 }
 
 /* ---- workout: active session ---- */
@@ -1316,12 +1317,14 @@ function cmjVideoModal() {
   showModal('Measure CMJ via video', `
     <input type="file" id="cmj-file-input" accept="video/*" capture="environment">
     <div id="cmj-fps-row" class="hidden mt8">
-      <span class="small muted">Recording frame rate</span>
+      <span class="small muted">Recording frame rate (auto-detected — tap to override)</span>
       <div class="cmj-fps-group mt8">
         ${FPS_PRESETS.map(f => `<button type="button" data-fps="${f}" class="ghost icon-btn ${f === 30 ? 'active' : ''}">${f} fps</button>`).join('')}
       </div>
+      <div id="cmj-fps-detect" class="small muted mt8"></div>
     </div>
     <div id="cmj-stage" class="hidden mt12">
+      <video id="cmj-video" muted playsinline style="position:absolute; left:-9999px; top:-9999px; width:2px; height:2px;"></video>
       <div class="cmj-video-wrap"><canvas id="cmj-canvas" class="cmj-canvas"></canvas></div>
       <input type="range" id="cmj-scrub" min="0" max="1" step="0.001" value="0" class="mt8" style="width:100%">
       <div class="row between mt8">
@@ -1346,6 +1349,16 @@ function cmjVideoModal() {
 }
 
 function cmjInitListeners() {
+  const video = document.getElementById('cmj-video');
+  cmjState.video = video;
+  video.addEventListener('error', () => {
+    // also fires when cmjCleanup() sets video.src = '' on close/accept — cmjState is
+    // already null by then (set synchronously before this async event arrives), so
+    // that case is distinguishable from a genuine load failure.
+    if (!cmjState) return;
+    toast('Could not load this video', 'err');
+    document.getElementById('cmj-stage').classList.add('hidden');
+  });
   const fileInput = document.getElementById('cmj-file-input');
   fileInput.addEventListener('change', () => {
     const file = fileInput.files && fileInput.files[0];
@@ -1353,8 +1366,9 @@ function cmjInitListeners() {
   });
   document.querySelectorAll('.cmj-fps-group [data-fps]').forEach(btn => {
     btn.addEventListener('click', () => {
-      cmjState.fps = parseInt(btn.dataset.fps, 10);
-      document.querySelectorAll('.cmj-fps-group [data-fps]').forEach(b => b.classList.toggle('active', b === btn));
+      cmjSetFps(parseInt(btn.dataset.fps, 10));
+      const detectEl = document.getElementById('cmj-fps-detect');
+      if (detectEl) detectEl.textContent = '';
     });
   });
   document.getElementById('cmj-scrub').addEventListener('input', e => cmjOnScrubInput(parseFloat(e.target.value)));
@@ -1373,15 +1387,6 @@ function cmjOnFileSelected(file) {
   if (acceptBtn) acceptBtn.disabled = true;
 
   cmjState.objectUrl = URL.createObjectURL(file);
-  if (!cmjState.video) {
-    const video = document.createElement('video');
-    video.muted = true; video.playsInline = true; video.preload = 'auto';
-    video.addEventListener('error', () => {
-      toast('Could not load this video', 'err');
-      document.getElementById('cmj-stage').classList.add('hidden');
-    });
-    cmjState.video = video;
-  }
   const video = cmjState.video;
   video.src = cmjState.objectUrl;
   video.addEventListener('loadedmetadata', function onMeta() {
@@ -1394,45 +1399,163 @@ function cmjOnFileSelected(file) {
     const scrub = document.getElementById('cmj-scrub');
     scrub.max = String(video.duration || 1);
     cmjState.seeking = true;
-    video.currentTime = 0;
-    cmjAfterSeek(cmjDrawFrame);
+    // A freshly-loaded video can report readyState HAVE_ENOUGH_DATA and correct
+    // dimensions at currentTime 0 without ever having actually decoded a paintable
+    // frame — drawImage silently draws nothing until a genuine seek occurs. And
+    // assigning currentTime = 0 again is a no-op (no 'seeked', no new rVFC frame),
+    // so it never happens on its own. Nudge to a hair past zero to force a real seek.
+    video.currentTime = Math.min(video.duration || 1, 0.001);
+    cmjAfterSeek(() => { cmjDrawFrame(); cmjAutoDetectFps(); });
   }, { once: true });
+}
+
+function cmjSetFps(fps) {
+  cmjState.fps = fps;
+  const rounded = Math.round(fps);
+  document.querySelectorAll('.cmj-fps-group [data-fps]').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.fps, 10) === rounded);
+  });
+}
+
+// Browsers don't expose a video file's true frame rate directly. Estimate it by
+// briefly playing the clip and counting presented frames over a short window. Two
+// independent counting mechanisms are raced against each other rather than picked
+// by feature-detection: requestVideoFrameCallback exists on most browsers but has
+// proven unreliable in practice (doesn't always fire during real playback), while
+// getVideoPlaybackQuality's frame-count polling is more consistently reliable —
+// whichever produces a result first wins. Falls back to the manual preset buttons
+// if neither is available or the clip is too short to sample reliably.
+function cmjAutoDetectFps() {
+  const video = cmjState.video;
+  const detectEl = document.getElementById('cmj-fps-detect');
+  const startTime = video.currentTime;
+  // Wider window = more frames counted = less sensitive to a noisy sample (e.g. a
+  // camera's brief exposure/encoder ramp-up right at the start of a clip).
+  const sampleWindow = Math.min(1, (video.duration || 0) - startTime - 0.02);
+  if (sampleWindow < 0.15) return;
+  if (!cmjRvfcSupported() && !video.getVideoPlaybackQuality) return;
+
+  if (detectEl) detectEl.textContent = 'Detecting frame rate…';
+  cmjState.seeking = true; // block stepper/scrub while we play through the sample window
+
+  let done = false;
+  const finish = detectedFps => {
+    if (done) return;
+    done = true;
+    const restore = () => {
+      cmjState.seeking = false;
+      cmjDrawFrame();
+      if (detectedFps) {
+        const snapped = cmjSnapFps(detectedFps);
+        cmjSetFps(snapped);
+        if (detectEl) detectEl.textContent = `Detected ~${snapped} fps from the video`;
+      } else if (detectEl) {
+        detectEl.textContent = 'Could not detect frame rate — pick it above.';
+      }
+    };
+    video.pause();
+    video.currentTime = startTime;
+    cmjAfterSeek(restore);
+  };
+  // Safety net: if some browser combination never resolves either mechanism, don't
+  // leave the stepper/scrub permanently frozen — give up after generous margin.
+  setTimeout(() => finish(null), sampleWindow * 1000 + 2000);
+
+  if (cmjRvfcSupported()) {
+    let first = null;
+    const collect = (now, metadata) => {
+      if (!cmjState || done) return;
+      if (!first) { first = metadata; video.requestVideoFrameCallback(collect); return; }
+      const dt = metadata.mediaTime - first.mediaTime;
+      if (dt >= sampleWindow) {
+        const frames = metadata.presentedFrames - first.presentedFrames;
+        finish(frames > 0 && dt > 0 ? frames / dt : null);
+      } else {
+        video.requestVideoFrameCallback(collect);
+      }
+    };
+    video.requestVideoFrameCallback(collect);
+  }
+  if (video.getVideoPlaybackQuality) {
+    const t0 = video.currentTime;
+    const q0 = video.getVideoPlaybackQuality().totalVideoFrames;
+    // setInterval rather than requestAnimationFrame: rAF is throttled/paused for a
+    // backgrounded tab, and the math only depends on video.currentTime deltas, not
+    // on the poll callback's own timing, so a plain timer works just as well and is
+    // more robust across tab-visibility edge cases.
+    const poll = setInterval(() => {
+      if (!cmjState || done) { clearInterval(poll); return; }
+      if (video.ended || video.currentTime - t0 >= sampleWindow) {
+        clearInterval(poll);
+        const q1 = video.getVideoPlaybackQuality().totalVideoFrames;
+        const dtq = video.currentTime - t0;
+        const frames = q1 - q0;
+        finish(frames > 0 && dtq > 0 ? frames / dtq : null);
+      }
+    }, 50);
+  }
+  video.play().catch(() => finish(null));
+}
+
+// Snap a noisy detected rate to the nearest common recording frame rate so a short
+// sample window's counting error doesn't produce a confusing off value.
+function cmjSnapFps(raw) {
+  const candidates = [24, 25, 30, 50, 60, 100, 120, 200, 240];
+  return candidates.reduce((best, c) => Math.abs(c - raw) < Math.abs(best - raw) ? c : best, candidates[0]);
 }
 
 function cmjRvfcSupported() { return 'requestVideoFrameCallback' in HTMLVideoElement.prototype; }
 
 function cmjAfterSeek(cb) {
+  // requestVideoFrameCallback exists (feature-detects true) on most browsers, but in
+  // practice it does not reliably fire for a paused video that's just been seeked —
+  // it's built for the playing case. Race it against the 'seeked' event, which does
+  // fire reliably here, so a browser where rVFC stalls still resolves instead of
+  // hanging forever (canvas never draws -> looks like a black screen).
   const video = cmjState.video;
+  let done = false;
+  const finish = time => {
+    if (done) return;
+    done = true;
+    cmjState.lastMediaTime = time;
+    cmjState.seeking = false;
+    cb();
+  };
   if (cmjRvfcSupported()) {
-    video.requestVideoFrameCallback((now, metadata) => {
-      cmjState.lastMediaTime = metadata.mediaTime;
-      cmjState.seeking = false;
-      cb();
-    });
-  } else {
-    video.addEventListener('seeked', function onSeeked() {
-      video.removeEventListener('seeked', onSeeked);
-      cmjState.lastMediaTime = video.currentTime;
-      cmjState.seeking = false;
-      cb();
-    }, { once: true });
+    video.requestVideoFrameCallback((now, metadata) => finish(metadata.mediaTime));
   }
+  video.addEventListener('seeked', function onSeeked() {
+    video.removeEventListener('seeked', onSeeked);
+    finish(video.currentTime);
+  }, { once: true });
+}
+
+// Seeking to the time the video is already at is a no-op in most browsers — no
+// 'seeked' event and no new frame callback ever fires, so cmjAfterSeek would hang.
+// Skip the wait and draw immediately when the target time hasn't actually changed.
+function cmjSeekTo(time, cb) {
+  const video = cmjState.video;
+  const clamped = Math.max(0, Math.min(video.duration || 0, time));
+  if (Math.abs(clamped - video.currentTime) < 1e-4) {
+    cmjState.lastMediaTime = video.currentTime;
+    cmjState.seeking = false;
+    cb();
+    return;
+  }
+  cmjState.seeking = true;
+  video.currentTime = clamped;
+  cmjAfterSeek(cb);
 }
 
 function cmjSeekBy(deltaFrames) {
   if (!cmjState || !cmjState.video || cmjState.seeking) return;
   const video = cmjState.video;
-  const next = Math.max(0, Math.min(video.duration || 0, video.currentTime + deltaFrames / cmjState.fps));
-  cmjState.seeking = true;
-  video.currentTime = next;
-  cmjAfterSeek(cmjDrawFrame);
+  cmjSeekTo(video.currentTime + deltaFrames / cmjState.fps, cmjDrawFrame);
 }
 
 function cmjOnScrubInput(value) {
   if (!cmjState || !cmjState.video || cmjState.seeking) return;
-  cmjState.seeking = true;
-  cmjState.video.currentTime = value;
-  cmjAfterSeek(cmjDrawFrame);
+  cmjSeekTo(value, cmjDrawFrame);
 }
 
 function cmjDrawFrame() {
@@ -1487,14 +1610,19 @@ function cmjUpdateResultUI() {
 }
 
 function cmjAccept() {
-  if (!cmjState || cmjState.resultHeightCm == null || !active) { cmjCancel(); return; }
-  active.readiness.cmjCm = Math.round(cmjState.resultHeightCm * 10) / 10;
-  active.readiness.flightTimeMs = cmjState.resultFlightTimeMs;
-  active.readiness.method = 'video';
-  saveActive();
+  if (!cmjState || cmjState.resultHeightCm == null) { cmjCancel(); return; }
+  const heightCm = Math.round(cmjState.resultHeightCm * 10) / 10;
+  if (active) {
+    active.readiness.cmjCm = heightCm;
+    active.readiness.flightTimeMs = cmjState.resultFlightTimeMs;
+    active.readiness.method = 'video';
+    saveActive();
+    toast('CMJ height set from video ✓');
+  } else {
+    toast(`CMJ: ${heightCm} cm`);
+  }
   cmjCleanup();
   closeModal(); render();
-  toast('CMJ height set from video ✓');
 }
 
 function cmjCancel() {
@@ -1506,7 +1634,7 @@ function cmjCleanup() {
   if (!cmjState) return;
   if (cmjState.objectUrl) URL.revokeObjectURL(cmjState.objectUrl);
   if (cmjState.pollTimer) clearInterval(cmjState.pollTimer);
-  if (cmjState.video) cmjState.video.src = '';
+  if (cmjState.video) { cmjState.video.pause(); cmjState.video.src = ''; }
   cmjState = null;
 }
 
