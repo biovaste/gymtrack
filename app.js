@@ -1315,7 +1315,8 @@ let cmjState = null; // { objectUrl, video, canvas, ctx, fps, seeking, lastMedia
 function cmjVideoModal() {
   cmjState = { objectUrl: null, video: null, fps: 30, seeking: false, lastMediaTime: 0, takeoffTime: null, landingTime: null, pollTimer: null };
   showModal('Measure CMJ via video', `
-    <input type="file" id="cmj-file-input" accept="video/*" capture="environment">
+    <input type="file" id="cmj-file-input" accept="video/*">
+    <p class="small muted mt8">iPhone tip: picking from Photos compresses the clip to ~24–30 fps. For full frame-rate accuracy, Share → “Save to Files” first, then pick it here via Choose File → Browse.</p>
     <div id="cmj-fps-row" class="hidden mt8">
       <span class="small muted">Recording frame rate (auto-detected — tap to override)</span>
       <div class="cmj-fps-group mt8">
@@ -1367,9 +1368,15 @@ function cmjInitListeners() {
   });
   document.querySelectorAll('.cmj-fps-group [data-fps]').forEach(btn => {
     btn.addEventListener('click', () => {
-      cmjSetFps(parseInt(btn.dataset.fps, 10));
+      const chosen = parseInt(btn.dataset.fps, 10);
+      cmjSetFps(chosen);
       const detectEl = document.getElementById('cmj-fps-detect');
-      if (detectEl) detectEl.textContent = '';
+      if (!detectEl) return;
+      // Picking a rate the file doesn't actually contain can't add missing frames —
+      // flag it so a Photos-transcoded clip isn't mistaken for real 120fps footage.
+      detectEl.textContent = (cmjState.detectedFps && chosen > cmjState.detectedFps * 1.5)
+        ? `This clip only plays ~${cmjState.detectedFps} fps — picking ${chosen} won't add frames. Use the original file via the Files app.`
+        : '';
     });
   });
   document.getElementById('cmj-scrub').addEventListener('input', e => cmjOnScrubInput(parseFloat(e.target.value)));
@@ -1423,13 +1430,10 @@ function cmjSetFps(fps) {
 }
 
 // Browsers don't expose a video file's true frame rate directly. Estimate it by
-// briefly playing the clip and counting presented frames over a short window. Two
-// independent counting mechanisms are raced against each other rather than picked
-// by feature-detection: requestVideoFrameCallback exists on most browsers but has
-// proven unreliable in practice (doesn't always fire during real playback), while
-// getVideoPlaybackQuality's frame-count polling is more consistently reliable —
-// whichever produces a result first wins. Falls back to the manual preset buttons
-// if neither is available or the clip is too short to sample reliably.
+// briefly playing the clip and counting decoded frames over a short window. This
+// play-through doubles as the iOS decoder primer (see cmjOnFileSelected). Falls
+// back to the manual preset buttons if no counting API is available or the clip
+// is too short to sample reliably.
 function cmjAutoDetectFps() {
   const video = cmjState.video;
   const detectEl = document.getElementById('cmj-fps-detect');
@@ -1453,6 +1457,7 @@ function cmjAutoDetectFps() {
       cmjDrawFrame();
       if (detectedFps) {
         const snapped = cmjSnapFps(detectedFps);
+        cmjState.detectedFps = snapped;
         cmjSetFps(snapped);
         if (detectEl) detectEl.textContent = `Detected ~${snapped} fps from the video`;
       } else if (detectEl) {
@@ -1470,21 +1475,10 @@ function cmjAutoDetectFps() {
   // leave the stepper/scrub permanently frozen — give up after generous margin.
   setTimeout(() => finish(null), sampleWindow * 1000 + 2000);
 
-  if (cmjRvfcSupported()) {
-    let first = null;
-    const collect = (now, metadata) => {
-      if (!cmjState || done) return;
-      if (!first) { first = metadata; video.requestVideoFrameCallback(collect); return; }
-      const dt = metadata.mediaTime - first.mediaTime;
-      if (dt >= sampleWindow) {
-        const frames = metadata.presentedFrames - first.presentedFrames;
-        finish(frames > 0 && dt > 0 ? frames / dt : null);
-      } else {
-        video.requestVideoFrameCallback(collect);
-      }
-    };
-    video.requestVideoFrameCallback(collect);
-  }
+  // Prefer getVideoPlaybackQuality: its totalVideoFrames counts DECODED frames,
+  // including ones the display skips. rVFC's presentedFrames only counts frames
+  // that actually hit the screen, which caps at the display refresh rate (~60Hz)
+  // and would report a true 120/240fps clip as ~60. rVFC is fallback-only.
   if (video.getVideoPlaybackQuality) {
     const t0 = video.currentTime;
     const q0 = video.getVideoPlaybackQuality().totalVideoFrames;
@@ -1502,6 +1496,20 @@ function cmjAutoDetectFps() {
         finish(frames > 0 && dtq > 0 ? frames / dtq : null);
       }
     }, 50);
+  } else {
+    let first = null;
+    const collect = (now, metadata) => {
+      if (!cmjState || done) return;
+      if (!first) { first = metadata; video.requestVideoFrameCallback(collect); return; }
+      const dt = metadata.mediaTime - first.mediaTime;
+      if (dt >= sampleWindow) {
+        const frames = metadata.presentedFrames - first.presentedFrames;
+        finish(frames > 0 && dt > 0 ? frames / dt : null);
+      } else {
+        video.requestVideoFrameCallback(collect);
+      }
+    };
+    video.requestVideoFrameCallback(collect);
   }
   video.play().catch(() => finish(null)); // rejects e.g. in iOS Low Power Mode
   return true;
