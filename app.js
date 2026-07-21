@@ -1313,7 +1313,7 @@ if (window.visualViewport) {
 let cmjState = null; // { objectUrl, video, canvas, ctx, fps, seeking, lastMediaTime, takeoffTime, landingTime, pollTimer }
 
 function cmjVideoModal() {
-  cmjState = { objectUrl: null, video: null, canvas: null, ctx: null, fps: 30, seeking: false, lastMediaTime: 0, takeoffTime: null, landingTime: null, pollTimer: null };
+  cmjState = { objectUrl: null, video: null, fps: 30, seeking: false, lastMediaTime: 0, takeoffTime: null, landingTime: null, pollTimer: null };
   showModal('Measure CMJ via video', `
     <input type="file" id="cmj-file-input" accept="video/*" capture="environment">
     <div id="cmj-fps-row" class="hidden mt8">
@@ -1325,8 +1325,7 @@ function cmjVideoModal() {
     </div>
     <div id="cmj-stage" class="hidden mt12">
       <div class="cmj-video-wrap">
-        <video id="cmj-video" muted playsinline webkit-playsinline style="position:absolute; inset:0; width:100%; height:100%; opacity:0.01; pointer-events:none;"></video>
-        <canvas id="cmj-canvas" class="cmj-canvas"></canvas>
+        <video id="cmj-video" muted playsinline webkit-playsinline class="cmj-video"></video>
       </div>
       <input type="range" id="cmj-scrub" min="0" max="1" step="0.001" value="0" class="mt8" style="width:100%">
       <div class="row between mt8">
@@ -1395,17 +1394,12 @@ function cmjOnFileSelected(file) {
     video.removeEventListener('loadedmetadata', onMeta);
     document.getElementById('cmj-fps-row').classList.remove('hidden');
     document.getElementById('cmj-stage').classList.remove('hidden');
-    const canvas = document.getElementById('cmj-canvas');
-    canvas.width = video.videoWidth || 640; canvas.height = video.videoHeight || 360;
-    cmjState.canvas = canvas; cmjState.ctx = canvas.getContext('2d');
     const scrub = document.getElementById('cmj-scrub');
     scrub.max = String(video.duration || 1);
     cmjState.seeking = true;
-    // A freshly-loaded video can report readyState HAVE_ENOUGH_DATA and correct
-    // dimensions at currentTime 0 without ever having actually decoded a paintable
-    // frame — drawImage silently draws nothing until a genuine seek occurs. And
-    // assigning currentTime = 0 again is a no-op (no 'seeked', no new rVFC frame),
-    // so it never happens on its own. Nudge to a hair past zero to force a real seek.
+    // Assigning currentTime = 0 to a freshly-loaded video is a no-op seek (it's
+    // already at 0): no 'seeked' event, no new rVFC frame, and the callback chain
+    // never resolves. Nudge to a hair past zero to force a genuine seek.
     video.currentTime = Math.min(video.duration || 1, 0.001);
     cmjAfterSeek(() => { cmjDrawFrame(); cmjAutoDetectFps(); });
   }, { once: true });
@@ -1560,10 +1554,12 @@ function cmjOnScrubInput(value) {
   cmjSeekTo(value, cmjDrawFrame);
 }
 
+// The video element itself is the display surface — after a seek the browser shows
+// the sought frame natively. (An earlier canvas+drawImage approach was black on iOS
+// Safari, which won't paint a paused, never-played video into a 2D canvas.)
 function cmjDrawFrame() {
-  const { video, canvas, ctx, fps, lastMediaTime } = cmjState;
-  if (!video || !canvas || !ctx) return;
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const { video, fps, lastMediaTime } = cmjState;
+  if (!video) return;
   document.getElementById('cmj-scrub').value = String(lastMediaTime);
   document.getElementById('cmj-time-readout').textContent = `${lastMediaTime.toFixed(3)}s · frame ${Math.round(lastMediaTime * fps)}`;
 }

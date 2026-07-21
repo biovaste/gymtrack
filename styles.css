@@ -216,7 +216,7 @@ label.field > span { display: block; margin-bottom: 5px; }
 
 /* ----- CMJ video modal ----- */
 .cmj-video-wrap { position: relative; background: #000; border-radius: 10px; overflow: hidden; }
-.cmj-canvas { display: block; width: 100%; height: auto; }
+.cmj-video { display: block; width: 100%; height: auto; max-height: 60vh; }
 .cmj-fps-group { display: flex; gap: 6px; flex-wrap: wrap; }
 .cmj-fps-group button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 .cmj-marker-row { display: flex; gap: 8px; }
