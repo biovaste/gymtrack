@@ -1,5 +1,5 @@
 /* GymTrack service worker — cache-first app shell for full offline use. */
-const CACHE = 'gymtrack-v4';
+const CACHE = 'gymtrack-v5';
 const ASSETS = [
   './',
   './index.html',

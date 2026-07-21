@@ -1325,7 +1325,7 @@ function cmjVideoModal() {
     </div>
     <div id="cmj-stage" class="hidden mt12">
       <div class="cmj-video-wrap">
-        <video id="cmj-video" muted playsinline webkit-playsinline class="cmj-video"></video>
+        <video id="cmj-video" muted playsinline webkit-playsinline preload="auto" class="cmj-video"></video>
       </div>
       <input type="range" id="cmj-scrub" min="0" max="1" step="0.001" value="0" class="mt8" style="width:100%">
       <div class="row between mt8">
@@ -1390,6 +1390,7 @@ function cmjOnFileSelected(file) {
   cmjState.objectUrl = URL.createObjectURL(file);
   const video = cmjState.video;
   video.src = cmjState.objectUrl;
+  video.load(); // iOS: without an explicit load() a blob-src video may sit idle
   video.addEventListener('loadedmetadata', function onMeta() {
     video.removeEventListener('loadedmetadata', onMeta);
     document.getElementById('cmj-fps-row').classList.remove('hidden');
@@ -1397,11 +1398,19 @@ function cmjOnFileSelected(file) {
     const scrub = document.getElementById('cmj-scrub');
     scrub.max = String(video.duration || 1);
     cmjState.seeking = true;
-    // Assigning currentTime = 0 to a freshly-loaded video is a no-op seek (it's
-    // already at 0): no 'seeked' event, no new rVFC frame, and the callback chain
-    // never resolves. Nudge to a hair past zero to force a genuine seek.
-    video.currentTime = Math.min(video.duration || 1, 0.001);
-    cmjAfterSeek(() => { cmjDrawFrame(); cmjAutoDetectFps(); });
+    // iOS Safari does not decode ANY frames for a video that has never played:
+    // the element renders black and seeks on it never complete (no 'seeked', no
+    // rVFC), which would deadlock the whole modal. So run the fps-detection
+    // play-through FIRST — muted+playsinline play() is allowed programmatically,
+    // and it forces the decoder to start. Its restore step then seeks back to
+    // the start, which now lands on a real decoded frame.
+    if (!cmjAutoDetectFps()) {
+      // Detection unavailable (clip too short / no counting API) — plain seek.
+      // Nudge past zero: assigning currentTime = 0 when already at 0 is a no-op
+      // seek that fires no events.
+      video.currentTime = Math.min(video.duration || 1, 0.001);
+      cmjAfterSeek(cmjDrawFrame);
+    }
   }, { once: true });
 }
 
@@ -1428,8 +1437,8 @@ function cmjAutoDetectFps() {
   // Wider window = more frames counted = less sensitive to a noisy sample (e.g. a
   // camera's brief exposure/encoder ramp-up right at the start of a clip).
   const sampleWindow = Math.min(1, (video.duration || 0) - startTime - 0.02);
-  if (sampleWindow < 0.15) return;
-  if (!cmjRvfcSupported() && !video.getVideoPlaybackQuality) return;
+  if (sampleWindow < 0.15) return false;
+  if (!cmjRvfcSupported() && !video.getVideoPlaybackQuality) return false;
 
   if (detectEl) detectEl.textContent = 'Detecting frame rate…';
   cmjState.seeking = true; // block stepper/scrub while we play through the sample window
@@ -1438,6 +1447,7 @@ function cmjAutoDetectFps() {
   const finish = detectedFps => {
     if (done) return;
     done = true;
+    if (!cmjState) return; // modal closed mid-detection (e.g. the safety timeout fired late)
     const restore = () => {
       cmjState.seeking = false;
       cmjDrawFrame();
@@ -1450,7 +1460,10 @@ function cmjAutoDetectFps() {
       }
     };
     video.pause();
-    video.currentTime = startTime;
+    // Land a hair past zero, not at exactly startTime: if startTime was 0 a seek
+    // to 0 can be treated as a no-op, and 0.001 guarantees a decoded frame now
+    // that playback has primed the decoder.
+    video.currentTime = Math.min(video.duration || 1, Math.max(0.001, startTime));
     cmjAfterSeek(restore);
   };
   // Safety net: if some browser combination never resolves either mechanism, don't
@@ -1490,7 +1503,8 @@ function cmjAutoDetectFps() {
       }
     }, 50);
   }
-  video.play().catch(() => finish(null));
+  video.play().catch(() => finish(null)); // rejects e.g. in iOS Low Power Mode
+  return true;
 }
 
 // Snap a noisy detected rate to the nearest common recording frame rate so a short
@@ -1505,18 +1519,23 @@ function cmjRvfcSupported() { return 'requestVideoFrameCallback' in HTMLVideoEle
 function cmjAfterSeek(cb) {
   // requestVideoFrameCallback exists (feature-detects true) on most browsers, but in
   // practice it does not reliably fire for a paused video that's just been seeked —
-  // it's built for the playing case. Race it against the 'seeked' event, which does
-  // fire reliably here, so a browser where rVFC stalls still resolves instead of
-  // hanging forever (canvas never draws -> looks like a black screen).
+  // it's built for the playing case. Race it against the 'seeked' event, plus a hard
+  // timeout as the last resort: iOS Safari can swallow BOTH events for a seek on
+  // not-yet-decoded data, and without the timeout the `seeking` flag would stay
+  // locked forever, freezing the scrub and frame-step buttons.
   const video = cmjState.video;
   let done = false;
+  let timer = null;
   const finish = time => {
     if (done) return;
     done = true;
+    clearTimeout(timer);
+    if (!cmjState) return; // modal closed while the seek was in flight
     cmjState.lastMediaTime = time;
     cmjState.seeking = false;
     cb();
   };
+  timer = setTimeout(() => finish(video.currentTime), 800);
   if (cmjRvfcSupported()) {
     video.requestVideoFrameCallback((now, metadata) => finish(metadata.mediaTime));
   }
