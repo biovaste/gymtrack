@@ -1316,7 +1316,7 @@ function cmjVideoModal() {
   cmjState = { objectUrl: null, video: null, fps: 30, seeking: false, lastMediaTime: 0, takeoffTime: null, landingTime: null, pollTimer: null };
   showModal('Measure CMJ via video', `
     <input type="file" id="cmj-file-input" accept="video/*">
-    <p class="small muted mt8">Slo-mo clips work: after the frame rate is detected, tap the rate you <em>recorded</em> at (e.g. 120 or 240 fps) and the slowed timeline is corrected automatically.</p>
+    <p class="small muted mt8">High-fps clips (120/240 fps, slo-mo or not): after detection, tap the rate you <em>recorded</em> at — if the file plays slower than real time, the timeline is corrected automatically.</p>
     <div id="cmj-fps-row" class="hidden mt8">
       <span class="small muted">Recording frame rate (auto-detected — tap to override)</span>
       <div class="cmj-fps-group mt8">
@@ -1375,7 +1375,7 @@ function cmjInitListeners() {
         // Recording rate above the clip's playback rate = slo-mo export → the
         // stretched timeline is corrected in the result (see cmjTimeScale).
         detectEl.textContent = (cmjState.detectedFps && chosen > cmjState.detectedFps * 1.5)
-          ? `Slo-mo: recorded ${chosen} fps, plays ~${cmjState.detectedFps} fps — times corrected ×${(chosen / cmjState.detectedFps).toFixed(1)}.`
+          ? `Recorded ${chosen} fps, plays ~${cmjState.detectedFps} fps — timeline is ${(chosen / cmjState.detectedFps).toFixed(1)}× slower than real time; times corrected.`
           : '';
       }
       // The scale factor feeds the flight-time math, so recompute a shown result.
@@ -1649,7 +1649,7 @@ function cmjUpdateResultUI() {
   resultEl.innerHTML = `
     <div class="big">${heightCm.toFixed(1)} cm</div>
     <div class="small muted">flight time ${Math.round(flightTimeSec * 1000)} ms</div>
-    ${scale !== 1 ? `<div class="small muted">slo-mo ×${(1 / scale).toFixed(1)} corrected (recorded ${fps} fps, plays ~${cmjState.detectedFps} fps)</div>` : ''}
+    ${scale !== 1 ? `<div class="small muted">×${(1 / scale).toFixed(1)} timeline correction (recorded ${fps} fps, plays ~${cmjState.detectedFps} fps)</div>` : ''}
     ${plausible ? '' : '<p class="small amber mt8">That seems unusually low/high — double check your markers.</p>'}`;
   cmjState.resultHeightCm = heightCm;
   cmjState.resultFlightTimeMs = Math.round(flightTimeSec * 1000);
