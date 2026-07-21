@@ -1324,8 +1324,10 @@ function cmjVideoModal() {
       <div id="cmj-fps-detect" class="small muted mt8"></div>
     </div>
     <div id="cmj-stage" class="hidden mt12">
-      <video id="cmj-video" muted playsinline style="position:absolute; left:-9999px; top:-9999px; width:2px; height:2px;"></video>
-      <div class="cmj-video-wrap"><canvas id="cmj-canvas" class="cmj-canvas"></canvas></div>
+      <div class="cmj-video-wrap">
+        <video id="cmj-video" muted playsinline webkit-playsinline style="position:absolute; inset:0; width:100%; height:100%; opacity:0.01; pointer-events:none;"></video>
+        <canvas id="cmj-canvas" class="cmj-canvas"></canvas>
+      </div>
       <input type="range" id="cmj-scrub" min="0" max="1" step="0.001" value="0" class="mt8" style="width:100%">
       <div class="row between mt8">
         <button type="button" class="ghost icon-btn" id="cmj-step-back">◀ frame</button>
