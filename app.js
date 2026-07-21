@@ -1316,7 +1316,7 @@ function cmjVideoModal() {
   cmjState = { objectUrl: null, video: null, fps: 30, seeking: false, lastMediaTime: 0, takeoffTime: null, landingTime: null, pollTimer: null };
   showModal('Measure CMJ via video', `
     <input type="file" id="cmj-file-input" accept="video/*">
-    <p class="small muted mt8">iPhone tip: picking from Photos compresses the clip to ~24–30 fps. For full frame-rate accuracy, Share → “Save to Files” first, then pick it here via Choose File → Browse.</p>
+    <p class="small muted mt8">Slo-mo clips work: after the frame rate is detected, tap the rate you <em>recorded</em> at (e.g. 120 or 240 fps) and the slowed timeline is corrected automatically.</p>
     <div id="cmj-fps-row" class="hidden mt8">
       <span class="small muted">Recording frame rate (auto-detected — tap to override)</span>
       <div class="cmj-fps-group mt8">
@@ -1371,12 +1371,15 @@ function cmjInitListeners() {
       const chosen = parseInt(btn.dataset.fps, 10);
       cmjSetFps(chosen);
       const detectEl = document.getElementById('cmj-fps-detect');
-      if (!detectEl) return;
-      // Picking a rate the file doesn't actually contain can't add missing frames —
-      // flag it so a Photos-transcoded clip isn't mistaken for real 120fps footage.
-      detectEl.textContent = (cmjState.detectedFps && chosen > cmjState.detectedFps * 1.5)
-        ? `This clip only plays ~${cmjState.detectedFps} fps — picking ${chosen} won't add frames. Use the original file via the Files app.`
-        : '';
+      if (detectEl) {
+        // Recording rate above the clip's playback rate = slo-mo export → the
+        // stretched timeline is corrected in the result (see cmjTimeScale).
+        detectEl.textContent = (cmjState.detectedFps && chosen > cmjState.detectedFps * 1.5)
+          ? `Slo-mo: recorded ${chosen} fps, plays ~${cmjState.detectedFps} fps — times corrected ×${(chosen / cmjState.detectedFps).toFixed(1)}.`
+          : '';
+      }
+      // The scale factor feeds the flight-time math, so recompute a shown result.
+      if (cmjState.takeoffTime != null || cmjState.landingTime != null) cmjUpdateResultUI();
     });
   });
   document.getElementById('cmj-scrub').addEventListener('input', e => cmjOnScrubInput(parseFloat(e.target.value)));
@@ -1573,7 +1576,10 @@ function cmjSeekTo(time, cb) {
 function cmjSeekBy(deltaFrames) {
   if (!cmjState || !cmjState.video || cmjState.seeking) return;
   const video = cmjState.video;
-  cmjSeekTo(video.currentTime + deltaFrames / cmjState.fps, cmjDrawFrame);
+  // Step by the clip's PLAYBACK rate, not the recording rate — on a slo-mo export
+  // one timeline frame at ~24fps IS one captured frame, so this steps exactly one
+  // source frame either way.
+  cmjSeekTo(video.currentTime + deltaFrames / cmjPlaybackFps(), cmjDrawFrame);
 }
 
 function cmjOnScrubInput(value) {
@@ -1585,10 +1591,10 @@ function cmjOnScrubInput(value) {
 // the sought frame natively. (An earlier canvas+drawImage approach was black on iOS
 // Safari, which won't paint a paused, never-played video into a 2D canvas.)
 function cmjDrawFrame() {
-  const { video, fps, lastMediaTime } = cmjState;
+  const { video, lastMediaTime } = cmjState;
   if (!video) return;
   document.getElementById('cmj-scrub').value = String(lastMediaTime);
-  document.getElementById('cmj-time-readout').textContent = `${lastMediaTime.toFixed(3)}s · frame ${Math.round(lastMediaTime * fps)}`;
+  document.getElementById('cmj-time-readout').textContent = `${lastMediaTime.toFixed(3)}s · frame ${Math.round(lastMediaTime * cmjPlaybackFps())}`;
 }
 
 function cmjSetTakeoff() {
@@ -1602,12 +1608,26 @@ function cmjSetLanding() {
   cmjUpdateResultUI();
 }
 
+// iPhone slo-mo exports bake the slow-motion effect into the file: 120/240fps
+// footage plays back at ~24-30fps with a stretched timeline, so media-time deltas
+// are NOT real time. When the user's selected recording rate is clearly above the
+// clip's measured playback rate, treat the clip as slo-mo and scale marked times
+// by playbackFps/recordedFps to recover real time. Same-rate clips scale by 1.
+function cmjTimeScale() {
+  const playback = cmjState.detectedFps;
+  if (playback && cmjState.fps > playback * 1.5) return playback / cmjState.fps;
+  return 1;
+}
+// Timeline frame numbers always follow the rate the file actually plays at.
+function cmjPlaybackFps() { return cmjState.detectedFps || cmjState.fps; }
+
 function cmjUpdateResultUI() {
   const { takeoffTime, landingTime, fps } = cmjState;
   const markersEl = document.getElementById('cmj-markers');
   const resultEl = document.getElementById('cmj-result');
   const acceptBtn = document.querySelector('[data-idx="m0"]');
-  const fmt = t => t == null ? '—' : `${t.toFixed(3)}s (frame ${Math.round(t * fps)})`;
+  const pf = cmjPlaybackFps();
+  const fmt = t => t == null ? '—' : `${t.toFixed(3)}s (frame ${Math.round(t * pf)})`;
   markersEl.innerHTML = `Takeoff: ${fmt(takeoffTime)} &nbsp;·&nbsp; Landing: ${fmt(landingTime)}`;
 
   if (takeoffTime == null || landingTime == null) {
@@ -1621,13 +1641,15 @@ function cmjUpdateResultUI() {
     if (acceptBtn) acceptBtn.disabled = true;
     return;
   }
-  const flightTimeSec = landingTime - takeoffTime;
+  const scale = cmjTimeScale();
+  const flightTimeSec = (landingTime - takeoffTime) * scale;
   const heightCm = computeJumpHeightCm(flightTimeSec);
   const plausible = heightCm >= 3 && heightCm <= 180;
   resultEl.classList.remove('hidden');
   resultEl.innerHTML = `
     <div class="big">${heightCm.toFixed(1)} cm</div>
     <div class="small muted">flight time ${Math.round(flightTimeSec * 1000)} ms</div>
+    ${scale !== 1 ? `<div class="small muted">slo-mo ×${(1 / scale).toFixed(1)} corrected (recorded ${fps} fps, plays ~${cmjState.detectedFps} fps)</div>` : ''}
     ${plausible ? '' : '<p class="small amber mt8">That seems unusually low/high — double check your markers.</p>'}`;
   cmjState.resultHeightCm = heightCm;
   cmjState.resultFlightTimeMs = Math.round(flightTimeSec * 1000);
