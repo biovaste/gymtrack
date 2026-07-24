@@ -94,10 +94,21 @@ function lookupExplanation(name) {
   return null;
 }
 
+/* ================= equipment / plate calculator config ================= */
+const EQUIPMENT_TYPES = ['barbell', 'trap-bar', 'landmine', 'training-bar', 'dumbbell', 'machine', 'cable', 'bodyweight', 'other'];
+const EQUIPMENT_LABELS = { barbell: 'Barbell', 'trap-bar': 'Trap bar', landmine: 'Landmine', 'training-bar': 'Training bar', dumbbell: 'Dumbbell', machine: 'Machine', cable: 'Cable', bodyweight: 'Bodyweight', other: 'Other' };
+const PLATE_EQUIPMENT = new Set(['barbell', 'trap-bar', 'landmine', 'training-bar']); // shows the plate calculator
+const BAR_WEIGHT_EQUIPMENT = new Set(['barbell', 'trap-bar', 'training-bar']); // landmine ignores bar weight entirely
+const BAR_WEIGHT_DEFAULTS = { barbell: { kg: 20, lb: 45 }, 'trap-bar': { kg: 25, lb: 55 }, 'training-bar': { kg: 10, lb: 15 } };
+function resolvedBarWeight(e) {
+  if (e.barWeight != null) return e.barWeight;
+  return BAR_WEIGHT_DEFAULTS[e.equipment]?.[unit()] ?? (unit() === 'lb' ? 45 : 20);
+}
+
 /* ================= default starter plan ================= */
 function defaultPlan() {
-  const ex = (name, sets, reps, weight, rpe, rest, alternates = []) =>
-    ({ id: uid(), name, sets, reps, weight, targetRpe: rpe, restSeconds: rest, description: '', notes: '', alternates });
+  const ex = (name, sets, reps, weight, rpe, rest, alternates = [], equipment) =>
+    ({ id: uid(), name, sets, reps, weight, targetRpe: rpe, restSeconds: rest, restSecondsNext: null, equipment: equipment || 'barbell', barWeight: null, description: '', notes: '', alternates });
   return {
     type: 'workout-plan', version: 1, name: 'Starter Push / Pull / Legs', createdAt: today(),
     days: [
@@ -110,7 +121,7 @@ function defaultPlan() {
       ]},
       { id: uid(), name: 'Day B — Pull', exercises: [
         ex('Deadlift', 3, '5', 100, 8, 180, [{ name: 'Romanian Deadlift', weight: 80 }]),
-        ex('Pull-Up', 3, '6-10', 0, 9, 150, [{ name: 'Lat Pulldown', weight: 55 }]),
+        ex('Pull-Up', 3, '6-10', 0, 9, 150, [{ name: 'Lat Pulldown', weight: 55 }], 'bodyweight'),
         ex('Barbell Row', 3, '8-10', 60, 8, 120, [{ name: 'Cable Row', weight: 55 }, { name: 'Dumbbell Row', weight: 26 }]),
         ex('Face Pull', 3, '12-15', 20, 9, 75, [{ name: 'Rear Delt Fly', weight: 8 }]),
         ex('Bicep Curl', 3, '10-12', 12, 9, 75, [{ name: 'Hammer Curl', weight: 12 }])
@@ -315,6 +326,9 @@ function normalizePlan(raw) {
             weight: parseFloat(e.weight) || 0,
             targetRpe: e.targetRpe != null ? parseFloat(e.targetRpe) : null,
             restSeconds: parseInt(e.restSeconds, 10) || 120,
+            restSecondsNext: e.restSecondsNext != null && e.restSecondsNext !== '' ? parseInt(e.restSecondsNext, 10) : null,
+            equipment: EQUIPMENT_TYPES.includes(e.equipment) ? e.equipment : 'barbell',
+            barWeight: e.barWeight != null && e.barWeight !== '' ? parseFloat(e.barWeight) : null,
             description: String(e.description || ''),
             notes: String(e.notes || ''),
             alternates: Array.isArray(e.alternates) ? e.alternates.filter(a => a && a.name).map(a => ({
@@ -358,7 +372,8 @@ function startSession(dayId) {
     exercises: day.exercises.map(e => ({
       name: e.name, planId: e.id, swappedFrom: null,
       plannedSets: e.sets, plannedReps: e.reps, plannedWeight: e.weight,
-      targetRpe: e.targetRpe, restSeconds: e.restSeconds,
+      targetRpe: e.targetRpe, restSeconds: e.restSeconds, restSecondsNext: e.restSecondsNext,
+      equipment: e.equipment || 'barbell', barWeight: e.barWeight,
       description: e.description, alternates: e.alternates, notes: '',
       sets: Array.from({ length: e.sets }, () => ({ weight: e.weight, reps: parseRepsLow(e.reps), rpe: e.targetRpe, done: false }))
     }))
@@ -461,6 +476,9 @@ Rules for the plan you produce:
           "weight": <number>,
           "targetRpe": <number 1-10>,
           "restSeconds": <number>,
+          "restSecondsNext": <number, optional — rest before moving to the next movement, omit if same as restSeconds>,
+          "equipment": "<one of: barbell, trap-bar, landmine, training-bar, dumbbell, machine, cable, bodyweight, other>",
+          "barWeight": <number, optional — only for barbell/trap-bar/training-bar if the bar isn't a standard 20kg/45lb bar; omit otherwise>,
           "description": "<1-2 sentence how-to>",
           "alternates": [ { "name": "<alternative exercise>", "weight": <number>, "description": "<short how-to>" } ]
         }
@@ -470,7 +488,8 @@ Rules for the plan you produce:
 }
 - Progress weights based on my logged RPE: if RPE was at or below target, increase; if above, hold or reduce.
 - Always include 1-2 "alternates" per exercise (for busy equipment) and a short "description" for each.
-- Keep rest times realistic per lift type.
+- Keep rest times realistic per lift type. Set "restSecondsNext" only when the rest before switching movements should genuinely differ from the between-set rest (e.g. longer before a heavy compound, shorter before a superset).
+- Set "equipment" accurately per exercise — this drives whether the plate calculator shows up and whether the weight field is grayed out for bodyweight moves.
 
 My data:
 `;
@@ -479,7 +498,7 @@ ${url}
 
 It contains my recent sessions (actual weights, reps, RPE), notes, body weight and current plan. Review it, then write my next workout plan.
 
-Reply with ONLY a JSON code block of type "workout-plan" (weights in ${unit()}) using the same field structure as the "plan" object in that data: days[] → exercises[] with name, sets, reps (string), weight, targetRpe, restSeconds, description, and 1-2 alternates each. Progress weights from my logged RPE vs target (at/under target → increase; over → hold or reduce). I'll paste your JSON back into the app to load it.`;
+Reply with ONLY a JSON code block of type "workout-plan" (weights in ${unit()}) using the same field structure as the "plan" object in that data: days[] → exercises[] with name, sets, reps (string), weight, targetRpe, restSeconds, restSecondsNext (optional, only if it should differ from restSeconds), equipment (one of: barbell, trap-bar, landmine, training-bar, dumbbell, machine, cable, bodyweight, other), barWeight (optional, only if the bar isn't a standard 20kg/45lb bar), description, and 1-2 alternates each. Progress weights from my logged RPE vs target (at/under target → increase; over → hold or reduce). I'll paste your JSON back into the app to load it.`;
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); return true; }
   catch (e) {
@@ -745,7 +764,8 @@ function viewActiveSession() {
     <div class="card">
       <textarea data-bind="session-notes" placeholder="How did it go? Anything Claude should know? (sleep, pain, energy…)">${esc(active.notes)}</textarea>
     </div>
-    <button class="wide ghost danger mt12" data-action="confirm-discard">Discard session</button>`;
+    <button class="wide success mt12" data-action="confirm-finish">Finish workout</button>
+    <button class="wide ghost danger mt8" data-action="confirm-discard">Discard session</button>`;
 }
 function exerciseCard(e, ei) {
   const doneCount = e.sets.filter(s => s.done).length;
@@ -773,14 +793,14 @@ function exerciseCard(e, ei) {
         ${e.swappedFrom ? `<div class="swap-note">↺ swapped from ${esc(e.swappedFrom)}</div>` : ''}
       </div>
       <button class="icon-btn" data-action="ex-info" data-ei="${ei}" title="Explain">${icon('info', 18)}</button>
-      <button class="icon-btn" data-action="plate-calc" data-ei="${ei}" title="Plate calculator">${icon('plate', 18)}</button>
+      ${PLATE_EQUIPMENT.has(e.equipment || 'barbell') ? `<button class="icon-btn" data-action="plate-calc" data-ei="${ei}" title="Plate calculator">${icon('plate', 18)}</button>` : ''}
       <button class="icon-btn" data-action="ex-swap" data-ei="${ei}" title="Swap">${icon('swap', 18)}</button>
     </div>
     <div class="set-grid">
       <div class="head">#</div><div class="head">${unit()}</div><div class="head">Reps</div><div class="head">RPE</div><div class="head">✓</div>
       ${e.sets.map((s, si) => `
         <div class="set-no">${si + 1}</div>
-        <input class="${s.done ? 'set-row-done-i' : ''}" type="number" inputmode="decimal" step="0.5" value="${s.weight != null ? s.weight : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="weight" ${s.done ? 'style="border-color:var(--green)"' : ''}>
+        <input class="${s.done ? 'set-row-done-i' : ''}${e.equipment === 'bodyweight' ? ' bw-weight-i' : ''}" type="number" inputmode="decimal" step="0.5" value="${s.weight != null ? s.weight : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="weight" ${s.done ? 'style="border-color:var(--green)"' : ''}>
         <input type="number" inputmode="numeric" value="${s.reps != null ? s.reps : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="reps" ${s.done ? 'style="border-color:var(--green)"' : ''}>
         <button class="rpe-btn ${s.rpe != null ? '' : 'muted'}" data-action="rpe-pick" data-ei="${ei}" data-si="${si}" ${s.done ? 'style="border-color:var(--green)"' : ''}>${s.rpe != null ? s.rpe : '—'}</button>
         <button class="set-done-btn ${s.done ? 'success' : ''}" data-action="set-done" data-ei="${ei}" data-si="${si}">${s.done ? '✓' : '○'}</button>`).join('')}
@@ -1113,7 +1133,8 @@ function exMenuModal(dayId, i) {
 }
 function exEditModal(dayId, i) {
   const day = plan.days.find(d => d.id === dayId);
-  const e = i != null ? day.exercises[i] : { name: '', sets: 3, reps: '8-12', weight: 0, targetRpe: 8, restSeconds: 120, description: '', alternates: [] };
+  const e = i != null ? day.exercises[i] : { name: '', sets: 3, reps: '8-12', weight: 0, targetRpe: 8, restSeconds: 120, restSecondsNext: null, equipment: 'barbell', barWeight: null, description: '', alternates: [] };
+  const equipment = e.equipment || 'barbell';
   showModal(i != null ? 'Edit exercise' : 'Add exercise', `
     <label class="field"><span>Name</span><input id="f-name" value="${esc(e.name)}"></label>
     <div class="row">
@@ -1123,15 +1144,28 @@ function exEditModal(dayId, i) {
     <div class="row">
       <label class="field grow"><span>Weight (${unit()})</span><input id="f-weight" type="number" inputmode="decimal" step="0.5" value="${e.weight}"></label>
       <label class="field grow"><span>Target RPE</span><button type="button" id="f-rpe" class="rpe-btn" data-action="edit-rpe-pick" data-v="${e.targetRpe != null ? e.targetRpe : ''}">${e.targetRpe != null ? e.targetRpe : '—'}</button></label>
-      <label class="field grow"><span>Rest (sec)</span><input id="f-rest" type="number" inputmode="numeric" value="${e.restSeconds}"></label>
     </div>
+    <div class="row">
+      <label class="field grow"><span>Rest between sets (sec)</span><input id="f-rest" type="number" inputmode="numeric" value="${e.restSeconds}"></label>
+      <label class="field grow"><span>Rest before next movement (sec, optional)</span><input id="f-rest-next" type="number" inputmode="numeric" placeholder="same as above" value="${e.restSecondsNext != null ? e.restSecondsNext : ''}"></label>
+    </div>
+    <label class="field"><span>Equipment</span>
+      <select id="f-equipment" data-bind="edit-equipment">${EQUIPMENT_TYPES.map(t => `<option value="${t}" ${t === equipment ? 'selected' : ''}>${EQUIPMENT_LABELS[t]}</option>`).join('')}</select>
+    </label>
+    <label class="field${BAR_WEIGHT_EQUIPMENT.has(equipment) ? '' : ' hidden'}" id="f-barweight-row"><span>Bar weight (${unit()})</span><input id="f-barweight" type="number" inputmode="decimal" step="0.5" placeholder="default ${resolvedBarWeight({ equipment, barWeight: null })}" value="${e.barWeight != null ? e.barWeight : ''}"></label>
     <label class="field"><span>How-to / description (optional)</span><textarea id="f-desc" style="min-height:60px">${esc(e.description)}</textarea></label>`,
     [
       { label: 'Save', cls: 'primary', fn: () => {
           const name = mval('f-name'); if (!name) { toast('Name is required', 'err'); return; }
           const rpeRaw = document.getElementById('f-rpe').dataset.v;
+          const restNextRaw = mval('f-rest-next');
+          const barWeightRaw = mval('f-barweight');
           const upd = { name, sets: Math.max(1, mnum('f-sets', 3)), reps: mval('f-reps') || '8-12', weight: mnum('f-weight'),
-            targetRpe: rpeRaw ? parseFloat(rpeRaw) : null, restSeconds: Math.max(0, mnum('f-rest', 120)), description: mval('f-desc') };
+            targetRpe: rpeRaw ? parseFloat(rpeRaw) : null, restSeconds: Math.max(0, mnum('f-rest', 120)),
+            restSecondsNext: restNextRaw ? Math.max(0, parseInt(restNextRaw, 10)) : null,
+            equipment: document.getElementById('f-equipment').value,
+            barWeight: barWeightRaw ? parseFloat(barWeightRaw) : null,
+            description: mval('f-desc') };
           if (i != null) Object.assign(day.exercises[i], upd);
           else day.exercises.push(Object.assign({ id: uid(), notes: '', alternates: [] }, upd));
           savePlan(); closeModal(); render();
@@ -1193,26 +1227,33 @@ function exInfoModal(ei) {
   showModal(e.name, `<p>${esc(desc)}</p>
     <p class="muted small mt12">Target: ${e.plannedSets}×${esc(e.plannedReps)} @ ${e.plannedWeight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''}</p>`);
 }
-function showPlateCalculator(weight) {
+function showPlateCalculator(e) {
   const isLb = unit() === 'lb';
-  const barWeight = isLb ? 45 : 20;
   const plates = isLb ? [45, 35, 25, 10, 5, 2.5] : [25, 20, 15, 10, 5, 2.5, 1.25];
-  weight = weight || 0;
-  if (weight <= barWeight) {
+  const weight = e.plannedWeight || 0;
+  const equipment = e.equipment || 'barbell';
+  const isLandmine = equipment === 'landmine';
+  const barWeight = isLandmine ? 0 : resolvedBarWeight(e);
+  const sides = isLandmine ? 1 : 2;
+  if (!isLandmine && weight <= barWeight) {
     showModal('Plate calculator', `<p class="muted">Target ${weight}${unit()} is at or below the bar (${barWeight}${unit()}) — no plates needed.</p>`);
     return;
   }
-  let perSide = (weight - barWeight) / 2;
+  let remain = (weight - barWeight) / sides;
   const rows = [];
   for (const p of plates) {
-    const count = Math.floor(perSide / p + 1e-9);
-    if (count > 0) { rows.push({ p, count }); perSide -= count * p; }
+    const count = Math.floor(remain / p + 1e-9);
+    if (count > 0) { rows.push({ p, count }); remain -= count * p; }
   }
+  const sideLabel = isLandmine ? 'on the end' : 'per side';
+  const summary = isLandmine
+    ? `Target ${weight}${unit()} to load on the landmine end`
+    : `Target ${weight}${unit()} · bar ${barWeight}${unit()} · ${((weight - barWeight) / sides).toFixed(2)}${unit()} per side`;
   showModal('Plate calculator', `
-    <p class="muted small">Target ${weight}${unit()} · bar ${barWeight}${unit()} · ${((weight - barWeight) / 2).toFixed(2)}${unit()} per side</p>
+    <p class="muted small">${summary}</p>
     <div class="divider"></div>
-    ${rows.length ? rows.map(r => `<div class="row between mt8"><span class="bold">${r.p}${unit()}</span><span>× ${r.count} per side</span></div>`).join('') : '<p class="muted small">Just the bar.</p>'}
-    ${perSide > 0.01 ? `<p class="muted small mt12">${perSide.toFixed(2)}${unit()} per side can't be made with these plates.</p>` : ''}`);
+    ${rows.length ? rows.map(r => `<div class="row between mt8"><span class="bold">${r.p}${unit()}</span><span>× ${r.count} ${sideLabel}</span></div>`).join('') : '<p class="muted small">Just the bar.</p>'}
+    ${remain > 0.01 ? `<p class="muted small mt12">${remain.toFixed(2)}${unit()} ${sideLabel} can't be made with these plates.</p>` : ''}`);
 }
 function exNoteModal(ei) {
   const e = active.exercises[ei];
@@ -1722,11 +1763,15 @@ document.addEventListener('click', e => {
       const ei = +el.dataset.ei;
       const ex = active.exercises[ei], s = ex.sets[+el.dataset.si];
       s.done = !s.done;
-      if (s.done && ex.sets.every(y => y.done)) exExpanded.delete(ei); // auto-collapse the finished exercise
+      const exerciseDone = ex.sets.every(y => y.done);
+      if (s.done && exerciseDone) exExpanded.delete(ei); // auto-collapse the finished exercise
       saveActive(); render();
       if (s.done) {
         const remaining = active.exercises.some(x => x.sets.some(y => !y.done));
-        if (remaining) startRest(ex.restSeconds, 'Rest — ' + ex.name);
+        if (remaining) {
+          const seconds = exerciseDone && ex.restSecondsNext != null ? ex.restSecondsNext : ex.restSeconds;
+          startRest(seconds, 'Rest — ' + ex.name);
+        }
         buzz([60]);
       }
       break;
@@ -1774,7 +1819,7 @@ document.addEventListener('click', e => {
     case 'ex-info': exInfoModal(+el.dataset.ei); break;
     case 'ex-swap': sessionSwapModal(+el.dataset.ei); break;
     case 'ex-note': exNoteModal(+el.dataset.ei); break;
-    case 'plate-calc': showPlateCalculator(active.exercises[+el.dataset.ei].plannedWeight); break;
+    case 'plate-calc': showPlateCalculator(active.exercises[+el.dataset.ei]); break;
     case 'cmj-open': cmjVideoModal(); break;
     case 'session-swap-pick': {
       const ei = +el.dataset.ei;
@@ -1910,6 +1955,14 @@ document.addEventListener('change', e => {
   const bind = e.target.dataset.bind;
   if (bind === 'history-ex') { historyExercise = e.target.value; render(); }
   if (bind === 'set-unit') { settings.unit = e.target.value; saveSettings(); render(); toast('Unit set to ' + settings.unit + ' (existing numbers are not converted)'); }
+  if (bind === 'edit-equipment') {
+    const row = document.getElementById('f-barweight-row');
+    if (row) {
+      row.classList.toggle('hidden', !BAR_WEIGHT_EQUIPMENT.has(e.target.value));
+      const input = document.getElementById('f-barweight');
+      if (input) input.placeholder = 'default ' + resolvedBarWeight({ equipment: e.target.value, barWeight: null });
+    }
+  }
 });
 
 /* boot */
