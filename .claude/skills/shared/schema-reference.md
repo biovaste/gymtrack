@@ -32,7 +32,13 @@ The primary input format produced by the app's "Copy coaching prompt + data" but
   "readiness": {
     "cmjCm": 29.2,
     "broadJumpCm": 185.0,
-    "subjectiveEnergy": 7
+    "subjectiveEnergy": 7,
+    "method": "video",
+    "flightTimeMs": 488,
+    "cmjAttempts": [
+      { "heightCm": 29.2, "flightTimeMs": 488, "effectiveFps": 240, "precisionCm": 0.3 },
+      { "heightCm": 28.1, "flightTimeMs": 479, "effectiveFps": 240, "precisionCm": 0.3 }
+    ]
   },
   "exercises": [
     {
@@ -59,9 +65,14 @@ The primary input format produced by the app's "Copy coaching prompt + data" but
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
 | `readiness` | object | No | Full block optional; any sub-field can be absent |
-| `readiness.cmjCm` | number | No | Countermovement jump in cm — primary neuromuscular readiness signal |
+| `readiness.cmjCm` | number | No | Countermovement jump in cm — primary neuromuscular readiness signal. **Best** attempt when `cmjAttempts` is present |
 | `readiness.broadJumpCm` | number | No | Broad jump in cm |
 | `readiness.subjectiveEnergy` | 1–10 | No | Self-reported readiness at session start |
+| `readiness.method` | `"video"` | No | Present only when measured with the in-app video tool. Absent = hand-entered |
+| `readiness.flightTimeMs` | number | No | Flight time of the best attempt. Video method only |
+| `readiness.cmjAttempts` | array | No | One entry per jump measured in that session, in the order taken. Video method only |
+| `cmjAttempts[].effectiveFps` | number | No | Real capture frame rate. **Below 60 the measurement is only ±2–5 cm** — don't read trends into differences smaller than `precisionCm` |
+| `cmjAttempts[].precisionCm` | number | No | Half-frame timing residual in cm. The measurement's error bar |
 | `plannedSets` | number | No | Required for `completionRate`. Absent in sessions from non-app data |
 | `plannedReps` | string | No | Range string e.g. `"6-8"`. Parse lower bound for comparisons |
 | `plannedWeight` | number | No | In same unit as `settings.unit` |

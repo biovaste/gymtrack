@@ -224,6 +224,16 @@ label.field > span { display: block; margin-bottom: 5px; }
 .cmj-marker-row button { flex: 1; }
 .cmj-result { text-align: center; padding: 10px; }
 .cmj-result .big { font-size: 32px; font-weight: 800; }
+.cmj-tips summary { cursor: pointer; }
+.cmj-tips ul { padding-left: 18px; }
+.cmj-tips li + li { margin-top: 6px; }
+.cmj-attempt {
+  display: flex; align-items: center; gap: 8px; margin-top: 6px;
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px;
+}
+.cmj-attempt.best { border-color: var(--green); }
+.cmj-attempt .small { flex: 1; }
+.cmj-attempt button { padding: 4px 8px; }
 
 /* ----- toast ----- */
 #toast-root { position: fixed; top: calc(60px + var(--safe-top)); left: 0; right: 0; z-index: 60; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }

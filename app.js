@@ -99,7 +99,7 @@ const EQUIPMENT_TYPES = ['barbell', 'trap-bar', 'landmine', 'training-bar', 'dum
 const EQUIPMENT_LABELS = { barbell: 'Barbell', 'trap-bar': 'Trap bar', landmine: 'Landmine', 'training-bar': 'Training bar', dumbbell: 'Dumbbell', machine: 'Machine', cable: 'Cable', bodyweight: 'Bodyweight', other: 'Other' };
 const PLATE_EQUIPMENT = new Set(['barbell', 'trap-bar', 'landmine', 'training-bar']); // shows the plate calculator
 const BAR_WEIGHT_EQUIPMENT = new Set(['barbell', 'trap-bar', 'training-bar']); // landmine ignores bar weight entirely
-const BAR_WEIGHT_DEFAULTS = { barbell: { kg: 20, lb: 45 }, 'trap-bar': { kg: 25, lb: 55 }, 'training-bar': { kg: 10, lb: 15 } };
+const BAR_WEIGHT_DEFAULTS = { barbell: { kg: 20, lb: 45 }, 'trap-bar': { kg: 23, lb: 50 }, 'training-bar': { kg: 10, lb: 15 } };
 function resolvedBarWeight(e) {
   if (e.barWeight != null) return e.barWeight;
   return BAR_WEIGHT_DEFAULTS[e.equipment]?.[unit()] ?? (unit() === 'lb' ? 45 : 20);
@@ -720,7 +720,7 @@ function viewActiveSession() {
   const hasReadiness = r.cmjCm != null || r.broadJumpCm != null || r.subjectiveEnergy != null;
   const readinessExpanded = readinessOpen != null ? readinessOpen : !(hasReadiness || doneSets > 0);
   const readinessSummary = hasReadiness
-    ? [r.cmjCm != null ? `CMJ ${r.cmjCm}` : '', r.broadJumpCm != null ? `Broad ${r.broadJumpCm}` : '', r.subjectiveEnergy != null ? `Energy ${r.subjectiveEnergy}` : ''].filter(Boolean).join(' · ')
+    ? [r.cmjCm != null ? `CMJ ${r.cmjCm}${r.cmjAttempts?.length > 1 ? ` (${r.cmjAttempts.length} att)` : ''}` : '', r.broadJumpCm != null ? `Broad ${r.broadJumpCm}` : '', r.subjectiveEnergy != null ? `Energy ${r.subjectiveEnergy}` : ''].filter(Boolean).join(' · ')
     : 'tap to log CMJ / energy';
   return `
     <div class="row between">
@@ -1351,13 +1351,21 @@ if (window.visualViewport) {
 /* ================= CMJ video measurement ================= */
 // Lives outside the render cycle like `rest` — mutated directly, with
 // targeted DOM writes, rather than routed through the app's render().
-let cmjState = null; // { objectUrl, video, canvas, ctx, fps, seeking, lastMediaTime, takeoffTime, landingTime, pollTimer }
+let cmjState = null; // { objectUrl, video, fps, detectedFps, seeking, lastMediaTime, takeoffTime, landingTime, attempts, pollTimer }
 
 function cmjVideoModal() {
-  cmjState = { objectUrl: null, video: null, fps: 30, seeking: false, lastMediaTime: 0, takeoffTime: null, landingTime: null, pollTimer: null };
+  cmjState = { objectUrl: null, video: null, fps: 30, seeking: false, lastMediaTime: 0, takeoffTime: null, landingTime: null, attempts: [], pollTimer: null };
   showModal('Measure CMJ via video', `
     <input type="file" id="cmj-file-input" accept="video/*">
-    <p class="small muted mt8">High-fps clips (120/240 fps, slo-mo or not): after detection, tap the rate you <em>recorded</em> at — if the file plays slower than real time, the timeline is corrected automatically.</p>
+    <details class="cmj-tips mt8">
+      <summary class="small muted">How to record for accurate results</summary>
+      <p class="small muted mt8">Frame rate <em>is</em> your accuracy. At a ~500&nbsp;ms flight time one frame is worth ~5&nbsp;cm at 24&nbsp;fps but only ~0.5&nbsp;cm at 240&nbsp;fps.</p>
+      <ul class="small muted mt8">
+        <li><b>iPhone: use Slo-Mo, not Video.</b> Camera → Slo-Mo, set to 1080p/240 fps in Settings › Camera › Record Slo-mo. Normal Video mode is 24–30 fps.</li>
+        <li><b>Don't trim the slo-mo region</b> — keep the whole clip slowed. Frame-rate detection samples the first second, so a partly-slowed clip gets the wrong timeline correction. If that happens, override the recording rate below.</li>
+        <li>Film side-on, whole body in frame, feet clearly visible, phone steady.</li>
+      </ul>
+    </details>
     <div id="cmj-fps-row" class="hidden mt8">
       <span class="small muted">Recording frame rate (auto-detected — tap to override)</span>
       <div class="cmj-fps-group mt8">
@@ -1376,14 +1384,16 @@ function cmjVideoModal() {
         <button type="button" class="ghost icon-btn" id="cmj-step-fwd">frame ▶</button>
       </div>
       <div class="cmj-marker-row mt12">
-        <button type="button" id="cmj-set-takeoff">Set takeoff</button>
-        <button type="button" id="cmj-set-landing">Set landing</button>
+        <button type="button" id="cmj-set-takeoff">Last frame on ground</button>
+        <button type="button" id="cmj-set-landing">First frame back down</button>
       </div>
       <div id="cmj-markers" class="small muted mt8"></div>
       <div id="cmj-result" class="cmj-result hidden"></div>
+      <button type="button" id="cmj-add-attempt" class="ghost wide mt8 hidden">Add attempt</button>
+      <div id="cmj-attempts" class="cmj-attempts"></div>
     </div>`,
     [
-      { label: 'Use this value', cls: 'primary', fn: cmjAccept },
+      { label: 'Save best', cls: 'primary', fn: cmjAccept },
       { label: 'Cancel', fn: cmjCancel }
     ]);
   cmjInitListeners();
@@ -1407,8 +1417,11 @@ function cmjInitListeners() {
     const file = fileInput.files && fileInput.files[0];
     if (file) cmjOnFileSelected(file);
   });
-  document.querySelectorAll('.cmj-fps-group [data-fps]').forEach(btn => {
-    btn.addEventListener('click', () => {
+  // Delegated: cmjSetFps can inject a chip for a detected rate that isn't a preset
+  // (24/25/50/100/200), and that chip needs to be clickable too.
+  document.querySelector('.cmj-fps-group').addEventListener('click', e => {
+    const btn = e.target.closest('[data-fps]');
+    if (btn) {
       const chosen = parseInt(btn.dataset.fps, 10);
       cmjSetFps(chosen);
       const detectEl = document.getElementById('cmj-fps-detect');
@@ -1421,22 +1434,28 @@ function cmjInitListeners() {
       }
       // The scale factor feeds the flight-time math, so recompute a shown result.
       if (cmjState.takeoffTime != null || cmjState.landingTime != null) cmjUpdateResultUI();
-    });
+    }
   });
   document.getElementById('cmj-scrub').addEventListener('input', e => cmjOnScrubInput(parseFloat(e.target.value)));
   document.getElementById('cmj-step-back').addEventListener('click', () => cmjSeekBy(-1));
   document.getElementById('cmj-step-fwd').addEventListener('click', () => cmjSeekBy(1));
   document.getElementById('cmj-set-takeoff').addEventListener('click', cmjSetTakeoff);
   document.getElementById('cmj-set-landing').addEventListener('click', cmjSetLanding);
+  document.getElementById('cmj-add-attempt').addEventListener('click', () => { cmjPushAttempt(); cmjUpdateResultUI(); });
+  document.getElementById('cmj-attempts').addEventListener('click', e => {
+    const del = e.target.closest('[data-attempt-del]');
+    if (!del) return;
+    cmjState.attempts.splice(parseInt(del.dataset.attemptDel, 10), 1);
+    cmjUpdateResultUI();
+  });
 }
 
 function cmjOnFileSelected(file) {
   if (cmjState.objectUrl) URL.revokeObjectURL(cmjState.objectUrl);
+  // Markers reset per file, but `attempts` deliberately survives: the intended flow
+  // is one clip per jump, loading a new file for each attempt in the same session.
   cmjState.takeoffTime = null; cmjState.landingTime = null;
-  document.getElementById('cmj-result').classList.add('hidden');
-  document.getElementById('cmj-markers').innerHTML = '';
-  const acceptBtn = document.querySelector('[data-idx="m0"]');
-  if (acceptBtn) acceptBtn.disabled = true;
+  cmjUpdateResultUI();
 
   cmjState.objectUrl = URL.createObjectURL(file);
   const video = cmjState.video;
@@ -1468,6 +1487,17 @@ function cmjOnFileSelected(file) {
 function cmjSetFps(fps) {
   cmjState.fps = fps;
   const rounded = Math.round(fps);
+  const group = document.querySelector('.cmj-fps-group');
+  // cmjSnapFps can land on 24/25/50/100/200, none of which are in FPS_PRESETS — with
+  // no matching chip the whole row would look unselected. Add the missing rate.
+  if (group && !group.querySelector(`[data-fps="${rounded}"]`)) {
+    const extra = document.createElement('button');
+    extra.type = 'button';
+    extra.dataset.fps = String(rounded);
+    extra.className = 'ghost icon-btn';
+    extra.textContent = `${rounded} fps`;
+    group.appendChild(extra);
+  }
   document.querySelectorAll('.cmj-fps-group [data-fps]').forEach(b => {
     b.classList.toggle('active', parseInt(b.dataset.fps, 10) === rounded);
   });
@@ -1662,52 +1692,119 @@ function cmjTimeScale() {
 // Timeline frame numbers always follow the rate the file actually plays at.
 function cmjPlaybackFps() { return cmjState.detectedFps || cmjState.fps; }
 
+// Real-world frames per second of the captured footage — the rate that actually sets
+// timing resolution, regardless of how the file plays back. A 240fps slo-mo export
+// plays at ~30fps with scale 0.125, so 30 / 0.125 = 240.
+function cmjEffectiveFps() { return cmjPlaybackFps() / cmjTimeScale(); }
+
+// Flight time from the two marked frames, or null if they don't describe a jump.
+// Height error scales as dh/dt = g·t/4 — at a ~500ms flight time that's 1.23 cm per
+// millisecond, so a 24fps clip is worth ±5 cm per frame and a 240fps one ±0.5 cm.
+function cmjCurrentResult() {
+  const { takeoffTime, landingTime } = cmjState;
+  if (takeoffTime == null || landingTime == null) return null;
+  const effFps = cmjEffectiveFps();
+  // Markers are frame-quantised. True takeoff lies half a frame AFTER the last frame
+  // with feet on the ground; true landing half a frame BEFORE the first frame back in
+  // contact. Subtracting one whole frame from the marked span makes the estimate
+  // unbiased rather than systematically long by up to a frame.
+  const flightTimeSec = (landingTime - takeoffTime) * cmjTimeScale() - 1 / effFps;
+  if (!(flightTimeSec > 0)) return null;
+  return {
+    heightCm: computeJumpHeightCm(flightTimeSec),
+    flightTimeMs: Math.round(flightTimeSec * 1000),
+    effectiveFps: Math.round(effFps),
+    precisionCm: (G_MS2 * flightTimeSec / 4) * (0.5 / effFps) * 100 // ±half a frame residual
+  };
+}
+
+// Bank the current measurement and clear the markers, ready for the next clip. The
+// video, the frame-rate setting and the attempt list all stay put.
+function cmjPushAttempt() {
+  const r = cmjCurrentResult();
+  if (!r) return false;
+  cmjState.attempts.push(r);
+  cmjState.takeoffTime = null;
+  cmjState.landingTime = null;
+  return true;
+}
+
+function cmjRenderAttempts() {
+  const el = document.getElementById('cmj-attempts');
+  if (!el) return;
+  const list = cmjState.attempts;
+  if (!list.length) { el.innerHTML = ''; return; }
+  const bestIdx = list.reduce((b, a, i) => a.heightCm > list[b].heightCm ? i : b, 0);
+  el.innerHTML = `<div class="small muted mt12">Attempts</div>` + list.map((a, i) => `
+    <div class="cmj-attempt${i === bestIdx ? ' best' : ''}">
+      <b>${a.heightCm.toFixed(1)} cm</b>
+      <span class="small muted">±${a.precisionCm.toFixed(1)} · ${a.flightTimeMs} ms · ${a.effectiveFps} fps</span>
+      <button type="button" class="ghost icon-btn" data-attempt-del="${i}" aria-label="Remove attempt ${i + 1}">✕</button>
+    </div>`).join('');
+}
+
 function cmjUpdateResultUI() {
-  const { takeoffTime, landingTime, fps } = cmjState;
+  const { takeoffTime, landingTime, fps, attempts } = cmjState;
   const markersEl = document.getElementById('cmj-markers');
   const resultEl = document.getElementById('cmj-result');
+  const addBtn = document.getElementById('cmj-add-attempt');
   const acceptBtn = document.querySelector('[data-idx="m0"]');
   const pf = cmjPlaybackFps();
   const fmt = t => t == null ? '—' : `${t.toFixed(3)}s (frame ${Math.round(t * pf)})`;
-  markersEl.innerHTML = `Takeoff: ${fmt(takeoffTime)} &nbsp;·&nbsp; Landing: ${fmt(landingTime)}`;
+  markersEl.innerHTML = `Last on ground: ${fmt(takeoffTime)} &nbsp;·&nbsp; First back down: ${fmt(landingTime)}`;
 
-  if (takeoffTime == null || landingTime == null) {
-    resultEl.classList.add('hidden');
-    if (acceptBtn) acceptBtn.disabled = true;
-    return;
+  const result = cmjCurrentResult();
+  cmjRenderAttempts();
+  if (addBtn) addBtn.classList.toggle('hidden', !result);
+  if (acceptBtn) {
+    // Accepting folds in a valid unmarked-as-attempt result, so count it here too —
+    // otherwise a single measured jump would look unsaveable.
+    const n = attempts.length + (result ? 1 : 0);
+    acceptBtn.disabled = n === 0;
+    acceptBtn.textContent = n > 1 ? `Save best (${n})` : 'Save best';
   }
-  if (landingTime <= takeoffTime) {
-    resultEl.classList.remove('hidden');
-    resultEl.innerHTML = `<p class="small red">Landing must be after takeoff — re-mark one of the frames.</p>`;
-    if (acceptBtn) acceptBtn.disabled = true;
+
+  if (takeoffTime == null || landingTime == null) { resultEl.classList.add('hidden'); return; }
+  resultEl.classList.remove('hidden');
+  if (!result) {
+    resultEl.innerHTML = `<p class="small red">No flight time from those frames — the first-back-down frame must be at least two frames after the last-on-ground frame.</p>`;
     return;
   }
   const scale = cmjTimeScale();
-  const flightTimeSec = (landingTime - takeoffTime) * scale;
-  const heightCm = computeJumpHeightCm(flightTimeSec);
-  const plausible = heightCm >= 3 && heightCm <= 180;
-  resultEl.classList.remove('hidden');
+  const plausible = result.heightCm >= 3 && result.heightCm <= 180;
   resultEl.innerHTML = `
-    <div class="big">${heightCm.toFixed(1)} cm</div>
-    <div class="small muted">flight time ${Math.round(flightTimeSec * 1000)} ms</div>
+    <div class="big">${result.heightCm.toFixed(1)} cm</div>
+    <div class="small muted">± ${result.precisionCm.toFixed(1)} cm · flight ${result.flightTimeMs} ms · ${result.effectiveFps} fps effective</div>
+    <div class="small muted">−1 frame applied (half-frame midpoint correction at each end)</div>
     ${scale !== 1 ? `<div class="small muted">×${(1 / scale).toFixed(1)} timeline correction (recorded ${fps} fps, plays ~${cmjState.detectedFps} fps)</div>` : ''}
+    ${result.effectiveFps < 60 ? `<p class="small amber mt8">Only ±${result.precisionCm.toFixed(1)} cm at ${result.effectiveFps} fps. Record in Slo-Mo at 240 fps for ~±0.3 cm — see “How to record” at the top.</p>` : ''}
     ${plausible ? '' : '<p class="small amber mt8">That seems unusually low/high — double check your markers.</p>'}`;
-  cmjState.resultHeightCm = heightCm;
-  cmjState.resultFlightTimeMs = Math.round(flightTimeSec * 1000);
-  if (acceptBtn) acceptBtn.disabled = false;
 }
 
 function cmjAccept() {
-  if (!cmjState || cmjState.resultHeightCm == null) { cmjCancel(); return; }
-  const heightCm = Math.round(cmjState.resultHeightCm * 10) / 10;
+  if (!cmjState) return;
+  cmjPushAttempt(); // fold in a valid measurement the user never tapped "Add attempt" for
+  const attempts = cmjState.attempts;
+  if (!attempts.length) { cmjCancel(); return; }
+  const round1 = n => Math.round(n * 10) / 10;
+  const best = attempts.reduce((b, a) => a.heightCm > b.heightCm ? a : b);
+  const heightCm = round1(best.heightCm);
+  const list = attempts.map(a => ({
+    heightCm: round1(a.heightCm),
+    flightTimeMs: a.flightTimeMs,
+    effectiveFps: a.effectiveFps,
+    precisionCm: round1(a.precisionCm)
+  }));
   if (active) {
     active.readiness.cmjCm = heightCm;
-    active.readiness.flightTimeMs = cmjState.resultFlightTimeMs;
+    active.readiness.flightTimeMs = best.flightTimeMs;
     active.readiness.method = 'video';
+    active.readiness.cmjAttempts = list;
     saveActive();
-    toast('CMJ height set from video ✓');
+    toast(list.length > 1 ? `CMJ ${heightCm} cm — best of ${list.length} ✓` : 'CMJ height set from video ✓');
   } else {
-    toast(`CMJ: ${heightCm} cm`);
+    // Nothing to attach to: say so loudly rather than silently dropping a full test set.
+    toast(`Best ${heightCm} cm of ${list.length} — not saved, start a session first`, 'err');
   }
   cmjCleanup();
   closeModal(); render();
@@ -1944,7 +2041,13 @@ document.addEventListener('input', e => {
   } else if (bind === 'session-notes' && active) {
     active.notes = el.value; saveActive();
   } else if (bind === 'readiness-cmj' && active) {
-    const v = parseFloat(el.value); active.readiness.cmjCm = isNaN(v) ? null : v; saveActive();
+    const v = parseFloat(el.value); active.readiness.cmjCm = isNaN(v) ? null : v;
+    // A typed value supersedes any earlier video measurement — drop its metadata so a
+    // stale method/flight time/attempt list can't ride along with a hand-entered number.
+    delete active.readiness.method;
+    delete active.readiness.flightTimeMs;
+    delete active.readiness.cmjAttempts;
+    saveActive();
   } else if (bind === 'readiness-broad' && active) {
     const v = parseFloat(el.value); active.readiness.broadJumpCm = isNaN(v) ? null : v; saveActive();
   } else if (bind === 'readiness-energy' && active) {
