@@ -655,6 +655,52 @@ function showUpdateBanner() {
   el.innerHTML = `<span>New version available</span><button data-action="update-app">Update</button>`;
   document.body.prepend(el);
 }
+// Manual "Check for updates". Covers two distinct failure modes:
+//  1. A new worker is installed and waiting but the banner was missed/dismissed.
+//  2. sw.js is byte-identical to the installed one (a release that forgot to bump
+//     CACHE), so no new worker ever installs — yet app.js on the server IS newer.
+//     reg.update() reports "nothing new" here, which is why we also compare the
+//     live app.js against the cached copy and offer a cache purge.
+async function checkForUpdates() {
+  const btn = document.querySelector('[data-action="check-updates"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Checking…'; }
+  const reset = () => { if (btn) { btn.disabled = false; btn.textContent = 'Check for updates'; } };
+  try {
+    if (!('serviceWorker' in navigator)) { toast('Updates need a browser with service workers', 'err'); return reset(); }
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) { toast('App not installed as a PWA — just reload the page'); return reset(); }
+
+    await reg.update(); // re-fetches sw.js; installs a new worker if it differs
+    if (reg.waiting) { swWaiting = reg.waiting; showUpdateBanner(); toast('Update ready — tap Update'); return reset(); }
+
+    // Worker is current. Is its cached app.js still current too?
+    const [liveRes, cachedRes] = await Promise.all([
+      fetch(`./app.js?fresh=${Date.now()}`, { cache: 'no-store' }),
+      caches.match('./app.js')
+    ]);
+    if (!liveRes.ok || !cachedRes) { toast('You’re on the latest version ✓'); return reset(); }
+    const [live, cached] = await Promise.all([liveRes.text(), cachedRes.text()]);
+    if (live === cached) { toast('You’re on the latest version ✓'); return reset(); }
+
+    reset();
+    showModal('Update available', `
+      <p class="small">A newer version is on the server, but this device is still serving a cached copy.</p>
+      <p class="small muted mt8">Reloading clears the app cache and fetches it. Your workouts, plan and settings are stored separately and are not affected.</p>`,
+      [{ label: 'Reload now', cls: 'primary', fn: forceRefresh }, { label: 'Not now' }]);
+  } catch (err) {
+    reset();
+    toast('Could not check — are you offline?', 'err');
+  }
+}
+
+// Purge every cache and reload from network. Only touches the SW cache; app data
+// lives in localStorage and is untouched.
+async function forceRefresh() {
+  closeModal();
+  try { await Promise.all((await caches.keys()).map(k => caches.delete(k))); } catch (err) { /* reload anyway */ }
+  location.reload();
+}
+
 function initServiceWorkerUpdates() {
   if (!('serviceWorker' in navigator)) return;
   navigator.serviceWorker.register('sw.js').then(reg => {
@@ -1111,6 +1157,12 @@ function viewSettings() {
         <button class="grow" data-action="backup-restore">Restore backup</button>
       </div>
       <button class="ghost wide danger mt8" data-action="reset-all">Reset everything</button>
+    </div>
+
+    <h2 class="section">App version</h2>
+    <div class="card">
+      <button class="ghost wide" data-action="check-updates">Check for updates</button>
+      <p class="small muted mt8">Updates normally appear as a banner at the top. Use this if the banner never shows.</p>
     </div>
     <p class="muted small" style="text-align:center">GymTrack v1 · data lives on this device${settings.autoSync ? ' + auto-synced to cloud' : ''}</p>`;
 }
@@ -1835,6 +1887,7 @@ document.addEventListener('click', e => {
     case 'modal-dismiss': if (e.target === el) { closeModal(); if (cmjState) cmjCleanup(); } break; // only when tapping the backdrop itself
     case 'modal-btn': { const fn = modalActions[el.dataset.idx]; if (fn) fn(); else closeModal(); break; }
     case 'update-app': if (swWaiting) swWaiting.postMessage('skipWaiting'); break;
+    case 'check-updates': checkForUpdates(); break;
     case 'settings-open': if (tab !== 'settings') { prevTab = tab; tab = 'settings'; render(); window.scrollTo(0, 0); } break;
     case 'settings-back': tab = prevTab; render(); window.scrollTo(0, 0); break;
 

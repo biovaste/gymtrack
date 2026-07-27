@@ -1,5 +1,8 @@
 /* GymTrack service worker — cache-first app shell for full offline use. */
-const CACHE = 'gymtrack-v8';
+// Bump on EVERY release. The browser only installs a new worker when sw.js itself
+// changes byte-for-byte, so shipping app.js/styles.css without touching this file
+// means no 'updatefound', no update banner, and users sit on the old cache.
+const CACHE = 'gymtrack-v9';
 const ASSETS = [
   './',
   './index.html',
@@ -33,6 +36,9 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return; // let API calls (GitHub) hit the network directly
+  // The Settings "Check for updates" probe compares the live file against the cached
+  // one, so it must reach the network and must not leave a ?fresh= entry behind.
+  if (url.searchParams.has('fresh')) return;
   // Stale-while-revalidate: serve from cache instantly, refresh the cache in
   // the background so app updates arrive on the next launch.
   e.respondWith(
