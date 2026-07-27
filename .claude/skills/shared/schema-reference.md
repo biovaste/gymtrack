@@ -71,7 +71,7 @@ The primary input format produced by the app's "Copy coaching prompt + data" but
 | `readiness.method` | `"video"` | No | Present only when measured with the in-app video tool. Absent = hand-entered |
 | `readiness.flightTimeMs` | number | No | Flight time of the best attempt. Video method only |
 | `readiness.cmjAttempts` | array | No | One entry per jump measured in that session, in the order taken. Video method only |
-| `cmjAttempts[].effectiveFps` | number | No | Real capture frame rate. **Below 60 the measurement is only ±2–5 cm** — don't read trends into differences smaller than `precisionCm` |
+| `cmjAttempts[].effectiveFps` | number | No | Real-time sampling rate = file frame rate × slow-motion factor (an 8× clip at 24 fps gives 192). **Below 60 the measurement is only ±2–5 cm** — don't read trends into differences smaller than `precisionCm` |
 | `cmjAttempts[].precisionCm` | number | No | Half-frame timing residual in cm. The measurement's error bar |
 | `plannedSets` | number | No | Required for `completionRate`. Absent in sessions from non-app data |
 | `plannedReps` | string | No | Range string e.g. `"6-8"`. Parse lower bound for comparisons |

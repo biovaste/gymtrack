@@ -45,7 +45,14 @@ function mountStaticIcons() {
 
 /* ================= CMJ flight-time math ================= */
 const G_MS2 = 9.81;
-const FPS_PRESETS = [30, 60, 120, 240];
+// How many seconds of file timeline per second of real time. iPhone Slo-Mo renders
+// against a 30fps nominal playback rate, so 120fps → 4× and 240fps → 8×. This is a
+// property of the TIMELINE, not of the encode: when Photos re-compresses a slo-mo
+// export down to ~24fps it keeps the stretched duration, so the factor is unchanged
+// while the frame rate changes. That is why the factor cannot be derived from two
+// frame rates (the old detectedFps/recordedFps approach gave 10× for a 240fps clip
+// re-encoded at 24fps, when the truth is still 8×).
+const SLOW_FACTORS = [1, 2, 4, 8];
 const computeJumpHeightCm = flightTimeSec => (G_MS2 * flightTimeSec * flightTimeSec / 8) * 100;
 
 /* ================= built-in exercise explanations (fallback) ================= */
@@ -1406,24 +1413,26 @@ if (window.visualViewport) {
 let cmjState = null; // { objectUrl, video, fps, detectedFps, seeking, lastMediaTime, takeoffTime, landingTime, attempts, pollTimer }
 
 function cmjVideoModal() {
-  cmjState = { objectUrl: null, video: null, fps: 30, seeking: false, lastMediaTime: 0, takeoffTime: null, landingTime: null, attempts: [], pollTimer: null };
+  cmjState = { objectUrl: null, video: null, fps: 30, slowFactor: settings.cmjSlowFactor || 1, seeking: false, lastMediaTime: 0, takeoffTime: null, landingTime: null, attempts: [], pollTimer: null };
   showModal('Measure CMJ via video', `
     <input type="file" id="cmj-file-input" accept="video/*">
     <details class="cmj-tips mt8">
       <summary class="small muted">How to record for accurate results</summary>
       <p class="small muted mt8">Frame rate <em>is</em> your accuracy. At a ~500&nbsp;ms flight time one frame is worth ~5&nbsp;cm at 24&nbsp;fps but only ~0.5&nbsp;cm at 240&nbsp;fps.</p>
       <ul class="small muted mt8">
-        <li><b>iPhone: use Slo-Mo, not Video.</b> Camera → Slo-Mo, set to 1080p/240 fps in Settings › Camera › Record Slo-mo. Normal Video mode is 24–30 fps.</li>
-        <li><b>Don't trim the slo-mo region</b> — keep the whole clip slowed. Frame-rate detection samples the first second, so a partly-slowed clip gets the wrong timeline correction. If that happens, override the recording rate below.</li>
+        <li><b>Don't use “Take Video” here.</b> The camera iOS opens from a web page only does standard video — Slo-Mo isn't offered. It will give you 24–30 fps and a useless number.</li>
+        <li><b>Record in the Camera app first</b>, in <b>Slo-Mo</b> (1080p/240 fps via Settings › Camera › Record Slo-mo), then come back and choose <b>Photo Library</b>.</li>
+        <li><b>Set the slow-motion factor below to match</b> — 240 fps Slo-Mo is <b>8×</b>, 120 fps is <b>4×</b>. Photos re-compresses the clip on the way in, which changes its frame rate but <em>not</em> its stretched duration, so the factor is the only thing that tells the app how to recover real time. Check the “→ Xs real” line looks right.</li>
         <li>Film side-on, whole body in frame, feet clearly visible, phone steady.</li>
       </ul>
     </details>
     <div id="cmj-fps-row" class="hidden mt8">
-      <span class="small muted">Recording frame rate (auto-detected — tap to override)</span>
+      <span class="small muted">Slow motion in the clip</span>
       <div class="cmj-fps-group mt8">
-        ${FPS_PRESETS.map(f => `<button type="button" data-fps="${f}" class="ghost icon-btn ${f === 30 ? 'active' : ''}">${f} fps</button>`).join('')}
+        ${SLOW_FACTORS.map(f => `<button type="button" data-slow="${f}" class="ghost icon-btn">${f === 1 ? 'Normal' : f + '×'}</button>`).join('')}
       </div>
       <div id="cmj-fps-detect" class="small muted mt8"></div>
+      <div id="cmj-duration-check" class="small muted mt8"></div>
     </div>
     <div id="cmj-stage" class="hidden mt12">
       <div class="cmj-video-wrap">
@@ -1469,24 +1478,9 @@ function cmjInitListeners() {
     const file = fileInput.files && fileInput.files[0];
     if (file) cmjOnFileSelected(file);
   });
-  // Delegated: cmjSetFps can inject a chip for a detected rate that isn't a preset
-  // (24/25/50/100/200), and that chip needs to be clickable too.
   document.querySelector('.cmj-fps-group').addEventListener('click', e => {
-    const btn = e.target.closest('[data-fps]');
-    if (btn) {
-      const chosen = parseInt(btn.dataset.fps, 10);
-      cmjSetFps(chosen);
-      const detectEl = document.getElementById('cmj-fps-detect');
-      if (detectEl) {
-        // Recording rate above the clip's playback rate = slo-mo export → the
-        // stretched timeline is corrected in the result (see cmjTimeScale).
-        detectEl.textContent = (cmjState.detectedFps && chosen > cmjState.detectedFps * 1.5)
-          ? `Recorded ${chosen} fps, plays ~${cmjState.detectedFps} fps — timeline is ${(chosen / cmjState.detectedFps).toFixed(1)}× slower than real time; times corrected.`
-          : '';
-      }
-      // The scale factor feeds the flight-time math, so recompute a shown result.
-      if (cmjState.takeoffTime != null || cmjState.landingTime != null) cmjUpdateResultUI();
-    }
+    const btn = e.target.closest('[data-slow]');
+    if (btn) cmjSetSlowFactor(parseInt(btn.dataset.slow, 10), true);
   });
   document.getElementById('cmj-scrub').addEventListener('input', e => cmjOnScrubInput(parseFloat(e.target.value)));
   document.getElementById('cmj-step-back').addEventListener('click', () => cmjSeekBy(-1));
@@ -1500,6 +1494,9 @@ function cmjInitListeners() {
     cmjState.attempts.splice(parseInt(del.dataset.attemptDel, 10), 1);
     cmjUpdateResultUI();
   });
+  // Paint the remembered factor now: the row is hidden until a file loads, but if
+  // detection fails the user sees it with no chip selected while a factor is active.
+  cmjSetSlowFactor(cmjState.slowFactor || 1);
 }
 
 function cmjOnFileSelected(file) {
@@ -1536,23 +1533,36 @@ function cmjOnFileSelected(file) {
   }, { once: true });
 }
 
-function cmjSetFps(fps) {
-  cmjState.fps = fps;
-  const rounded = Math.round(fps);
-  const group = document.querySelector('.cmj-fps-group');
-  // cmjSnapFps can land on 24/25/50/100/200, none of which are in FPS_PRESETS — with
-  // no matching chip the whole row would look unselected. Add the missing rate.
-  if (group && !group.querySelector(`[data-fps="${rounded}"]`)) {
-    const extra = document.createElement('button');
-    extra.type = 'button';
-    extra.dataset.fps = String(rounded);
-    extra.className = 'ghost icon-btn';
-    extra.textContent = `${rounded} fps`;
-    group.appendChild(extra);
-  }
-  document.querySelectorAll('.cmj-fps-group [data-fps]').forEach(b => {
-    b.classList.toggle('active', parseInt(b.dataset.fps, 10) === rounded);
+function cmjSetFps(fps) { cmjState.fps = fps; }
+
+// The slow-motion factor is the one thing the file cannot tell us, so it is an
+// explicit choice. Persisted because a given phone's Slo-Mo setting rarely changes.
+// `persist` only when the user taps a chip. Auto-application (a remembered factor, or
+// forcing Normal for a raw high-fps clip) must not overwrite the stored default —
+// one odd file shouldn't wipe the setting used for every Photos import.
+function cmjSetSlowFactor(factor, persist) {
+  cmjState.slowFactor = factor;
+  if (persist) { settings.cmjSlowFactor = factor; saveSettings(); }
+  document.querySelectorAll('.cmj-fps-group [data-slow]').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.slow, 10) === factor);
   });
+  cmjRenderDurationCheck();
+  cmjUpdateResultUI();
+}
+
+// A wrong factor is otherwise invisible, so state the consequence in real units: the
+// user knows roughly how long the action actually took, and can spot 8× vs 4× at once.
+function cmjRenderDurationCheck() {
+  const el = document.getElementById('cmj-duration-check');
+  if (!el || !cmjState.video) return;
+  const dur = cmjState.video.duration;
+  if (!dur || !isFinite(dur)) { el.textContent = ''; return; }
+  const factor = cmjState.slowFactor || 1;
+  const eff = Math.round(cmjEffectiveFps());
+  el.innerHTML = factor === 1
+    ? `Clip is ${dur.toFixed(2)}s, played as filmed · ${eff} fps effective`
+    : `Clip is ${dur.toFixed(2)}s in the file → <b>${(dur / factor).toFixed(2)}s real</b> at ${factor}× · ${eff} fps effective
+       <br><span class="muted">If that real duration doesn't match what you filmed, pick a different factor.</span>`;
 }
 
 // Browsers don't expose a video file's true frame rate directly. Estimate it by
@@ -1585,10 +1595,14 @@ function cmjAutoDetectFps() {
         const snapped = cmjSnapFps(detectedFps);
         cmjState.detectedFps = snapped;
         cmjSetFps(snapped);
-        if (detectEl) detectEl.textContent = `Detected ~${snapped} fps from the video`;
+        // A file that still plays at 100fps+ was never stretched, so it cannot be a
+        // slo-mo export — force Normal and ignore any remembered factor.
+        if (snapped >= 100) cmjSetSlowFactor(1);
+        if (detectEl) detectEl.textContent = `Plays at ~${snapped} fps`;
       } else if (detectEl) {
-        detectEl.textContent = 'Could not detect frame rate — pick it above.';
+        detectEl.textContent = 'Could not read the frame rate from this clip.';
       }
+      cmjSetSlowFactor(cmjState.slowFactor || 1); // paint the chip row + duration check
     };
     video.pause();
     // Land a hair past zero, not at exactly startTime: if startTime was 0 a seek
@@ -1731,23 +1745,16 @@ function cmjSetLanding() {
   cmjUpdateResultUI();
 }
 
-// iPhone slo-mo exports bake the slow-motion effect into the file: 120/240fps
-// footage plays back at ~24-30fps with a stretched timeline, so media-time deltas
-// are NOT real time. When the user's selected recording rate is clearly above the
-// clip's measured playback rate, treat the clip as slo-mo and scale marked times
-// by playbackFps/recordedFps to recover real time. Same-rate clips scale by 1.
-function cmjTimeScale() {
-  const playback = cmjState.detectedFps;
-  if (playback && cmjState.fps > playback * 1.5) return playback / cmjState.fps;
-  return 1;
-}
+// Media-time deltas are real time divided by the slow-motion factor.
+function cmjTimeScale() { return 1 / (cmjState.slowFactor || 1); }
 // Timeline frame numbers always follow the rate the file actually plays at.
 function cmjPlaybackFps() { return cmjState.detectedFps || cmjState.fps; }
 
-// Real-world frames per second of the captured footage — the rate that actually sets
-// timing resolution, regardless of how the file plays back. A 240fps slo-mo export
-// plays at ~30fps with scale 0.125, so 30 / 0.125 = 240.
-function cmjEffectiveFps() { return cmjPlaybackFps() / cmjTimeScale(); }
+// Real-world frames per second of the captured footage — the rate that sets timing
+// resolution. An 8× clip re-encoded to 24fps still carries 8 × 24 = 192 distinct
+// frames per real second, so the temporal detail survives the re-compression even
+// though the file's own frame rate looks low.
+function cmjEffectiveFps() { return cmjPlaybackFps() * (cmjState.slowFactor || 1); }
 
 // Flight time from the two marked frames, or null if they don't describe a jump.
 // Height error scales as dh/dt = g·t/4 — at a ~500ms flight time that's 1.23 cm per
@@ -1822,13 +1829,13 @@ function cmjUpdateResultUI() {
     resultEl.innerHTML = `<p class="small red">No flight time from those frames — the first-back-down frame must be at least two frames after the last-on-ground frame.</p>`;
     return;
   }
-  const scale = cmjTimeScale();
+  const factor = cmjState.slowFactor || 1;
   const plausible = result.heightCm >= 3 && result.heightCm <= 180;
   resultEl.innerHTML = `
     <div class="big">${result.heightCm.toFixed(1)} cm</div>
     <div class="small muted">± ${result.precisionCm.toFixed(1)} cm · flight ${result.flightTimeMs} ms · ${result.effectiveFps} fps effective</div>
     <div class="small muted">−1 frame applied (half-frame midpoint correction at each end)</div>
-    ${scale !== 1 ? `<div class="small muted">×${(1 / scale).toFixed(1)} timeline correction (recorded ${fps} fps, plays ~${cmjState.detectedFps} fps)</div>` : ''}
+    ${factor !== 1 ? `<div class="small muted">${factor}× slow motion (${cmjState.detectedFps || fps} fps timeline × ${factor})</div>` : ''}
     ${result.effectiveFps < 60 ? `<p class="small amber mt8">Only ±${result.precisionCm.toFixed(1)} cm at ${result.effectiveFps} fps. Record in Slo-Mo at 240 fps for ~±0.3 cm — see “How to record” at the top.</p>` : ''}
     ${plausible ? '' : '<p class="small amber mt8">That seems unusually low/high — double check your markers.</p>'}`;
 }
