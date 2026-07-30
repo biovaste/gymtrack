@@ -185,18 +185,25 @@ function validatePlan(plan, { unit = 'kg' } = {}) {
     }
   }
 
+  // Metric correctness has nothing to do with the plan's unit, so these checks
+  // run regardless of "kg" vs "lb" — unlike the weight-ladder checks below.
+  for (const day of plan.days) {
+    for (const e of day.exercises || []) {
+      if (e.metric != null && e.metric !== 'load' && e.metric !== 'height') {
+        errors.push(`${day.name} → ${e.name}: metric "${e.metric}" is not one of "load", "height".`);
+      }
+      if (e.metric === 'height' && e.weight) {
+        errors.push(`${day.name} → ${e.name}: a height-metric exercise must have weight 0 — box height goes in "description".`);
+      }
+    }
+  }
+
   if (unit !== 'kg') {
     warnings.push(`Unit is "${unit}" — the loadable-weight ladder is kg-only, so weights were not checked.`);
   } else {
     for (const day of plan.days) {
       for (const e of day.exercises || []) {
-        if (e.metric != null && e.metric !== 'load' && e.metric !== 'height') {
-          errors.push(`${day.name} → ${e.name}: metric "${e.metric}" is not one of "load", "height".`);
-        }
-        if (e.metric === 'height') {
-          if (e.weight) errors.push(`${day.name} → ${e.name}: a height-metric exercise must have weight 0 — box height goes in "description".`);
-          continue; // the weight ladder does not apply
-        }
+        if (e.metric === 'height') continue; // the weight ladder does not apply
         const p = weightProblem(e.equipment, e.weight, e.barWeight);
         if (p) errors.push(`${day.name} → ${e.name}: ${e.weight} kg ${p}`);
         // An alternate that declares its own equipment is checked as an error, the

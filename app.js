@@ -574,7 +574,10 @@ const sameExercise = (a, b) => canonicalName(a).toLowerCase() === canonicalName(
 function lastPerformance(name) {
   for (let i = sessions.length - 1; i >= 0; i--) {
     for (const e of sessions[i].exercises) {
-      if (sameExercise(e.name, name) && e.sets.length) return { date: sessions[i].date, sets: e.sets };
+      if (sameExercise(e.name, name) && e.sets.length) {
+        // Missing metric = pre-jump-feature record; treat as 'load' (backward compat).
+        return { date: sessions[i].date, sets: e.sets, jump: e.metric === 'height' };
+      }
     }
   }
   return null;
@@ -1074,7 +1077,7 @@ function exerciseCard(e, ei) {
         <div class="target-line">${isJump(e)
           ? `Plan: ${e.plannedSets} attempt${e.plannedSets === 1 ? '' : 's'} · rest ${fmtClock(e.restSeconds)} ${equipChip(e)}`
           : `Plan: ${e.plannedSets}×${esc(e.plannedReps)} @ ${e.plannedWeight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''} · rest ${fmtClock(e.restSeconds)} ${equipChip(e)}`}</div>
-        ${lastP ? `<div class="last-line">Last: ${isJump(e) ? `best ${bestHeight(lastP.sets)} cm` : lastP.sets.map(s => `${s.weight}×${s.reps}`).join(' · ') + (lastRpe ? ` @RPE ${lastRpe}` : '')} — ${fmtDate(lastP.date)}</div>` : ''}
+        ${lastP ? `<div class="last-line">Last: ${lastP.jump ? `best ${bestHeight(lastP.sets)} cm` : lastP.sets.map(s => `${s.weight}×${s.reps}`).join(' · ') + (lastRpe ? ` @RPE ${lastRpe}` : '')} — ${fmtDate(lastP.date)}</div>` : ''}
         ${e.swappedFrom ? `<div class="swap-note">↺ swapped from ${esc(e.swappedFrom)}</div>` : ''}
       </div>
       <button class="icon-btn" data-action="ex-info" data-ei="${ei}" title="Explain">${icon('info', 18)}</button>
@@ -1236,7 +1239,11 @@ function viewHistory() {
   const sel = historyExercise || exNames[0] || '';
   const hist = sel ? exerciseHistory(sel) : [];
   const histJump = hist.length ? hist[hist.length - 1].jump : false;
-  const prBest = hist.length ? Math.max(...hist.map(r => histJump ? r.heightCm : r.e1rm)) : 0;
+  // A metric switch mid-history (e.g. load -> height) leaves older rows shaped
+  // for the other metric — mixing them into one chart/list produces NaN and
+  // "undefined" values, so only rows matching the newest row's metric are shown.
+  const histRows = hist.filter(r => r.jump === histJump);
+  const prBest = histRows.length ? Math.max(...histRows.map(r => histJump ? r.heightCm : r.e1rm)) : 0;
   const bwLast = bodyWeight[bodyWeight.length - 1];
   const weeks = sessions.length ? weeklyStats(8) : [];
   const thisWeek = weeks[weeks.length - 1];
@@ -1265,11 +1272,12 @@ function viewHistory() {
     <div class="card">
       ${exNames.length ? `
         <select data-bind="history-ex">${exNames.map(n => `<option ${n === sel ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
-        ${hist.length ? `
-          ${chartSvg(hist.slice(-12).map(r => ({ v: histJump ? r.heightCm : r.e1rm, d: r.date })))}
+        ${histRows.length ? `
+          ${chartSvg(histRows.slice(-12).map(r => ({ v: histJump ? r.heightCm : r.e1rm, d: r.date })))}
           <div class="muted small mt8">${histJump ? `Best jump: <b class="amber">${prBest} cm</b>` : `Best est. 1RM: <b class="amber">${prBest} ${unit()}</b>`}</div>
+          ${hist.length > histRows.length ? `<div class="muted small mt8">${hist.length - histRows.length} earlier session${hist.length - histRows.length === 1 ? '' : 's'} logged this exercise with a different metric and ${hist.length - histRows.length === 1 ? 'is' : 'are'} not shown.</div>` : ''}
           <div class="divider"></div>
-          ${hist.slice(-8).reverse().map(r => `
+          ${histRows.slice(-8).reverse().map(r => `
             <div class="row between" style="padding:5px 0">
               <span class="muted small">${fmtDate(r.date)}</span>
               <span class="small">${histJump ? r.sets.map(s => `${s.heightCm}cm`).join(' · ') : r.sets.map(s => `${s.weight}×${s.reps}`).join(' · ')}</span>
