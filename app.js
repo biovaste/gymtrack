@@ -141,6 +141,12 @@ const WEIGHT_LADDER = {
 };
 const LADDER_PLATE = [[Infinity, 2.5]];               // 1.25 kg plate pairs exist
 const LADDER_BAR_TYPES = ['barbell', 'trap-bar', 'training-bar'];
+// kg-only bar defaults, local to this block on purpose: BAR_WEIGHT_DEFAULTS a
+// few lines above already covers this (kg + lb), but this block has to stay
+// self-contained so tools/weights.test.mjs can extract and evaluate it in
+// isolation, and the ladder itself is always kg. Don't fold this into
+// BAR_WEIGHT_DEFAULTS — that would break the isolated extraction.
+const LADDER_BAR_DEFAULTS = { barbell: 20, 'trap-bar': 23, 'training-bar': 10 };
 const ladderRound = v => Math.round(v * 100) / 100;
 
 function ladderFor(equipment) {
@@ -148,7 +154,8 @@ function ladderFor(equipment) {
   return WEIGHT_LADDER[equipment] || LADDER_PLATE;
 }
 function ladderBase(equipment, barWeight) {
-  return LADDER_BAR_TYPES.indexOf(equipment) !== -1 ? (barWeight || 0) : 0;
+  const bar = barWeight != null ? barWeight : LADDER_BAR_DEFAULTS[equipment];
+  return LADDER_BAR_TYPES.indexOf(equipment) !== -1 ? (bar || 0) : 0;
 }
 // Every loadable load-above-base up to maxLoad, ascending, starting at 0.
 function ladderRungs(segs, maxLoad) {

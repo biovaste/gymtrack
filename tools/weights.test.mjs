@@ -74,6 +74,14 @@ for (const [eq, bar, w] of [
   ['barbell', 20, 20], ['bodyweight', null, 0], ['landmine', null, 21.25],
 ]) check(`loadable: ${eq} ${w}`, isLoadable(eq, bar, w), true);
 
+/* A null barWeight must resolve to the gym's default bar, in both copies.
+   Only the trap bar exposes this — 23 is not a multiple of 2.5, so a wrong
+   base changes the answer, while a 20 or 10 kg bar hides it. */
+check('trap bar 83 loadable with null bar',  isLoadable('trap-bar', null, 83), true);
+check('trap bar 88 loadable with null bar',  isLoadable('trap-bar', null, 88), true);
+check('trap bar 85 rejected with null bar',  isLoadable('trap-bar', null, 85), false);
+check('barbell 77.5 loadable with null bar', isLoadable('barbell', null, 77.5), true);
+
 /* ---- weights that have shipped broken must be rejected ---- */
 for (const [eq, bar, w] of [
   ['dumbbell', null, 22.5], ['trap-bar', 23, 85], ['cable', null, 27.5],
@@ -105,6 +113,7 @@ if (typeof validator.isLoadable !== 'function' || typeof validator.weightIssueKi
 } else {
   let mismatches = 0, kindMismatches = 0;
   for (const [eq, bar] of [['barbell', 20], ['trap-bar', 23], ['training-bar', 10],
+                           ['barbell', null], ['trap-bar', null], ['training-bar', null],
                            ['dumbbell', null], ['cable', null], ['machine', null],
                            ['landmine', null], ['bodyweight', null]]) {
     for (let w = 0; w <= 200; w += 0.25) {
