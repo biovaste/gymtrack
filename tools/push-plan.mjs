@@ -22,6 +22,7 @@
  *   echo '<workout-plan json>' | node tools/push-plan.mjs   # or via stdin
  */
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const WORKER_URL = 'https://api.gymtrack.hithitpull.fi';
 
@@ -40,33 +41,91 @@ function resolveUUID() {
 
 /*
  * Loadable-weight ladder for Henri's gym, derived from what has actually been
- * logged (see "Loadable weights" in sports/CLAUDE.md):
- *   plate-loaded  — 1.25 kg plates exist, so (weight − barWeight) steps by 2.5
- *   dumbbell      — even kg only (…12, 20, 22, 24…); 22.5 does not exist
- *   cable/machine — 5 kg stack steps
- *   bodyweight    — must be 0, or the app's grayed weight field logs nonsense
- * Two real bugs this catches: a planned 22.5 kg dumbbell row, and a planned
- * 85 kg trap bar RDL (23 + 62 is unreachable — it's 83 or 88).
+ * logged (see "Loadable weights" in sports/CLAUDE.md).
+ *
+ * MIRRORS the LADDER-START/LADDER-END block in app.js. app.js is a classic
+ * browser script and this is Node ESM, with no build step to share a module
+ * through, so the code is duplicated on purpose. tools/weights.test.mjs sweeps
+ * both copies and fails on any disagreement — run it after touching either.
+ *
+ * Real bugs this catches: a planned 22.5 kg dumbbell, a planned 85 kg trap bar
+ * RDL (23 + 62 is unreachable — it is 83 or 88), a 27.5 kg cable stack.
  */
 const BAR_DEFAULTS = { barbell: 20, 'trap-bar': 23, 'training-bar': 10 };
-const isStep = (v, step) => Math.abs(v / step - Math.round(v / step)) < 1e-9;
+
+const WEIGHT_LADDER = {
+  dumbbell: [[10, 1], [Infinity, 2]],
+  cable:    [[25, 2.5], [Infinity, 5]],
+  machine:  [[25, 2.5], [Infinity, 5]],
+  landmine: [[Infinity, 1.25]],
+  other:    [[Infinity, 2.5]],
+};
+const LADDER_PLATE = [[Infinity, 2.5]];
+const LADDER_BAR_TYPES = ['barbell', 'trap-bar', 'training-bar'];
+const ladderRound = v => Math.round(v * 100) / 100;
+
+function ladderFor(equipment) {
+  if (equipment === 'bodyweight') return null;
+  return WEIGHT_LADDER[equipment] || LADDER_PLATE;
+}
+function ladderBase(equipment, barWeight) {
+  const bar = barWeight != null ? barWeight : BAR_DEFAULTS[equipment];
+  return LADDER_BAR_TYPES.indexOf(equipment) !== -1 ? (bar || 0) : 0;
+}
+function ladderRungs(segs, maxLoad) {
+  const out = [0];
+  let v = 0;
+  for (const seg of segs) {
+    const bound = seg[0], step = seg[1];
+    while (v + step <= bound + 1e-9 && v <= maxLoad + 1e-9) { v = ladderRound(v + step); out.push(v); }
+    if (v > maxLoad + 1e-9) break;
+  }
+  return out;
+}
+export function nextWeight(equipment, barWeight, current, dir) {
+  const segs = ladderFor(equipment);
+  if (!segs) return 0;
+  const base = ladderBase(equipment, barWeight);
+  const load = Math.max(0, ladderRound((current || 0) - base));
+  const rungs = ladderRungs(segs, load + 20);
+  if (dir > 0) {
+    for (let i = 0; i < rungs.length; i++) if (rungs[i] > load + 1e-9) return ladderRound(base + rungs[i]);
+    return ladderRound(base + load);
+  }
+  for (let i = rungs.length - 1; i >= 0; i--) if (rungs[i] < load - 1e-9) return ladderRound(base + rungs[i]);
+  return ladderRound(base);
+}
+export function isLoadable(equipment, barWeight, weight) {
+  if (equipment === 'bodyweight') return (weight || 0) === 0;
+  if (equipment === 'other') return true;
+  const segs = ladderFor(equipment);
+  const base = ladderBase(equipment, barWeight);
+  const load = ladderRound((weight || 0) - base);
+  if (load < -1e-9) return false;
+  const rungs = ladderRungs(segs, load);
+  for (let i = 0; i < rungs.length; i++) if (Math.abs(rungs[i] - load) < 1e-9) return true;
+  return false;
+}
+
+const LADDER_DESC = {
+  dumbbell: 'dumbbells go 1 kg to 10, then 2 kg (no 11, no 22.5)',
+  cable: 'cable stacks go 2.5 kg to 25, then 5 kg',
+  machine: 'machine stacks go 2.5 kg to 25, then 5 kg',
+  landmine: 'landmine plate load must be a multiple of 1.25 kg',
+};
 
 function weightProblem(equipment, weight, barWeight) {
   const eq = equipment || 'barbell';
-  if (eq === 'other' || !weight) return eq === 'bodyweight' && weight ? 'bodyweight moves must have weight 0' : null;
-  if (eq === 'bodyweight') return 'bodyweight moves must have weight 0';
-  if (eq === 'dumbbell') return isStep(weight, 2) ? null : 'dumbbells go in 2 kg steps (even kg only)';
-  if (eq === 'cable' || eq === 'machine') return isStep(weight, 5) ? null : 'cable/machine stacks go in 5 kg steps';
-  if (eq === 'landmine') return isStep(weight, 1.25) ? null : 'landmine plate load must be a multiple of 1.25 kg';
-  const bar = barWeight != null ? barWeight : BAR_DEFAULTS[eq];
-  if (bar == null) return null;
-  const load = weight - bar;
-  if (load < 0) return `below the empty ${eq} (${bar} kg) — is the equipment type wrong?`;
-  if (!isStep(load, 2.5)) {
-    const lo = bar + Math.floor(load / 2.5) * 2.5, hi = lo + 2.5;
-    return `not loadable on a ${bar} kg bar with 1.25 kg plates — nearest are ${lo} and ${hi} kg`;
+  if (eq === 'bodyweight') return (weight || 0) === 0 ? null : 'bodyweight moves must have weight 0';
+  if (eq === 'other' || !weight) return null;
+  if (isLoadable(eq, barWeight, weight)) return null;
+  const base = ladderBase(eq, barWeight);
+  if (ladderRound(weight - base) < -1e-9) {
+    return `below the empty ${eq} (${base} kg) — is the equipment type wrong?`;
   }
-  return null;
+  const lo = nextWeight(eq, barWeight, weight, -1), hi = nextWeight(eq, barWeight, weight, 1);
+  const why = LADDER_DESC[eq] || `a ${base} kg bar loads in 2.5 kg steps with 1.25 kg plate pairs`;
+  return `not loadable — ${why}; nearest are ${lo} and ${hi} kg`;
 }
 
 /*
@@ -200,4 +259,11 @@ async function main() {
   console.log('  Open the GymTrack app on your phone — it loads the new plan on launch.');
 }
 
-main().catch(e => { console.error('✗ ' + e.message); process.exit(1); });
+// Only push when invoked directly. tools/weights.test.mjs imports this module to
+// compare its ladder against app.js, and must not trigger a network write.
+import { realpathSync } from 'node:fs';
+const invokedDirectly = process.argv[1] &&
+  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+if (invokedDirectly) {
+  main().catch(e => { console.error('✗ ' + e.message); process.exit(1); });
+}

@@ -119,6 +119,81 @@ function resolvedBarWeight(e) {
   return BAR_WEIGHT_DEFAULTS[e.equipment]?.[unit()] ?? (unit() === 'lb' ? 45 : 20);
 }
 
+/* ================= loadable-weight ladder ================= */
+/*
+ * The gym's real weight increments, derived from what has actually been logged.
+ * Mirrored in tools/push-plan.mjs — app.js is a classic script with no exports and
+ * push-plan.mjs is Node ESM, and there is no build step to share a module through.
+ * tools/weights.test.mjs asserts the two copies agree; run it after touching either.
+ *
+ * Everything between the markers must stay self-contained (no unit(), no
+ * BAR_WEIGHT_DEFAULTS) so the test can extract and evaluate it in isolation.
+ * Callers resolve the bar weight and pass it in as a number.
+ */
+/* LADDER-START */
+// [upperBound, stepBelowThatBound] — walked from 0 upward.
+const WEIGHT_LADDER = {
+  dumbbell: [[10, 1], [Infinity, 2]],       // 1 kg steps to 10, then 2 kg: no 11, no 22.5
+  cable:    [[25, 2.5], [Infinity, 5]],     // 2.5 kg steps to 25, then 5 kg: no 27.5
+  machine:  [[25, 2.5], [Infinity, 5]],
+  landmine: [[Infinity, 1.25]],             // plate load on the single end
+  other:    [[Infinity, 2.5]],              // a usable stepper default; NOT enforced by isLoadable
+};
+const LADDER_PLATE = [[Infinity, 2.5]];               // 1.25 kg plate pairs exist
+const LADDER_BAR_TYPES = ['barbell', 'trap-bar', 'training-bar'];
+const ladderRound = v => Math.round(v * 100) / 100;
+
+function ladderFor(equipment) {
+  if (equipment === 'bodyweight') return null;
+  return WEIGHT_LADDER[equipment] || LADDER_PLATE;
+}
+function ladderBase(equipment, barWeight) {
+  return LADDER_BAR_TYPES.indexOf(equipment) !== -1 ? (barWeight || 0) : 0;
+}
+// Every loadable load-above-base up to maxLoad, ascending, starting at 0.
+function ladderRungs(segs, maxLoad) {
+  const out = [0];
+  let v = 0;
+  for (const seg of segs) {
+    const bound = seg[0], step = seg[1];
+    while (v + step <= bound + 1e-9 && v <= maxLoad + 1e-9) { v = ladderRound(v + step); out.push(v); }
+    if (v > maxLoad + 1e-9) break;
+  }
+  return out;
+}
+// The next loadable weight above (dir 1) or below (dir -1) `current`.
+// An off-ladder `current` snaps onto the ladder in that direction.
+function nextWeight(equipment, barWeight, current, dir) {
+  const segs = ladderFor(equipment);
+  if (!segs) return 0;                                    // bodyweight never steps
+  const base = ladderBase(equipment, barWeight);
+  const load = Math.max(0, ladderRound((current || 0) - base));
+  const rungs = ladderRungs(segs, load + 20);             // +20 clears the largest step
+  if (dir > 0) {
+    for (let i = 0; i < rungs.length; i++) if (rungs[i] > load + 1e-9) return ladderRound(base + rungs[i]);
+    return ladderRound(base + load);
+  }
+  for (let i = rungs.length - 1; i >= 0; i--) if (rungs[i] < load - 1e-9) return ladderRound(base + rungs[i]);
+  return ladderRound(base);
+}
+function isLoadable(equipment, barWeight, weight) {
+  if (equipment === 'bodyweight') return (weight || 0) === 0;
+  if (equipment === 'other') return true;                 // unclassified — never enforce
+  const segs = ladderFor(equipment);
+  const base = ladderBase(equipment, barWeight);
+  const load = ladderRound((weight || 0) - base);
+  if (load < -1e-9) return false;                         // below the empty bar
+  const rungs = ladderRungs(segs, load);
+  for (let i = 0; i < rungs.length; i++) if (Math.abs(rungs[i] - load) < 1e-9) return true;
+  return false;
+}
+// The loadable weights either side of an unloadable one, for error messages.
+function nearestRungs(equipment, barWeight, weight) {
+  if (equipment === 'bodyweight' || equipment === 'other') return { lo: null, hi: null };
+  return { lo: nextWeight(equipment, barWeight, weight, -1), hi: nextWeight(equipment, barWeight, weight, 1) };
+}
+/* LADDER-END */
+
 /* ================= default starter plan ================= */
 function defaultPlan() {
   const ex = (name, sets, reps, weight, rpe, rest, alternates = [], equipment) =>
@@ -1197,6 +1272,16 @@ function exMenuModal(dayId, i) {
       { label: 'Close' }
     ]);
 }
+// Human-readable increment rule for the plan editor's weight field.
+function ladderHint(equipment) {
+  if (unit() !== 'kg') return '';
+  if (equipment === 'bodyweight') return 'bodyweight — leave at 0';
+  if (equipment === 'other') return 'increments not checked';
+  if (equipment === 'dumbbell') return '1 kg steps to 10 kg, then 2 kg';
+  if (equipment === 'cable' || equipment === 'machine') return '2.5 kg steps to 25 kg, then 5 kg';
+  if (equipment === 'landmine') return '1.25 kg steps (load on the end)';
+  return `2.5 kg steps from the ${resolvedBarWeight({ equipment, barWeight: null })} kg bar`;
+}
 function exEditModal(dayId, i) {
   const day = plan.days.find(d => d.id === dayId);
   const e = i != null ? day.exercises[i] : { name: '', sets: 3, reps: '8-12', weight: 0, targetRpe: 8, restSeconds: 120, restSecondsNext: null, equipment: 'barbell', barWeight: null, description: '', alternates: [] };
@@ -1208,7 +1293,8 @@ function exEditModal(dayId, i) {
       <label class="field grow"><span>Reps</span><input id="f-reps" value="${esc(e.reps)}"></label>
     </div>
     <div class="row">
-      <label class="field grow"><span>Weight (${unit()})</span><input id="f-weight" type="number" inputmode="decimal" step="0.5" value="${e.weight}"></label>
+      <label class="field grow"><span>Weight (${unit()})</span><input id="f-weight" type="number" inputmode="decimal" step="0.5" value="${e.weight}">
+        <span class="field-hint" id="f-weight-hint">${esc(ladderHint(equipment))}</span></label>
       <label class="field grow"><span>Target RPE</span><button type="button" id="f-rpe" class="rpe-btn" data-action="edit-rpe-pick" data-v="${e.targetRpe != null ? e.targetRpe : ''}">${e.targetRpe != null ? e.targetRpe : '—'}</button></label>
     </div>
     <div class="row">
@@ -1226,6 +1312,14 @@ function exEditModal(dayId, i) {
           const rpeRaw = document.getElementById('f-rpe').dataset.v;
           const restNextRaw = mval('f-rest-next');
           const barWeightRaw = mval('f-barweight');
+          const eqVal = document.getElementById('f-equipment').value;
+          const barVal = barWeightRaw ? parseFloat(barWeightRaw) : null;
+          const wVal = mnum('f-weight');
+          if (unit() === 'kg' && !isLoadable(eqVal, barVal != null ? barVal : resolvedBarWeight({ equipment: eqVal, barWeight: null }), wVal)) {
+            const n = nearestRungs(eqVal, barVal != null ? barVal : resolvedBarWeight({ equipment: eqVal, barWeight: null }), wVal);
+            toast(`${wVal}${unit()} is not loadable on a ${EQUIPMENT_LABELS[eqVal].toLowerCase()} — try ${n.lo} or ${n.hi}`, 'err');
+            return;
+          }
           const upd = { name, sets: Math.max(1, mnum('f-sets', 3)), reps: mval('f-reps') || '8-12', weight: mnum('f-weight'),
             targetRpe: rpeRaw ? parseFloat(rpeRaw) : null, restSeconds: Math.max(0, mnum('f-rest', 120)),
             restSecondsNext: restNextRaw ? Math.max(0, parseInt(restNextRaw, 10)) : null,
@@ -1367,9 +1461,26 @@ function closeRpePicker() { document.getElementById('picker-root').innerHTML = '
 // ±1 rep without retyping. Positioned above the keyboard via visualViewport.
 let stepperTarget = null;
 let stepperHideTimer = null;
-function stepperStep(el) {
+/*
+ * What the stepper bar should do for the focused input. Weight steps follow the
+ * gym's ladder, so the two buttons are often asymmetric (at a 10 kg dumbbell it
+ * is −1 / +2). Returns null when the field should get no stepper at all.
+ */
+function stepperInfo(el) {
   if (!el || !el.dataset || el.dataset.bind !== 'set') return null;
-  return el.dataset.f === 'weight' ? 2.5 : el.dataset.f === 'reps' ? 1 : null;
+  const f = el.dataset.f;
+  if (f === 'reps') return { kind: 'reps', label: 'reps', down: 1, up: 1 };
+  if (f !== 'weight') return null;
+  const ex = active && active.exercises[+el.dataset.ei];
+  if (!ex || ex.equipment === 'bodyweight') return null;   // nothing to load
+  if (unit() !== 'kg') return { kind: 'weight', label: unit(), down: 2.5, up: 2.5 };
+  const cur = parseFloat(el.value) || 0;
+  const bar = resolvedBarWeight(ex);
+  return {
+    kind: 'weight', label: unit(),
+    down: ladderRound(cur - nextWeight(ex.equipment, bar, cur, -1)),
+    up: ladderRound(nextWeight(ex.equipment, bar, cur, 1) - cur)
+  };
 }
 function positionStepper() {
   if (!stepperTarget) return;
@@ -1379,15 +1490,15 @@ function positionStepper() {
   bar.style.bottom = Math.max(keyboard + 8, 74) + 'px';
 }
 function showStepper(el) {
-  const step = stepperStep(el);
-  if (step == null) return;
+  const info = stepperInfo(el);
+  if (!info) return;
   clearTimeout(stepperHideTimer);
   stepperTarget = el;
   const bar = document.getElementById('stepper-bar');
   bar.innerHTML = `
-    <button data-step="-1">−${step}</button>
-    <span class="muted small">${el.dataset.f === 'weight' ? unit() : 'reps'}</span>
-    <button data-step="1">+${step}</button>`;
+    <button data-step="-1">−${info.down}</button>
+    <span class="muted small">${info.label}</span>
+    <button data-step="1">+${info.up}</button>`;
   bar.classList.remove('hidden');
   positionStepper();
 }
@@ -1403,11 +1514,21 @@ document.getElementById('stepper-bar').addEventListener('pointerdown', e => {
   const btn = e.target.closest('[data-step]');
   if (!btn || !stepperTarget) return;
   e.preventDefault(); // keep the input focused (no blur, keyboard stays up)
-  const delta = stepperStep(stepperTarget) * parseInt(btn.dataset.step, 10);
+  const info = stepperInfo(stepperTarget);
+  if (!info) return;
+  const dir = parseInt(btn.dataset.step, 10);
   const cur = parseFloat(stepperTarget.value);
-  const next = Math.max(0, Math.round(((isNaN(cur) ? 0 : cur) + delta) * 100) / 100);
-  stepperTarget.value = next;
+  const curN = isNaN(cur) ? 0 : cur;
+  let next;
+  if (info.kind === 'weight' && unit() === 'kg') {
+    const ex = active.exercises[+stepperTarget.dataset.ei];
+    next = nextWeight(ex.equipment, resolvedBarWeight(ex), curN, dir);
+  } else {
+    next = curN + dir * (dir > 0 ? info.up : info.down);
+  }
+  stepperTarget.value = Math.max(0, ladderRound(next));
   stepperTarget.dispatchEvent(new Event('input', { bubbles: true })); // reuse the data-bind update path
+  showStepper(stepperTarget); // the next step size may have changed (9→10 turns +1 into +2)
 });
 if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', positionStepper);
@@ -2162,6 +2283,8 @@ document.addEventListener('change', e => {
       const input = document.getElementById('f-barweight');
       if (input) input.placeholder = 'default ' + resolvedBarWeight({ equipment: e.target.value, barWeight: null });
     }
+    const hint = document.getElementById('f-weight-hint');
+    if (hint) hint.textContent = ladderHint(e.target.value);
   }
 });
 
