@@ -228,9 +228,15 @@ function validatePlan(plan, { unit = 'kg' } = {}) {
   } else {
     for (const day of plan.days) {
       for (const e of day.exercises || []) {
-        if (e.metric === 'height') continue; // the weight ladder does not apply
-        const p = weightProblem(e.equipment, e.weight, e.barWeight);
-        if (p) errors.push(`${day.name} → ${e.name}: ${e.weight} kg ${p}`);
+        // The height metric only exempts the exercise's OWN weight (always 0) from the
+        // ladder check — its alternates are ordinary load exercises and must still be
+        // checked. `continue`-ing the whole exercise here used to skip them too, so a
+        // height exercise carrying an unloadable alternate (e.g. a 22.5 kg dumbbell)
+        // passed silently.
+        if (e.metric !== 'height') {
+          const p = weightProblem(e.equipment, e.weight, e.barWeight);
+          if (p) errors.push(`${day.name} → ${e.name}: ${e.weight} kg ${p}`);
+        }
         // An alternate that declares its own equipment is checked as an error, the
         // same as a main exercise. Only an alternate that omits it falls back to the
         // name-based guess, which stays a warning because it is inference.

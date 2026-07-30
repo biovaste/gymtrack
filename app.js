@@ -238,25 +238,25 @@ function defaultPlan() {
     type: 'workout-plan', version: 1, name: 'Starter Push / Pull / Legs', createdAt: today(),
     days: [
       { id: uid(), name: 'Day A — Push', exercises: [
-        ex('Bench Press', 4, '6-8', 60, 8, 150, [{ name: 'Dumbbell Bench Press', weight: 22 }, { name: 'Machine Chest Press', weight: 50 }]),
-        ex('Overhead Press', 3, '8-10', 35, 8, 120, [{ name: 'Seated Dumbbell Press', weight: 16 }]),
-        ex('Incline Bench Press', 3, '8-12', 45, 8, 120, [{ name: 'Incline Dumbbell Press', weight: 18 }]),
-        ex('Lateral Raise', 3, '12-15', 8, 9, 75, [{ name: 'Cable Lateral Raise', weight: 5 }]),
-        ex('Triceps Pushdown', 3, '10-15', 25, 9, 75, [{ name: 'Skull Crusher', weight: 20 }])
+        ex('Bench Press', 4, '6-8', 60, 8, 150, [{ name: 'Dumbbell Bench Press', weight: 22, equipment: 'dumbbell' }, { name: 'Machine Chest Press', weight: 50, equipment: 'machine' }]),
+        ex('Overhead Press', 3, '8-10', 35, 8, 120, [{ name: 'Seated Dumbbell Press', weight: 16, equipment: 'dumbbell' }]),
+        ex('Incline Bench Press', 3, '8-12', 45, 8, 120, [{ name: 'Incline Dumbbell Press', weight: 18, equipment: 'dumbbell' }]),
+        ex('Lateral Raise', 3, '12-15', 8, 9, 75, [{ name: 'Cable Lateral Raise', weight: 5, equipment: 'cable' }], 'dumbbell'),
+        ex('Triceps Pushdown', 3, '10-15', 25, 9, 75, [{ name: 'Skull Crusher', weight: 20, equipment: 'barbell' }], 'cable')
       ]},
       { id: uid(), name: 'Day B — Pull', exercises: [
         ex('Deadlift', 3, '5', 100, 8, 180, [{ name: 'Romanian Deadlift', weight: 80 }]),
-        ex('Pull-Up', 3, '6-10', 0, 9, 150, [{ name: 'Lat Pulldown', weight: 55 }], 'bodyweight'),
-        ex('Barbell Row', 3, '8-10', 60, 8, 120, [{ name: 'Cable Row', weight: 55 }, { name: 'Dumbbell Row', weight: 26 }]),
-        ex('Face Pull', 3, '12-15', 20, 9, 75, [{ name: 'Rear Delt Fly', weight: 8 }]),
-        ex('Bicep Curl', 3, '10-12', 12, 9, 75, [{ name: 'Hammer Curl', weight: 12 }])
+        ex('Pull-Up', 3, '6-10', 0, 9, 150, [{ name: 'Lat Pulldown', weight: 55, equipment: 'cable' }], 'bodyweight'),
+        ex('Barbell Row', 3, '8-10', 60, 8, 120, [{ name: 'Cable Row', weight: 55, equipment: 'cable' }, { name: 'Dumbbell Row', weight: 26, equipment: 'dumbbell' }]),
+        ex('Face Pull', 3, '12-15', 20, 9, 75, [{ name: 'Rear Delt Fly', weight: 8, equipment: 'dumbbell' }], 'cable'),
+        ex('Bicep Curl', 3, '10-12', 12, 9, 75, [{ name: 'Hammer Curl', weight: 12 }], 'dumbbell')
       ]},
       { id: uid(), name: 'Day C — Legs', exercises: [
-        ex('Squat', 4, '6-8', 80, 8, 180, [{ name: 'Leg Press', weight: 140 }]),
-        ex('Romanian Deadlift', 3, '8-10', 70, 8, 150, [{ name: 'Leg Curl', weight: 40 }]),
-        ex('Bulgarian Split Squat', 3, '8-10', 14, 9, 105, [{ name: 'Lunge', weight: 14 }]),
-        ex('Leg Curl', 3, '10-12', 40, 9, 90, [{ name: 'Good Morning', weight: 40 }]),
-        ex('Calf Raise', 4, '10-15', 60, 9, 75, [])
+        ex('Squat', 4, '6-8', 80, 8, 180, [{ name: 'Leg Press', weight: 140, equipment: 'machine' }]),
+        ex('Romanian Deadlift', 3, '8-10', 70, 8, 150, [{ name: 'Leg Curl', weight: 40, equipment: 'machine' }]),
+        ex('Bulgarian Split Squat', 3, '8-10', 14, 9, 105, [{ name: 'Lunge', weight: 14 }], 'dumbbell'),
+        ex('Leg Curl', 3, '10-12', 40, 9, 90, [{ name: 'Good Morning', weight: 40, equipment: 'barbell' }], 'machine'),
+        ex('Calf Raise', 4, '10-15', 60, 9, 75, [], 'machine')
       ]}
     ]
   };
@@ -716,6 +716,44 @@ function detectPRs(record) {
     if (newBest > oldBest && oldBest > 0) prs.push(canonicalName(e.name));
   }
   return prs;
+}
+
+// Post-completion side effects for a set that has just been marked done: starts
+// the right rest (respecting superset round-robin/group-complete transitions),
+// buzzes, and persists + re-renders. Shared by the manual set-done tap and
+// cmjAccept, so accepting a video measurement behaves exactly like tapping the
+// checkmark — same rest timer, same round-robin advance inside a superset.
+function completeSet(ei, si) {
+  const ex = active.exercises[ei];
+  const group = groupOf(active.exercises, ei);
+  const exerciseDone = ex.sets.every(y => y.done);
+  // Inside a group the whole group collapses together, so don't collapse a member.
+  if (exerciseDone && !group) exExpanded.delete(ei);
+  saveActive(); render();
+  const remaining = active.exercises.some(x => x.sets.some(y => !y.done));
+  if (remaining) {
+    if (group) {
+      const nextEi = nextInRound(active.exercises, group, ei, si);
+      if (nextEi != null) {
+        // Mid-round: this exercise's own restSeconds is the short transition.
+        startRest(ex.restSeconds, '→ ' + active.exercises[nextEi].name);
+      } else if (!groupComplete(active.exercises, group)) {
+        const rounds = Math.max(...group.idx.map(j => active.exercises[j].sets.length));
+        startRest(ex.restSeconds, `Round ${Math.min(si + 2, rounds)} of ${rounds}`);
+      } else {
+        // Group finished. The next-movement rest is authored on the group's LAST
+        // member in plan order — with unequal set counts the last member to
+        // finish need not be that one, so don't read it off `ex`.
+        const lastEx = active.exercises[group.idx[group.idx.length - 1]];
+        startRest(lastEx.restSecondsNext != null ? lastEx.restSecondsNext : lastEx.restSeconds,
+          'Rest — next movement');
+      }
+    } else {
+      const seconds = exerciseDone && ex.restSecondsNext != null ? ex.restSecondsNext : ex.restSeconds;
+      startRest(seconds, 'Rest — ' + ex.name);
+    }
+  }
+  buzz([60]);
 }
 
 /* ================= Claude data exchange ================= */
@@ -1397,7 +1435,9 @@ function viewHistory() {
           ${s.exercises.map(e => `
             <div style="padding:5px 0">
               <div class="bold small">${esc(e.name)}${e.swappedFrom ? ` <span class="swap-note">(was ${esc(e.swappedFrom)})</span>` : ''}</div>
-              <div class="muted small">${e.sets.map(x => `${x.weight}${unit()}×${x.reps}${x.rpe ? '@' + x.rpe : ''}`).join(' · ')}</div>
+              <div class="muted small">${e.metric === 'height'
+                ? e.sets.map(x => `${x.heightCm} cm`).join(' · ')
+                : e.sets.map(x => `${x.weight}${unit()}×${x.reps}${x.rpe ? '@' + x.rpe : ''}`).join(' · ')}</div>
               ${e.notes ? `<div class="small amber">📝 ${esc(e.notes)}</div>` : ''}
             </div>`).join('')}
           ${s.notes ? `<div class="divider"></div><div class="small">📝 ${esc(s.notes)}</div>` : ''}
@@ -1609,7 +1649,7 @@ function exEditModal(dayId, i) {
               toast(`${wVal}${unit()} — bodyweight exercises must be 0${unit()}`, 'err');
               return;
             } else if (kind === 'below-bar') {
-              toast(`${wVal}${unit()} is below the empty ${EQUIPMENT_LABELS[eqVal].toLowerCase()} (${barResolved}${unit()})`, 'err');
+              toast(`${wVal}${unit()} is below the empty ${EQUIPMENT_LABELS[eqVal].toLowerCase()} (${barResolved}${unit()}) — is the Equipment field above set wrong? A dumbbell/cable/machine move this light usually isn't a barbell`, 'err');
               return;
             } else if (kind === 'off-ladder') {
               const n = nearestRungs(eqVal, barResolved, wVal);
@@ -1790,10 +1830,15 @@ function stepperInfo(el) {
   if (unit() !== 'kg') return { kind: 'weight', label: unit(), down: 2.5, up: 2.5 };
   const cur = parseFloat(el.value) || 0;
   const bar = resolvedBarWeight(ex);
+  // Clamp both directions to >= 0. When `cur` sits below the ladder base (e.g. an
+  // undeclared-equipment exercise still carrying the 'barbell' default and its
+  // 20kg bar), nextWeight(dir=-1) floors at the bar — a value ABOVE `cur` — which
+  // would otherwise produce a negative down-step whose label lies and whose button
+  // moves the weight the wrong way when pressed.
   return {
     kind: 'weight', label: unit(),
-    down: ladderRound(cur - nextWeight(ex.equipment, bar, cur, -1)),
-    up: ladderRound(nextWeight(ex.equipment, bar, cur, 1) - cur)
+    down: Math.max(0, ladderRound(cur - nextWeight(ex.equipment, bar, cur, -1))),
+    up: Math.max(0, ladderRound(nextWeight(ex.equipment, bar, cur, 1) - cur))
   };
 }
 function positionStepper() {
@@ -1810,7 +1855,7 @@ function showStepper(el) {
   stepperTarget = el;
   const bar = document.getElementById('stepper-bar');
   bar.innerHTML = `
-    <button data-step="-1">−${info.down}</button>
+    <button data-step="-1" ${info.down === 0 ? 'disabled' : ''}>−${info.down}</button>
     <span class="muted small">${info.label}</span>
     <button data-step="1">+${info.up}</button>`;
   bar.classList.remove('hidden');
@@ -1826,7 +1871,7 @@ document.addEventListener('focusout', e => {
 });
 document.getElementById('stepper-bar').addEventListener('pointerdown', e => {
   const btn = e.target.closest('[data-step]');
-  if (!btn || !stepperTarget) return;
+  if (!btn || !stepperTarget || btn.disabled) return;
   e.preventDefault(); // keep the input focused (no blur, keyboard stays up)
   const info = stepperInfo(stepperTarget);
   if (!info) return;
@@ -2334,7 +2379,9 @@ function cmjAccept() {
     if (!slot) { slot = { heightCm: null, done: false }; targetEx.sets.push(slot); }
     slot.heightCm = heightCm;
     slot.done = true;
-    saveActive();
+    // Route through the same post-completion path as tapping the checkmark, so
+    // this starts the rest timer and advances a superset's round-robin pointer.
+    completeSet(targetEi, targetEx.sets.indexOf(slot));
     toast(`${heightCm} cm logged to ${targetEx.name} ✓`);
   } else if (active) {
     active.readiness.cmjCm = heightCm;
@@ -2402,37 +2449,8 @@ document.addEventListener('click', e => {
       const ei = +el.dataset.ei, si = +el.dataset.si;
       const ex = active.exercises[ei], s = ex.sets[si];
       s.done = !s.done;
-      const group = groupOf(active.exercises, ei);
-      const exerciseDone = ex.sets.every(y => y.done);
-      // Inside a group the whole group collapses together, so don't collapse a member.
-      if (s.done && exerciseDone && !group) exExpanded.delete(ei);
-      saveActive(); render();
-      if (s.done) {
-        const remaining = active.exercises.some(x => x.sets.some(y => !y.done));
-        if (remaining) {
-          if (group) {
-            const nextEi = nextInRound(active.exercises, group, ei, si);
-            if (nextEi != null) {
-              // Mid-round: this exercise's own restSeconds is the short transition.
-              startRest(ex.restSeconds, '→ ' + active.exercises[nextEi].name);
-            } else if (!groupComplete(active.exercises, group)) {
-              const rounds = Math.max(...group.idx.map(j => active.exercises[j].sets.length));
-              startRest(ex.restSeconds, `Round ${Math.min(si + 2, rounds)} of ${rounds}`);
-            } else {
-              // Group finished. The next-movement rest is authored on the group's LAST
-              // member in plan order — with unequal set counts the last member to
-              // finish need not be that one, so don't read it off `ex`.
-              const lastEx = active.exercises[group.idx[group.idx.length - 1]];
-              startRest(lastEx.restSecondsNext != null ? lastEx.restSecondsNext : lastEx.restSeconds,
-                'Rest — next movement');
-            }
-          } else {
-            const seconds = exerciseDone && ex.restSecondsNext != null ? ex.restSecondsNext : ex.restSeconds;
-            startRest(seconds, 'Rest — ' + ex.name);
-          }
-        }
-        buzz([60]);
-      }
+      if (s.done) completeSet(ei, si);
+      else { saveActive(); render(); }
       break;
     }
     case 'ex-expand': exExpanded.add(el.dataset.key != null ? el.dataset.key : +el.dataset.ei); render(); break;

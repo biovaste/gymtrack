@@ -94,7 +94,7 @@ The primary input format produced by the app's "Copy coaching prompt + data" but
 | `targetRpe` | number | No | 1–10 |
 | `swappedFrom` | string \| null | No | Original exercise name if a swap occurred |
 | `durationMin` | number | No | Total session wall-clock time |
-| `equipment` | string | No | One of `barbell`, `trap-bar`, `landmine`, `training-bar`, `dumbbell`, `machine`, `cable`, `bodyweight`, `other`. Absent in records logged before 2026-07-30 — treat as unknown, not as `barbell` |
+| `equipment` | string | No | One of `barbell`, `trap-bar`, `landmine`, `training-bar`, `dumbbell`, `machine`, `cable`, `bodyweight`, `other`. **In practice this field is never actually absent** — `app.js` stamps `'barbell'` on any exercise whose plan never declared one (both on import, in `normalizePlan`, and again when a session starts). So a `barbell` value doesn't mean "confirmed barbell" — it may just mean "nobody said." A `barbell` label on a weight under ~20 kg (its own empty-bar weight) is almost certainly an undeclared dumbbell, cable or machine move wearing the fallback. Treat that combination as unknown equipment, not as a real barbell |
 | `barWeight` | number | No | Only meaningful for `barbell`/`trap-bar`/`training-bar`. Absent = the gym default (20 / 23 / 10 kg) |
 | `metric` | `"load"` \| `"height"` | No | Absent = `"load"`. A `"height"` exercise's sets carry **only** `heightCm` — no weight, reps or RPE. Never compute volume, e1RM or RPE stats from them |
 | `superset` | string \| null | No | Adjacent exercises sharing a tag were performed as an alternating superset. Relevant to fatigue reads: RPE on the second movement is inflated by the first |
@@ -166,7 +166,7 @@ Set `equipment` accurately **first** — the weight check depends on it, and it 
 
 **The ladder has breakpoints — "round to the nearest 2.5 kg" is wrong.** Dumbbells step 1 kg below 10 kg and 2 kg above it; cable and machine stacks step 2.5 kg below 25 kg and 5 kg above it. So 22.5 kg is a valid cable weight but not a valid dumbbell, and 27.5 kg is neither. The authoritative table is in the project's CLAUDE.md, and `tools/weights.test.mjs` is its executable form.
 
-*Signature of this bug in the data:* a `plannedWeight` the athlete never logs, with a nearby value logged instead — planned 22.5 kg → logged 22 kg, twice. Since 2026-07-30 session records carry `equipment`, so this is now **checkable** rather than inferable: compare the planned weight against that equipment's ladder before reading a planned-vs-actual gap as auto-regulation.
+*Signature of this bug in the data:* a `plannedWeight` the athlete never logs, with a nearby value logged instead — planned 22.5 kg → logged 22 kg, twice. Since 2026-07-30 session records carry `equipment`, so this is now **checkable** rather than inferable: compare the planned weight against that equipment's ladder before reading a planned-vs-actual gap as auto-regulation. But `equipment` being *present* doesn't mean it was *declared* — see the field note above. Before trusting the comparison, sanity-check a `barbell` entry against its own weight: a "barbell" load under ~20 kg is the stamped default, not a fact, and belongs in the unknown bucket rather than fed into the barbell ladder.
 
 ### 3. Superset members must be adjacent
 

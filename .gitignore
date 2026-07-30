@@ -10,8 +10,8 @@ desktop.ini
 .claude/launch.json
 .claude/settings.local.json
 
-# Cloudflare Worker build cache (contains account token)
-worker/.wrangler/
+# Cloudflare Worker build cache (contains account token) — any depth, not just worker/
+.wrangler/
 
 # Logs / temp
 *.log

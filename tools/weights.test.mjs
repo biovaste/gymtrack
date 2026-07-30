@@ -111,7 +111,7 @@ if (typeof validator.isLoadable !== 'function' || typeof validator.weightIssueKi
   failures++;
   console.error('FAIL  push-plan.mjs does not export isLoadable/weightIssueKind — export them so this test can compare the copies.');
 } else {
-  let mismatches = 0, kindMismatches = 0;
+  let mismatches = 0, kindMismatches = 0, nextMismatches = 0;
   for (const [eq, bar] of [['barbell', 20], ['trap-bar', 23], ['training-bar', 10],
                            ['barbell', null], ['trap-bar', null], ['training-bar', null],
                            ['dumbbell', null], ['cable', null], ['machine', null],
@@ -125,10 +125,20 @@ if (typeof validator.isLoadable !== 'function' || typeof validator.weightIssueKi
       const ka = weightIssueKind(eq, bar, wr);
       const kb = validator.weightIssueKind(eq, bar, wr);
       if (ka !== kb) { kindMismatches++; if (kindMismatches < 5) console.error(`  kind drift: ${eq} ${w} app=${ka} validator=${kb}`); }
+
+      // push-plan.mjs's "nearest are X and Y kg" message is built from nextWeight,
+      // so a divergence here would pass isLoadable/weightIssueKind clean and still
+      // print a wrong suggestion.
+      for (const dir of [1, -1]) {
+        const na = nextWeight(eq, bar, wr, dir);
+        const nb = validator.nextWeight(eq, bar, wr, dir);
+        if (na !== nb) { nextMismatches++; if (nextMismatches < 5) console.error(`  nextWeight drift: ${eq} ${w} dir=${dir} app=${na} validator=${nb}`); }
+      }
     }
   }
   check('app.js and push-plan.mjs ladders agree', mismatches, 0);
   check('app.js and push-plan.mjs weightIssueKind agree', kindMismatches, 0);
+  check('app.js and push-plan.mjs nextWeight agree', nextMismatches, 0);
 }
 
 console.log(failures ? `\n${failures} failing check(s)` : '\nAll checks passed');
