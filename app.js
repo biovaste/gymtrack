@@ -370,6 +370,7 @@ function scheduleCue(seconds) {
   if (!audioCtx || !rest) return;
   try {
     const nodes = [];
+    const myRest = rest; // bind onended to this rest by identity, not to whatever `rest` is when it fires
     const t0 = audioCtx.currentTime + seconds;
     for (let i = 0; i < 3; i++) {
       const o = audioCtx.createOscillator(), g = audioCtx.createGain();
@@ -380,7 +381,7 @@ function scheduleCue(seconds) {
       g.gain.exponentialRampToValueAtTime(0.6, t + 0.02);
       g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
       o.start(t); o.stop(t + 0.32);
-      if (i === 0) o.onended = () => { if (rest) { rest.cueFired = true; saveRest(); } };
+      if (i === 0) o.onended = () => { if (rest === myRest) { rest.cueFired = true; saveRest(); } };
       nodes.push(o);
     }
     rest.cueNodes = nodes;
@@ -421,6 +422,7 @@ const saveRest = () => {
 function startRest(seconds, label) {
   if (!seconds || seconds <= 0) return;
   unlockAudio();
+  cancelCue(); // cancel the outgoing rest's scheduled oscillators while `rest` still points at it
   rest = { endsAt: Date.now() + seconds * 1000, total: seconds, label: label || 'Rest', fired: false, cueFired: false, cueNodes: null };
   scheduleCue(seconds);
   saveRest(); renderRest();
@@ -2384,7 +2386,7 @@ document.addEventListener('click', e => {
             ['plan', 'sessions', 'active', 'bw', 'settings', 'updatedAt'].forEach(k => store.del(k));
             plan = defaultPlan(); sessions = []; active = null; bodyWeight = []; dataUpdatedAt = 0;
             settings = { unit: 'kg', sound: true, vibrate: true, autoSync: true };
-            stopRest(); render(); toast('Fresh start');
+            stopRest(); syncWakeLock(); render(); toast('Fresh start');
           } }, { label: 'Cancel' }]);
       break;
   }
