@@ -22,6 +22,7 @@
  *   echo '<workout-plan json>' | node tools/push-plan.mjs   # or via stdin
  */
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const WORKER_URL = 'https://api.gymtrack.hithitpull.fi';
 
@@ -40,40 +41,110 @@ function resolveUUID() {
 
 /*
  * Loadable-weight ladder for Henri's gym, derived from what has actually been
- * logged (see "Loadable weights" in sports/CLAUDE.md):
- *   plate-loaded  — 1.25 kg plates exist, so (weight − barWeight) steps by 2.5
- *   dumbbell      — even kg only (…12, 20, 22, 24…); 22.5 does not exist
- *   cable/machine — 5 kg stack steps
- *   bodyweight    — must be 0, or the app's grayed weight field logs nonsense
- * Two real bugs this catches: a planned 22.5 kg dumbbell row, and a planned
- * 85 kg trap bar RDL (23 + 62 is unreachable — it's 83 or 88).
+ * logged (see "Loadable weights" in sports/CLAUDE.md).
+ *
+ * MIRRORS the LADDER-START/LADDER-END block in app.js. app.js is a classic
+ * browser script and this is Node ESM, with no build step to share a module
+ * through, so the code is duplicated on purpose. tools/weights.test.mjs sweeps
+ * both copies and fails on any disagreement — run it after touching either.
+ *
+ * Real bugs this catches: a planned 22.5 kg dumbbell, a planned 85 kg trap bar
+ * RDL (23 + 62 is unreachable — it is 83 or 88), a 27.5 kg cable stack.
  */
 const BAR_DEFAULTS = { barbell: 20, 'trap-bar': 23, 'training-bar': 10 };
-const isStep = (v, step) => Math.abs(v / step - Math.round(v / step)) < 1e-9;
+
+const WEIGHT_LADDER = {
+  dumbbell: [[10, 1], [Infinity, 2]],
+  cable:    [[25, 2.5], [Infinity, 5]],
+  machine:  [[25, 2.5], [Infinity, 5]],
+  landmine: [[Infinity, 1.25]],
+  other:    [[Infinity, 2.5]],
+};
+const LADDER_PLATE = [[Infinity, 2.5]];
+const LADDER_BAR_TYPES = ['barbell', 'trap-bar', 'training-bar'];
+const ladderRound = v => Math.round(v * 100) / 100;
+
+function ladderFor(equipment) {
+  if (equipment === 'bodyweight') return null;
+  return WEIGHT_LADDER[equipment] || LADDER_PLATE;
+}
+function ladderBase(equipment, barWeight) {
+  const bar = barWeight != null ? barWeight : BAR_DEFAULTS[equipment];
+  return LADDER_BAR_TYPES.indexOf(equipment) !== -1 ? (bar || 0) : 0;
+}
+function ladderRungs(segs, maxLoad) {
+  const out = [0];
+  let v = 0;
+  for (const seg of segs) {
+    const bound = seg[0], step = seg[1];
+    while (v + step <= bound + 1e-9 && v <= maxLoad + 1e-9) { v = ladderRound(v + step); out.push(v); }
+    if (v > maxLoad + 1e-9) break;
+  }
+  return out;
+}
+export function nextWeight(equipment, barWeight, current, dir) {
+  const segs = ladderFor(equipment);
+  if (!segs) return 0;
+  const base = ladderBase(equipment, barWeight);
+  const load = Math.max(0, ladderRound((current || 0) - base));
+  const rungs = ladderRungs(segs, load + 20);
+  if (dir > 0) {
+    for (let i = 0; i < rungs.length; i++) if (rungs[i] > load + 1e-9) return ladderRound(base + rungs[i]);
+    return ladderRound(base + load);
+  }
+  for (let i = rungs.length - 1; i >= 0; i--) if (rungs[i] < load - 1e-9) return ladderRound(base + rungs[i]);
+  return ladderRound(base);
+}
+export function isLoadable(equipment, barWeight, weight) {
+  if (equipment === 'bodyweight') return (weight || 0) === 0;
+  if (equipment === 'other') return true;
+  const segs = ladderFor(equipment);
+  const base = ladderBase(equipment, barWeight);
+  const load = ladderRound((weight || 0) - base);
+  if (load < -1e-9) return false;
+  const rungs = ladderRungs(segs, load);
+  for (let i = 0; i < rungs.length; i++) if (Math.abs(rungs[i] - load) < 1e-9) return true;
+  return false;
+}
+
+const LADDER_DESC = {
+  dumbbell: 'dumbbells go 1 kg to 10, then 2 kg (no 11, no 22.5)',
+  cable: 'cable stacks go 2.5 kg to 25, then 5 kg',
+  machine: 'machine stacks go 2.5 kg to 25, then 5 kg',
+  landmine: 'landmine plate load must be a multiple of 1.25 kg',
+};
+
+// MIRRORS the weightIssueKind() in the app.js LADDER-START/LADDER-END block —
+// the decision is shared so the UI guard and this validator can't diverge at
+// the call site again. tools/weights.test.mjs sweeps both copies.
+export function weightIssueKind(equipment, barWeight, weight) {
+  if (equipment === 'bodyweight') return (weight || 0) === 0 ? null : 'bodyweight';
+  if (equipment === 'other' || !weight) return null;
+  if (isLoadable(equipment, barWeight, weight)) return null;
+  return ladderRound(weight - ladderBase(equipment, barWeight)) < -1e-9 ? 'below-bar' : 'off-ladder';
+}
 
 function weightProblem(equipment, weight, barWeight) {
   const eq = equipment || 'barbell';
-  if (eq === 'other' || !weight) return eq === 'bodyweight' && weight ? 'bodyweight moves must have weight 0' : null;
-  if (eq === 'bodyweight') return 'bodyweight moves must have weight 0';
-  if (eq === 'dumbbell') return isStep(weight, 2) ? null : 'dumbbells go in 2 kg steps (even kg only)';
-  if (eq === 'cable' || eq === 'machine') return isStep(weight, 5) ? null : 'cable/machine stacks go in 5 kg steps';
-  if (eq === 'landmine') return isStep(weight, 1.25) ? null : 'landmine plate load must be a multiple of 1.25 kg';
-  const bar = barWeight != null ? barWeight : BAR_DEFAULTS[eq];
-  if (bar == null) return null;
-  const load = weight - bar;
-  if (load < 0) return `below the empty ${eq} (${bar} kg) — is the equipment type wrong?`;
-  if (!isStep(load, 2.5)) {
-    const lo = bar + Math.floor(load / 2.5) * 2.5, hi = lo + 2.5;
-    return `not loadable on a ${bar} kg bar with 1.25 kg plates — nearest are ${lo} and ${hi} kg`;
+  const kind = weightIssueKind(eq, barWeight, weight);
+  if (!kind) return null;
+  if (kind === 'bodyweight') return 'bodyweight moves must have weight 0';
+  const base = ladderBase(eq, barWeight);
+  if (kind === 'below-bar') {
+    return `below the empty ${eq} (${base} kg) — is the equipment type wrong?`;
   }
-  return null;
+  const lo = nextWeight(eq, barWeight, weight, -1), hi = nextWeight(eq, barWeight, weight, 1);
+  const why = LADDER_DESC[eq] || `a ${base} kg bar loads in 2.5 kg steps with 1.25 kg plate pairs`;
+  return `not loadable — ${why}; nearest are ${lo} and ${hi} kg`;
 }
 
 /*
- * Alternates have no `equipment` field of their own — the app strips unknown keys
- * and a swap keeps the parent's equipment — so guess from the name and only fall
- * back to the parent's. Without this, a dumbbell alternate under a barbell parent
- * gets judged against the barbell ladder and warns for no reason.
+ * Fallback for alternates that omit `equipment` and `barWeight` — when omitted,
+ * they inherit the parent's. This guesses equipment from the name, which is why
+ * validatePlan reports it as a warning (inference) rather than an error. An
+ * alternate that explicitly declares `equipment` is checked as an error instead.
+ * Without this fallback, a dumbbell alternate under a barbell parent would be
+ * judged against the barbell ladder and warn for no reason.
  */
 function guessAlternateEquipment(name, parentEquipment) {
   const n = String(name || '');
@@ -114,19 +185,71 @@ function validatePlan(plan, { unit = 'kg' } = {}) {
     }
   }
 
+  // A superset tag must form ONE adjacent run. Split runs render as two separate
+  // cards in the app with two independent rest cycles — not what was intended.
+  // Normalization here must match app.js's import sanitiser exactly (including
+  // the slice(0, 2) truncation) — otherwise two tags that are distinct here but
+  // collide once the app truncates them would pass this check clean and still
+  // split into two cards after import.
+  for (const day of plan.days) {
+    const runs = new Map(); // tag → number of separate adjacent runs
+    let prev = null;
+    for (const e of day.exercises || []) {
+      const tag = e.superset ? String(e.superset).trim().toUpperCase().slice(0, 2) : null;
+      if (tag && tag !== prev) runs.set(tag, (runs.get(tag) || 0) + 1);
+      prev = tag;
+    }
+    for (const [tag, n] of runs) {
+      if (n > 1) {
+        errors.push(
+          `${day.name}: superset "${tag}" appears in ${n} separate non-adjacent runs. ` +
+          'Superset members must sit next to each other in the exercise list — ' +
+          'otherwise they render as separate cards with independent rest cycles.'
+        );
+      }
+    }
+  }
+
+  // Metric correctness has nothing to do with the plan's unit, so these checks
+  // run regardless of "kg" vs "lb" — unlike the weight-ladder checks below.
+  for (const day of plan.days) {
+    for (const e of day.exercises || []) {
+      if (e.metric != null && e.metric !== 'load' && e.metric !== 'height') {
+        errors.push(`${day.name} → ${e.name}: metric "${e.metric}" is not one of "load", "height".`);
+      }
+      if (e.metric === 'height' && e.weight) {
+        errors.push(`${day.name} → ${e.name}: a height-metric exercise must have weight 0 — box height goes in "description".`);
+      }
+    }
+  }
+
   if (unit !== 'kg') {
     warnings.push(`Unit is "${unit}" — the loadable-weight ladder is kg-only, so weights were not checked.`);
   } else {
     for (const day of plan.days) {
       for (const e of day.exercises || []) {
-        const p = weightProblem(e.equipment, e.weight, e.barWeight);
-        if (p) errors.push(`${day.name} → ${e.name}: ${e.weight} kg ${p}`);
-        // Alternate equipment is inferred, so these are warnings rather than errors.
+        // The height metric only exempts the exercise's OWN weight (always 0) from the
+        // ladder check — its alternates are ordinary load exercises and must still be
+        // checked. `continue`-ing the whole exercise here used to skip them too, so a
+        // height exercise carrying an unloadable alternate (e.g. a 22.5 kg dumbbell)
+        // passed silently.
+        if (e.metric !== 'height') {
+          const p = weightProblem(e.equipment, e.weight, e.barWeight);
+          if (p) errors.push(`${day.name} → ${e.name}: ${e.weight} kg ${p}`);
+        }
+        // An alternate that declares its own equipment is checked as an error, the
+        // same as a main exercise. Only an alternate that omits it falls back to the
+        // name-based guess, which stays a warning because it is inference.
         for (const a of e.alternates || []) {
           if (!a.weight) continue; // 0 = bodyweight/interval alternate
-          const aEq = guessAlternateEquipment(a.name, e.equipment);
-          const ap = weightProblem(aEq, a.weight, aEq === e.equipment ? e.barWeight : null);
-          if (ap) warnings.push(`${day.name} → ${e.name} → alternate "${a.name}": ${a.weight} kg ${ap} (equipment inferred as "${aEq || 'barbell'}")`);
+          if (a.equipment) {
+            const ap = weightProblem(a.equipment, a.weight, a.barWeight);
+            if (ap) errors.push(`${day.name} → ${e.name} → alternate "${a.name}": ${a.weight} kg ${ap}`);
+          } else {
+            const aEq = guessAlternateEquipment(a.name, e.equipment);
+            const ap = weightProblem(aEq, a.weight, aEq === e.equipment ? e.barWeight : null);
+            if (ap) warnings.push(`${day.name} → ${e.name} → alternate "${a.name}": ${a.weight} kg ${ap} (equipment inferred as "${aEq || 'barbell'}" — set "equipment" on the alternate to check this properly)`);
+          }
         }
       }
     }
@@ -200,4 +323,11 @@ async function main() {
   console.log('  Open the GymTrack app on your phone — it loads the new plan on launch.');
 }
 
-main().catch(e => { console.error('✗ ' + e.message); process.exit(1); });
+// Only push when invoked directly. tools/weights.test.mjs imports this module to
+// compare its ladder against app.js, and must not trigger a network write.
+import { realpathSync } from 'node:fs';
+const invokedDirectly = process.argv[1] &&
+  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+if (invokedDirectly) {
+  main().catch(e => { console.error('✗ ' + e.message); process.exit(1); });
+}

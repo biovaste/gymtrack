@@ -11,7 +11,7 @@ Science underpinning the weekly planning decisions. Apply these principles; cite
 **Why RPE works:** RPE at a given load correlates with proximity to failure (reps in reserve). When an athlete performs a set at a lower RPE than planned, they have more reserve than expected — the load is too light to drive adaptation. When RPE is higher than planned, recovery was insufficient or the load is too heavy.
 
 **Rules applied in this skill:**
-- RPE < target by ≥ 0.5 → +2.5 kg: athlete recovered well, load can increase
+- RPE < target by ≥ 0.5 → **+1 rung** on that exercise's equipment ladder (2.5 kg on a barbell; the ladder differs for dumbbells and cable/machine stacks — see "Plan Authoring Constraints §2" in `../shared/schema-reference.md`): athlete recovered well, load can increase
 - RPE at target (±0.5) → hold weight: optimal stimulus, seek more reps in the range
 - RPE > target by ≥ 0.5 → hold or reduce: athlete was under-recovered or load too high
 
@@ -62,6 +62,13 @@ Science underpinning the weekly planning decisions. Apply these principles; cite
 ## D. Neuromuscular Fatigue — CMJ as Readiness Proxy
 
 **Principle:** Countermovement jump height is a sensitive marker of neuromuscular fatigue — it reflects the same explosive force production capacity required for heavy compound lifts and plyometrics.
+
+**Two sources, one of which is not a readiness signal.** Since 2026-07-30 jump height can arrive two ways:
+
+- `readiness.cmjCm` — measured pre-session under a standardised protocol (hands on hips, no arm swing, 3 attempts, best logged). **This is the fatigue signal.**
+- A `metric: "height"` exercise's `sets[].heightCm` — jumps performed *as training*, warm and often already fatigued, with no standardisation.
+
+Never average them together, and never compare one against the other across sessions. A training jump that is 4 cm below a morning readiness CMJ is not evidence of fatigue; it is evidence that the athlete had already been training for 40 minutes. Use `readiness.cmjCm` for the readiness trend and treat training jumps as output — a performance number to progress, like a lift.
 
 **Thresholds:**
 - CMJ drop ≥ 5% from baseline → meaningful neuromuscular fatigue signal (Gathercole et al., 2015)

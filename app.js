@@ -118,34 +118,145 @@ function resolvedBarWeight(e) {
   if (e.barWeight != null) return e.barWeight;
   return BAR_WEIGHT_DEFAULTS[e.equipment]?.[unit()] ?? (unit() === 'lb' ? 45 : 20);
 }
+// Compact equipment label for exercise cards, plan rows and swap sheets.
+// Bar weight is shown only when it is meaningful and non-default.
+function equipChip(e) {
+  const eq = e.equipment;
+  if (!eq) return '';
+  let label = EQUIPMENT_LABELS[eq] || eq;
+  if (BAR_WEIGHT_EQUIPMENT.has(eq) && e.barWeight != null) label += ` · ${e.barWeight}${unit()}`;
+  return `<span class="equip-chip">${esc(label)}</span>`;
+}
+
+/*
+ * What an exercise's sets measure. 'load' is the default (weight × reps × RPE);
+ * 'height' logs one jump attempt per row in cm and carries no weight, reps or
+ * RPE at all — absent rather than zero, so nothing downstream mistakes a jump
+ * for a 0 kg lift.
+ */
+const EXERCISE_METRICS = ['load', 'height'];
+const isJump = e => e.metric === 'height';
+const bestHeight = sets => sets.reduce((m, s) => (s.heightCm != null && s.heightCm > m ? s.heightCm : m), 0);
+
+/* ================= loadable-weight ladder ================= */
+/*
+ * The gym's real weight increments, derived from what has actually been logged.
+ * Mirrored in tools/push-plan.mjs — app.js is a classic script with no exports and
+ * push-plan.mjs is Node ESM, and there is no build step to share a module through.
+ * tools/weights.test.mjs asserts the two copies agree; run it after touching either.
+ *
+ * Everything between the markers must stay self-contained (no unit(), no
+ * BAR_WEIGHT_DEFAULTS) so the test can extract and evaluate it in isolation.
+ * Callers resolve the bar weight and pass it in as a number.
+ */
+/* LADDER-START */
+// [upperBound, stepBelowThatBound] — walked from 0 upward.
+const WEIGHT_LADDER = {
+  dumbbell: [[10, 1], [Infinity, 2]],       // 1 kg steps to 10, then 2 kg: no 11, no 22.5
+  cable:    [[25, 2.5], [Infinity, 5]],     // 2.5 kg steps to 25, then 5 kg: no 27.5
+  machine:  [[25, 2.5], [Infinity, 5]],
+  landmine: [[Infinity, 1.25]],             // plate load on the single end
+  other:    [[Infinity, 2.5]],              // a usable stepper default; NOT enforced by isLoadable
+};
+const LADDER_PLATE = [[Infinity, 2.5]];               // 1.25 kg plate pairs exist
+const LADDER_BAR_TYPES = ['barbell', 'trap-bar', 'training-bar'];
+// kg-only bar defaults, local to this block on purpose: BAR_WEIGHT_DEFAULTS a
+// few lines above already covers this (kg + lb), but this block has to stay
+// self-contained so tools/weights.test.mjs can extract and evaluate it in
+// isolation, and the ladder itself is always kg. Don't fold this into
+// BAR_WEIGHT_DEFAULTS — that would break the isolated extraction.
+const LADDER_BAR_DEFAULTS = { barbell: 20, 'trap-bar': 23, 'training-bar': 10 };
+const ladderRound = v => Math.round(v * 100) / 100;
+
+function ladderFor(equipment) {
+  if (equipment === 'bodyweight') return null;
+  return WEIGHT_LADDER[equipment] || LADDER_PLATE;
+}
+function ladderBase(equipment, barWeight) {
+  const bar = barWeight != null ? barWeight : LADDER_BAR_DEFAULTS[equipment];
+  return LADDER_BAR_TYPES.indexOf(equipment) !== -1 ? (bar || 0) : 0;
+}
+// Every loadable load-above-base up to maxLoad, ascending, starting at 0.
+function ladderRungs(segs, maxLoad) {
+  const out = [0];
+  let v = 0;
+  for (const seg of segs) {
+    const bound = seg[0], step = seg[1];
+    while (v + step <= bound + 1e-9 && v <= maxLoad + 1e-9) { v = ladderRound(v + step); out.push(v); }
+    if (v > maxLoad + 1e-9) break;
+  }
+  return out;
+}
+// The next loadable weight above (dir 1) or below (dir -1) `current`.
+// An off-ladder `current` snaps onto the ladder in that direction.
+function nextWeight(equipment, barWeight, current, dir) {
+  const segs = ladderFor(equipment);
+  if (!segs) return 0;                                    // bodyweight never steps
+  const base = ladderBase(equipment, barWeight);
+  const load = Math.max(0, ladderRound((current || 0) - base));
+  const rungs = ladderRungs(segs, load + 20);             // +20 clears the largest step
+  if (dir > 0) {
+    for (let i = 0; i < rungs.length; i++) if (rungs[i] > load + 1e-9) return ladderRound(base + rungs[i]);
+    return ladderRound(base + load);
+  }
+  for (let i = rungs.length - 1; i >= 0; i--) if (rungs[i] < load - 1e-9) return ladderRound(base + rungs[i]);
+  return ladderRound(base);
+}
+function isLoadable(equipment, barWeight, weight) {
+  if (equipment === 'bodyweight') return (weight || 0) === 0;
+  if (equipment === 'other') return true;                 // unclassified — never enforce
+  const segs = ladderFor(equipment);
+  const base = ladderBase(equipment, barWeight);
+  const load = ladderRound((weight || 0) - base);
+  if (load < -1e-9) return false;                         // below the empty bar
+  const rungs = ladderRungs(segs, load);
+  for (let i = 0; i < rungs.length; i++) if (Math.abs(rungs[i] - load) < 1e-9) return true;
+  return false;
+}
+// The loadable weights either side of an unloadable one, for error messages.
+function nearestRungs(equipment, barWeight, weight) {
+  if (equipment === 'bodyweight' || equipment === 'other') return { lo: null, hi: null };
+  return { lo: nextWeight(equipment, barWeight, weight, -1), hi: nextWeight(equipment, barWeight, weight, 1) };
+}
+// Why a weight is not loadable, or null when it is fine. The caller builds the
+// message — keeping this block free of unit()/DOM so the test can evaluate it.
+// A falsy weight is always acceptable: 0 is the placeholder a new exercise
+// starts at, and a bodyweight move must be exactly 0.
+function weightIssueKind(equipment, barWeight, weight) {
+  if (equipment === 'bodyweight') return (weight || 0) === 0 ? null : 'bodyweight';
+  if (equipment === 'other' || !weight) return null;
+  if (isLoadable(equipment, barWeight, weight)) return null;
+  return ladderRound(weight - ladderBase(equipment, barWeight)) < -1e-9 ? 'below-bar' : 'off-ladder';
+}
+/* LADDER-END */
 
 /* ================= default starter plan ================= */
 function defaultPlan() {
   const ex = (name, sets, reps, weight, rpe, rest, alternates = [], equipment) =>
-    ({ id: uid(), name, sets, reps, weight, targetRpe: rpe, restSeconds: rest, restSecondsNext: null, equipment: equipment || 'barbell', barWeight: null, description: '', notes: '', alternates });
+    ({ id: uid(), name, sets, reps, weight, targetRpe: rpe, restSeconds: rest, restSecondsNext: null, equipment: equipment || 'barbell', barWeight: null, metric: 'load', superset: null, description: '', notes: '', alternates });
   return {
     type: 'workout-plan', version: 1, name: 'Starter Push / Pull / Legs', createdAt: today(),
     days: [
       { id: uid(), name: 'Day A — Push', exercises: [
-        ex('Bench Press', 4, '6-8', 60, 8, 150, [{ name: 'Dumbbell Bench Press', weight: 22 }, { name: 'Machine Chest Press', weight: 50 }]),
-        ex('Overhead Press', 3, '8-10', 35, 8, 120, [{ name: 'Seated Dumbbell Press', weight: 16 }]),
-        ex('Incline Bench Press', 3, '8-12', 45, 8, 120, [{ name: 'Incline Dumbbell Press', weight: 18 }]),
-        ex('Lateral Raise', 3, '12-15', 8, 9, 75, [{ name: 'Cable Lateral Raise', weight: 5 }]),
-        ex('Triceps Pushdown', 3, '10-15', 25, 9, 75, [{ name: 'Skull Crusher', weight: 20 }])
+        ex('Bench Press', 4, '6-8', 60, 8, 150, [{ name: 'Dumbbell Bench Press', weight: 22, equipment: 'dumbbell' }, { name: 'Machine Chest Press', weight: 50, equipment: 'machine' }]),
+        ex('Overhead Press', 3, '8-10', 35, 8, 120, [{ name: 'Seated Dumbbell Press', weight: 16, equipment: 'dumbbell' }]),
+        ex('Incline Bench Press', 3, '8-12', 45, 8, 120, [{ name: 'Incline Dumbbell Press', weight: 18, equipment: 'dumbbell' }]),
+        ex('Lateral Raise', 3, '12-15', 8, 9, 75, [{ name: 'Cable Lateral Raise', weight: 5, equipment: 'cable' }], 'dumbbell'),
+        ex('Triceps Pushdown', 3, '10-15', 25, 9, 75, [{ name: 'Skull Crusher', weight: 20, equipment: 'barbell' }], 'cable')
       ]},
       { id: uid(), name: 'Day B — Pull', exercises: [
         ex('Deadlift', 3, '5', 100, 8, 180, [{ name: 'Romanian Deadlift', weight: 80 }]),
-        ex('Pull-Up', 3, '6-10', 0, 9, 150, [{ name: 'Lat Pulldown', weight: 55 }], 'bodyweight'),
-        ex('Barbell Row', 3, '8-10', 60, 8, 120, [{ name: 'Cable Row', weight: 55 }, { name: 'Dumbbell Row', weight: 26 }]),
-        ex('Face Pull', 3, '12-15', 20, 9, 75, [{ name: 'Rear Delt Fly', weight: 8 }]),
-        ex('Bicep Curl', 3, '10-12', 12, 9, 75, [{ name: 'Hammer Curl', weight: 12 }])
+        ex('Pull-Up', 3, '6-10', 0, 9, 150, [{ name: 'Lat Pulldown', weight: 55, equipment: 'cable' }], 'bodyweight'),
+        ex('Barbell Row', 3, '8-10', 60, 8, 120, [{ name: 'Cable Row', weight: 55, equipment: 'cable' }, { name: 'Dumbbell Row', weight: 26, equipment: 'dumbbell' }]),
+        ex('Face Pull', 3, '12-15', 20, 9, 75, [{ name: 'Rear Delt Fly', weight: 8, equipment: 'dumbbell' }], 'cable'),
+        ex('Bicep Curl', 3, '10-12', 12, 9, 75, [{ name: 'Hammer Curl', weight: 12 }], 'dumbbell')
       ]},
       { id: uid(), name: 'Day C — Legs', exercises: [
-        ex('Squat', 4, '6-8', 80, 8, 180, [{ name: 'Leg Press', weight: 140 }]),
-        ex('Romanian Deadlift', 3, '8-10', 70, 8, 150, [{ name: 'Leg Curl', weight: 40 }]),
-        ex('Bulgarian Split Squat', 3, '8-10', 14, 9, 105, [{ name: 'Lunge', weight: 14 }]),
-        ex('Leg Curl', 3, '10-12', 40, 9, 90, [{ name: 'Good Morning', weight: 40 }]),
-        ex('Calf Raise', 4, '10-15', 60, 9, 75, [])
+        ex('Squat', 4, '6-8', 80, 8, 180, [{ name: 'Leg Press', weight: 140, equipment: 'machine' }]),
+        ex('Romanian Deadlift', 3, '8-10', 70, 8, 150, [{ name: 'Leg Curl', weight: 40, equipment: 'machine' }]),
+        ex('Bulgarian Split Squat', 3, '8-10', 14, 9, 105, [{ name: 'Lunge', weight: 14 }], 'dumbbell'),
+        ex('Leg Curl', 3, '10-12', 40, 9, 90, [{ name: 'Good Morning', weight: 40, equipment: 'barbell' }], 'machine'),
+        ex('Calf Raise', 4, '10-15', 60, 9, 75, [], 'machine')
       ]}
     ]
   };
@@ -201,9 +312,14 @@ let audioCtx = null;
 function unlockAudio() {
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+    // WebKit uses a non-standard 'interrupted' state after a screen lock, an incoming
+    // call, or another app taking audio — and stays there. Checking only for
+    // 'suspended' left the context dead, so the timer cue silently produced nothing
+    // while the Test button still worked (a user gesture makes WebKit auto-resume).
+    if (audioCtx.state !== 'running') audioCtx.resume();
   } catch (e) {}
 }
+function audioState() { return audioCtx ? audioCtx.state : 'none'; }
 function beep(times = 3, freq = 880) {
   if (!settings.sound) return;
   unlockAudio();
@@ -225,9 +341,72 @@ function buzz(pattern = [200, 100, 200]) {
   if (settings.vibrate && navigator.vibrate) { try { navigator.vibrate(pattern); } catch (e) {} }
 }
 
+/*
+ * A near-silent looping source. Without it an idle context gets suspended, which
+ * freezes currentTime and strands any pre-scheduled cue. Runs only while a
+ * session is active, so it costs nothing the rest of the time.
+ */
+let keepAlive = null;
+function startKeepAlive() {
+  unlockAudio();
+  if (!audioCtx || keepAlive) return;
+  try {
+    const buf = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+    const src = audioCtx.createBufferSource(), g = audioCtx.createGain();
+    src.buffer = buf; src.loop = true;
+    g.gain.value = 0.0001;
+    src.connect(g); g.connect(audioCtx.destination);
+    src.start();
+    keepAlive = src;
+  } catch (e) {}
+}
+function stopKeepAlive() {
+  if (!keepAlive) return;
+  try { keepAlive.stop(); } catch (e) {}
+  keepAlive = null;
+}
+
+/*
+ * Schedule the rest cue `seconds` from now on the audio clock rather than firing
+ * it from setInterval. startRest() is always reached from a tap, so the context
+ * is live at scheduling time; the audio thread then delivers on time regardless
+ * of main-thread throttling. The interval keeps a late fallback for the case
+ * where the context dies before the scheduled time arrives.
+ */
+function scheduleCue(seconds) {
+  cancelCue();
+  if (!settings.sound) return;
+  unlockAudio();
+  if (!audioCtx || !rest) return;
+  try {
+    const nodes = [];
+    const myRest = rest; // bind onended to this rest by identity, not to whatever `rest` is when it fires
+    const t0 = audioCtx.currentTime + seconds;
+    for (let i = 0; i < 3; i++) {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = 880;
+      o.connect(g); g.connect(audioCtx.destination);
+      const t = t0 + i * 0.38;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.6, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+      o.start(t); o.stop(t + 0.32);
+      if (i === 0) o.onended = () => { if (rest === myRest) { rest.cueFired = true; saveRest(); } };
+      nodes.push(o);
+    }
+    rest.cueNodes = nodes;
+  } catch (e) {}
+}
+function cancelCue() {
+  if (!rest || !rest.cueNodes) return;
+  for (const o of rest.cueNodes) { try { o.onended = null; o.stop(); } catch (e) {} }
+  rest.cueNodes = null;
+}
+
 /* ================= wake lock (keep screen on during a session) ================= */
 let wakeLock = null;
 async function syncWakeLock() {
+  if (active) startKeepAlive(); else stopKeepAlive();
   try {
     if (active && !wakeLock && 'wakeLock' in navigator) {
       wakeLock = await navigator.wakeLock.request('screen');
@@ -236,23 +415,37 @@ async function syncWakeLock() {
   } catch (e) { wakeLock = null; }
 }
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') { syncWakeLock(); }
+  if (document.visibilityState === 'visible') { unlockAudio(); syncWakeLock(); }
   else if (syncReady && settings.autoSync && dataUpdatedAt > lastSyncedAt) {
     clearTimeout(syncTimer); workerPush({ silent: true }); // flush unsynced changes before backgrounding
   }
 });
 
 /* ================= rest timer ================= */
-let rest = store.get('rest', null); // { endsAt, total, label, fired } — persisted so a reload mid-rest doesn't lose the countdown
-const saveRest = () => rest ? store.set('rest', rest) : store.del('rest');
+let rest = store.get('rest', null); // { endsAt, total, label, fired, cueFired } — persisted so a reload mid-rest doesn't lose the countdown
+// cueNodes holds live AudioNodes and must never be persisted.
+const saveRest = () => {
+  if (!rest) { store.del('rest'); return; }
+  const { cueNodes, ...persistable } = rest;
+  store.set('rest', persistable);
+};
 function startRest(seconds, label) {
   if (!seconds || seconds <= 0) return;
   unlockAudio();
-  rest = { endsAt: Date.now() + seconds * 1000, total: seconds, label: label || 'Rest', fired: false };
+  cancelCue(); // cancel the outgoing rest's scheduled oscillators while `rest` still points at it
+  rest = { endsAt: Date.now() + seconds * 1000, total: seconds, label: label || 'Rest', fired: false, cueFired: false, cueNodes: null };
+  scheduleCue(seconds);
   saveRest(); renderRest();
 }
-function adjustRest(delta) { if (rest) { rest.endsAt += delta * 1000; rest.total = Math.max(rest.total + delta, 1); saveRest(); renderRest(); } }
-function stopRest() { rest = null; saveRest(); renderRest(); }
+function adjustRest(delta) {
+  if (!rest) return;
+  rest.endsAt += delta * 1000;
+  rest.total = Math.max(rest.total + delta, 1);
+  const remain = (rest.endsAt - Date.now()) / 1000;
+  if (remain > 0) { rest.fired = false; rest.cueFired = false; scheduleCue(remain); }
+  saveRest(); renderRest();
+}
+function stopRest() { cancelCue(); rest = null; saveRest(); renderRest(); }
 function renderRest() {
   const el = document.getElementById('rest-banner');
   if (!rest) { el.classList.add('hidden'); el.classList.remove('over'); return; }
@@ -275,8 +468,15 @@ function renderRest() {
 setInterval(() => {
   if (rest) {
     const remain = (rest.endsAt - Date.now()) / 1000;
-    if (remain <= 0 && !rest.fired) { rest.fired = true; saveRest(); beep(3); buzz(); }
-    if (remain <= -30) { rest = null; saveRest(); }  // auto-dismiss 30s after firing
+    // Fallback only: the cue is normally delivered by scheduleCue() on the audio
+    // clock. Beep here only if that never landed, so a dead context still gets a
+    // late cue and a delivered one never doubles up.
+    if (remain <= 0 && !rest.fired) {
+      rest.fired = true;
+      if (!rest.cueFired) { beep(3); buzz(); } else buzz();
+      saveRest();
+    }
+    if (remain <= -30) { cancelCue(); rest = null; saveRest(); }  // auto-dismiss 30s after firing
     renderRest();
   }
   // live session clock
@@ -343,10 +543,22 @@ function normalizePlan(raw) {
             restSecondsNext: e.restSecondsNext != null && e.restSecondsNext !== '' ? parseInt(e.restSecondsNext, 10) : null,
             equipment: EQUIPMENT_TYPES.includes(e.equipment) ? e.equipment : 'barbell',
             barWeight: e.barWeight != null && e.barWeight !== '' ? parseFloat(e.barWeight) : null,
+            metric: EXERCISE_METRICS.includes(e.metric) ? e.metric : 'load',
+            // Adjacent exercises sharing a tag form one superset. Uppercased and
+            // trimmed so "a" and "A " group together rather than silently splitting.
+            // This normalization must stay identical to the one in
+            // tools/push-plan.mjs's validatePlan — otherwise the validator can
+            // pass a plan whose tags collide only after this truncation, and the
+            // app silently splits it into two cards.
+            superset: e.superset ? String(e.superset).trim().toUpperCase().slice(0, 2) : null,
             description: String(e.description || ''),
             notes: String(e.notes || ''),
             alternates: Array.isArray(e.alternates) ? e.alternates.filter(a => a && a.name).map(a => ({
-              name: String(a.name), weight: parseFloat(a.weight) || 0, description: String(a.description || '')
+              name: String(a.name), weight: parseFloat(a.weight) || 0, description: String(a.description || ''),
+              // Omitted equipment means "same as the parent" — keep it absent rather than
+              // defaulting to barbell, so a swap inherits instead of silently relabelling.
+              equipment: EQUIPMENT_TYPES.includes(a.equipment) ? a.equipment : null,
+              barWeight: a.barWeight != null && a.barWeight !== '' ? parseFloat(a.barWeight) : null
             })) : []
           };
         })
@@ -369,7 +581,59 @@ const sameExercise = (a, b) => canonicalName(a).toLowerCase() === canonicalName(
 function lastPerformance(name) {
   for (let i = sessions.length - 1; i >= 0; i--) {
     for (const e of sessions[i].exercises) {
-      if (sameExercise(e.name, name) && e.sets.length) return { date: sessions[i].date, sets: e.sets };
+      if (sameExercise(e.name, name) && e.sets.length) {
+        // Missing metric = pre-jump-feature record; treat as 'load' (backward compat).
+        return { date: sessions[i].date, sets: e.sets, jump: e.metric === 'height' };
+      }
+    }
+  }
+  return null;
+}
+
+/* ================= supersets ================= */
+/*
+ * A superset is a maximal run of ADJACENT exercises sharing a `superset` tag.
+ * Adjacency is the whole contract: it keeps days[].exercises a flat array, so
+ * every existing index path (history, swap, stepper, set-done) is untouched.
+ * A tag that appears in two non-adjacent runs renders as two cards — visibly
+ * wrong, and tools/push-plan.mjs rejects it before it can be pushed.
+ */
+function supersetGroups(list) {
+  const out = [];
+  for (let i = 0; i < list.length; i++) {
+    const tag = list[i].superset || null;
+    if (!tag) { out.push({ tag: null, idx: [i] }); continue; }
+    const idx = [i];
+    while (i + 1 < list.length && (list[i + 1].superset || null) === tag) { idx.push(++i); }
+    out.push({ tag, idx });
+  }
+  return out;
+}
+function groupOf(list, ei) {
+  const g = supersetGroups(list).find(x => x.idx.includes(ei));
+  return g && g.tag ? g : null;
+}
+// The next member owing set `si`, scanning after `ei` then wrapping to the start.
+// Unequal set counts just skip members that have no set at that round.
+function nextInRound(list, group, ei, si) {
+  const pos = group.idx.indexOf(ei);
+  const order = group.idx.slice(pos + 1).concat(group.idx.slice(0, pos));
+  for (const j of order) {
+    const s = list[j].sets[si];
+    if (s && !s.done) return j;
+  }
+  return null;
+}
+function groupComplete(list, group) {
+  return group.idx.every(j => list[j].sets.every(s => s.done));
+}
+// Round-robin: the single set the athlete should log next, or null when done.
+function groupNextSlot(list, group) {
+  const rounds = Math.max(...group.idx.map(j => list[j].sets.length));
+  for (let si = 0; si < rounds; si++) {
+    for (const j of group.idx) {
+      const s = list[j].sets[si];
+      if (s && !s.done) return { ei: j, si };
     }
   }
   return null;
@@ -388,8 +652,11 @@ function startSession(dayId) {
       plannedSets: e.sets, plannedReps: e.reps, plannedWeight: e.weight,
       targetRpe: e.targetRpe, restSeconds: e.restSeconds, restSecondsNext: e.restSecondsNext,
       equipment: e.equipment || 'barbell', barWeight: e.barWeight,
+      metric: e.metric === 'height' ? 'height' : 'load', superset: e.superset || null,
       description: e.description, alternates: e.alternates, notes: '',
-      sets: Array.from({ length: e.sets }, () => ({ weight: e.weight, reps: parseRepsLow(e.reps), rpe: e.targetRpe, done: false }))
+      sets: e.metric === 'height'
+        ? Array.from({ length: e.sets }, () => ({ heightCm: null, done: false }))
+        : Array.from({ length: e.sets }, () => ({ weight: e.weight, reps: parseRepsLow(e.reps), rpe: e.targetRpe, done: false }))
     }))
   };
   exExpanded = new Set(); readinessOpen = null;
@@ -409,8 +676,12 @@ function finishSession() {
     exercises: active.exercises
       .map(e => ({ name: e.name, plannedSets: e.plannedSets, plannedReps: e.plannedReps,
         plannedWeight: e.plannedWeight, targetRpe: e.targetRpe,
+        equipment: e.equipment, barWeight: e.barWeight, metric: e.metric === 'height' ? 'height' : 'load',
+        superset: e.superset || null,
         swappedFrom: e.swappedFrom, notes: e.notes,
-        sets: e.sets.filter(s => s.done).map(s => ({ weight: s.weight, reps: s.reps, rpe: s.rpe })) }))
+        sets: e.sets.filter(s => s.done).map(s => e.metric === 'height'
+          ? ({ heightCm: s.heightCm })
+          : ({ weight: s.weight, reps: s.reps, rpe: s.rpe })) }))
       .filter(e => e.sets.length)
   };
   const rd = active.readiness || {};
@@ -432,15 +703,57 @@ function finishSession() {
 function detectPRs(record) {
   const prs = [];
   for (const e of record.exercises) {
-    const newBest = Math.max(...e.sets.map(s => est1RM(s.weight, s.reps)));
+    const jump = e.metric === 'height';
+    const score = ex => jump ? bestHeight(ex.sets) : Math.max(...ex.sets.map(s => est1RM(s.weight, s.reps)));
+    const newBest = score(e);
     let oldBest = 0;
     for (const s of sessions) for (const ex of s.exercises) {
-      if (sameExercise(ex.name, e.name))
-        for (const set of ex.sets) oldBest = Math.max(oldBest, est1RM(set.weight, set.reps));
+      // Compare like with like: a height PR must not be measured against loads.
+      if (sameExercise(ex.name, e.name) && (ex.metric === 'height') === jump) {
+        oldBest = Math.max(oldBest, score(ex));
+      }
     }
     if (newBest > oldBest && oldBest > 0) prs.push(canonicalName(e.name));
   }
   return prs;
+}
+
+// Post-completion side effects for a set that has just been marked done: starts
+// the right rest (respecting superset round-robin/group-complete transitions),
+// buzzes, and persists + re-renders. Shared by the manual set-done tap and
+// cmjAccept, so accepting a video measurement behaves exactly like tapping the
+// checkmark — same rest timer, same round-robin advance inside a superset.
+function completeSet(ei, si) {
+  const ex = active.exercises[ei];
+  const group = groupOf(active.exercises, ei);
+  const exerciseDone = ex.sets.every(y => y.done);
+  // Inside a group the whole group collapses together, so don't collapse a member.
+  if (exerciseDone && !group) exExpanded.delete(ei);
+  saveActive(); render();
+  const remaining = active.exercises.some(x => x.sets.some(y => !y.done));
+  if (remaining) {
+    if (group) {
+      const nextEi = nextInRound(active.exercises, group, ei, si);
+      if (nextEi != null) {
+        // Mid-round: this exercise's own restSeconds is the short transition.
+        startRest(ex.restSeconds, '→ ' + active.exercises[nextEi].name);
+      } else if (!groupComplete(active.exercises, group)) {
+        const rounds = Math.max(...group.idx.map(j => active.exercises[j].sets.length));
+        startRest(ex.restSeconds, `Round ${Math.min(si + 2, rounds)} of ${rounds}`);
+      } else {
+        // Group finished. The next-movement rest is authored on the group's LAST
+        // member in plan order — with unequal set counts the last member to
+        // finish need not be that one, so don't read it off `ex`.
+        const lastEx = active.exercises[group.idx[group.idx.length - 1]];
+        startRest(lastEx.restSecondsNext != null ? lastEx.restSecondsNext : lastEx.restSeconds,
+          'Rest — next movement');
+      }
+    } else {
+      const seconds = exerciseDone && ex.restSecondsNext != null ? ex.restSecondsNext : ex.restSeconds;
+      startRest(seconds, 'Rest — ' + ex.name);
+    }
+  }
+  buzz([60]);
 }
 
 /* ================= Claude data exchange ================= */
@@ -493,6 +806,8 @@ Rules for the plan you produce:
           "restSecondsNext": <number, optional — rest before moving to the next movement, omit if same as restSeconds>,
           "equipment": "<one of: barbell, trap-bar, landmine, training-bar, dumbbell, machine, cable, bodyweight, other>",
           "barWeight": <number, optional — only for barbell/trap-bar/training-bar if the bar isn't a standard 20kg/45lb bar; omit otherwise>,
+          "metric": "<optional — 'load' (default, omit) or 'height' for a jump exercise logged in cm; use equipment 'bodyweight' and weight 0 with 'height'>",
+          "superset": "<optional — a short tag like 'A' shared by adjacent exercises to log them as one alternating superset card; omit for a standalone exercise>",
           "description": "<1-2 sentence how-to>",
           "alternates": [ { "name": "<alternative exercise>", "weight": <number>, "description": "<short how-to>" } ]
         }
@@ -504,6 +819,8 @@ Rules for the plan you produce:
 - Always include 1-2 "alternates" per exercise (for busy equipment) and a short "description" for each.
 - Keep rest times realistic per lift type. Set "restSecondsNext" only when the rest before switching movements should genuinely differ from the between-set rest (e.g. longer before a heavy compound, shorter before a superset).
 - Set "equipment" accurately per exercise — this drives whether the plate calculator shows up and whether the weight field is grayed out for bodyweight moves.
+- Set "metric" to "height" only for jump-height tests (e.g. box jumps, CMJ-style training sets) logged in cm; leave it out for ordinary weight × reps exercises.
+- Set "superset" to the same tag on exercises meant to be logged as one alternating superset — they must be adjacent in the "exercises" array; leave it out otherwise.
 
 My data:
 `;
@@ -512,7 +829,7 @@ ${url}
 
 It contains my recent sessions (actual weights, reps, RPE), notes, body weight and current plan. Review it, then write my next workout plan.
 
-Reply with ONLY a JSON code block of type "workout-plan" (weights in ${unit()}) using the same field structure as the "plan" object in that data: days[] → exercises[] with name, sets, reps (string), weight, targetRpe, restSeconds, restSecondsNext (optional, only if it should differ from restSeconds), equipment (one of: barbell, trap-bar, landmine, training-bar, dumbbell, machine, cable, bodyweight, other), barWeight (optional, only if the bar isn't a standard 20kg/45lb bar), description, and 1-2 alternates each. Progress weights from my logged RPE vs target (at/under target → increase; over → hold or reduce). I'll paste your JSON back into the app to load it.`;
+Reply with ONLY a JSON code block of type "workout-plan" (weights in ${unit()}) using the same field structure as the "plan" object in that data: days[] → exercises[] with name, sets, reps (string), weight, targetRpe, restSeconds, restSecondsNext (optional, only if it should differ from restSeconds), equipment (one of: barbell, trap-bar, landmine, training-bar, dumbbell, machine, cable, bodyweight, other), barWeight (optional, only if the bar isn't a standard 20kg/45lb bar), metric (optional, "load" default or "height" for a jump exercise logged in cm — use equipment "bodyweight" and weight 0 with it), superset (optional, a short tag shared by adjacent exercises to log as one alternating superset), description, and 1-2 alternates each. Progress weights from my logged RPE vs target (at/under target → increase; over → hold or reduce). I'll paste your JSON back into the app to load it.`;
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); return true; }
   catch (e) {
@@ -819,7 +1136,9 @@ function viewActiveSession() {
         <span class="chev">${icon('chevRight', 16)}</span>
       </div>
     </div>`}
-    ${active.exercises.map((e, ei) => exerciseCard(e, ei)).join('')}
+    ${supersetGroups(active.exercises).map(g => g.tag
+      ? supersetCard(g)
+      : exerciseCard(active.exercises[g.idx[0]], g.idx[0])).join('')}
     <h2 class="section">Session notes</h2>
     <div class="card">
       <textarea data-bind="session-notes" placeholder="How did it go? Anything Claude should know? (sleep, pain, energy…)">${esc(active.notes)}</textarea>
@@ -827,16 +1146,52 @@ function viewActiveSession() {
     <button class="wide success mt12" data-action="confirm-finish">Finish workout</button>
     <button class="wide ghost danger mt8" data-action="confirm-discard">Discard session</button>`;
 }
-function exerciseCard(e, ei) {
+function supersetCard(group) {
+  const list = active.exercises;
+  const rounds = Math.max(...group.idx.map(j => list[j].sets.length));
+  const doneRounds = Array.from({ length: rounds }, (_, si) =>
+    group.idx.every(j => !list[j].sets[si] || list[j].sets[si].done)).filter(Boolean).length;
+  const complete = groupComplete(list, group);
+  const key = 'ss:' + group.tag;
+  if (complete && !exExpanded.has(key)) {
+    return `
+    <div class="card collapsed-ex tappable" data-action="ex-expand" data-key="${esc(key)}">
+      <div class="row between">
+        <div class="grow"><span class="green bold">✓</span> <span class="bold">Superset ${esc(group.tag)}</span>
+          <span class="muted small">· ${group.idx.map(j => esc(list[j].name)).join(' + ')}</span></div>
+        <span class="chev">${icon('chevDown', 18)}</span>
+      </div>
+    </div>`;
+  }
+  const slot = groupNextSlot(list, group);
+  return `
+  <div class="card superset-card">
+    <div class="superset-head row between">
+      <span class="bold">Superset ${esc(group.tag)}</span>
+      <span class="muted small">${complete ? 'complete' : `round ${Math.min(doneRounds + 1, rounds)} of ${rounds}`}</span>
+    </div>
+    ${group.idx.map(j => `<div class="superset-member${slot && slot.ei === j ? ' ss-next' : ''}">${exerciseCard(list[j], j, { inGroup: true })}</div>`).join('')}
+  </div>`;
+}
+function exerciseCard(e, ei, opts) {
+  const inGroup = !!(opts && opts.inGroup);
   const doneCount = e.sets.filter(s => s.done).length;
   const allDone = doneCount === e.sets.length && e.sets.length > 0;
-  if (allDone && !exExpanded.has(ei)) {
-    const best = e.sets.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
+  // Inside a superset the whole group collapses as a unit, so a member never
+  // collapses on its own — the athlete still needs its rows for the next round.
+  if (allDone && !inGroup && !exExpanded.has(ei)) {
+    let summary;
+    if (isJump(e)) {
+      summary = `${e.sets.length} attempt${e.sets.length === 1 ? '' : 's'} · best ${bestHeight(e.sets)} cm`;
+    } else {
+      const best = e.sets.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
+      summary = `${e.sets.length} sets · best ${best.weight}×${best.reps}`;
+    }
     return `
     <div class="card collapsed-ex tappable" data-action="ex-expand" data-ei="${ei}">
       <div class="row between">
         <div class="grow"><span class="green bold">✓</span> <span class="bold">${esc(e.name)}</span>
-          <span class="muted small">· ${e.sets.length} sets · best ${best.weight}×${best.reps}</span></div>
+          <span class="muted small">· ${esc(summary)}</span></div>
         <span class="chev">${icon('chevDown', 18)}</span>
       </div>
     </div>`;
@@ -844,18 +1199,28 @@ function exerciseCard(e, ei) {
   const lastP = lastPerformance(e.name);
   const lastRpe = lastP ? Math.max(0, ...lastP.sets.map(s => s.rpe || 0)) : 0;
   return `
-  <div class="card">
+  <div class="${inGroup ? 'ss-body' : 'card'}">
     <div class="row between">
       <div class="grow">
         <div class="ex-name">${allDone ? '✅ ' : ''}${esc(e.name)}</div>
-        <div class="target-line">Plan: ${e.plannedSets}×${esc(e.plannedReps)} @ ${e.plannedWeight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''} · rest ${fmtClock(e.restSeconds)}</div>
-        ${lastP ? `<div class="last-line">Last: ${lastP.sets.map(s => `${s.weight}×${s.reps}`).join(' · ')}${lastRpe ? ` @RPE ${lastRpe}` : ''} — ${fmtDate(lastP.date)}</div>` : ''}
+        <div class="target-line">${isJump(e)
+          ? `Plan: ${e.plannedSets} attempt${e.plannedSets === 1 ? '' : 's'} · rest ${fmtClock(e.restSeconds)} ${equipChip(e)}`
+          : `Plan: ${e.plannedSets}×${esc(e.plannedReps)} @ ${e.plannedWeight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''} · rest ${fmtClock(e.restSeconds)} ${equipChip(e)}`}</div>
+        ${lastP ? `<div class="last-line">Last: ${lastP.jump ? `best ${bestHeight(lastP.sets)} cm` : lastP.sets.map(s => `${s.weight}×${s.reps}`).join(' · ') + (lastRpe ? ` @RPE ${lastRpe}` : '')} — ${fmtDate(lastP.date)}</div>` : ''}
         ${e.swappedFrom ? `<div class="swap-note">↺ swapped from ${esc(e.swappedFrom)}</div>` : ''}
       </div>
       <button class="icon-btn" data-action="ex-info" data-ei="${ei}" title="Explain">${icon('info', 18)}</button>
-      ${PLATE_EQUIPMENT.has(e.equipment || 'barbell') ? `<button class="icon-btn" data-action="plate-calc" data-ei="${ei}" title="Plate calculator">${icon('plate', 18)}</button>` : ''}
+      ${!isJump(e) && PLATE_EQUIPMENT.has(e.equipment || 'barbell') ? `<button class="icon-btn" data-action="plate-calc" data-ei="${ei}" title="Plate calculator">${icon('plate', 18)}</button>` : ''}
       <button class="icon-btn" data-action="ex-swap" data-ei="${ei}" title="Swap">${icon('swap', 18)}</button>
     </div>
+    ${isJump(e) ? `
+    <div class="set-grid jump">
+      <div class="head">#</div><div class="head">cm</div><div class="head">✓</div>
+      ${e.sets.map((s, si) => `
+        <div class="set-no">${si + 1}</div>
+        <input class="${s.done ? 'set-row-done-i' : ''}" type="number" inputmode="decimal" step="0.5" value="${s.heightCm != null ? s.heightCm : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="heightCm" ${s.done ? 'style="border-color:var(--green)"' : ''}>
+        <button class="set-done-btn ${s.done ? 'success' : ''}" data-action="set-done" data-ei="${ei}" data-si="${si}">${s.done ? '✓' : '○'}</button>`).join('')}
+    </div>` : `
     <div class="set-grid">
       <div class="head">#</div><div class="head">${unit()}</div><div class="head">Reps</div><div class="head">RPE</div><div class="head">✓</div>
       ${e.sets.map((s, si) => `
@@ -864,10 +1229,11 @@ function exerciseCard(e, ei) {
         <input type="number" inputmode="numeric" value="${s.reps != null ? s.reps : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="reps" ${s.done ? 'style="border-color:var(--green)"' : ''}>
         <button class="rpe-btn ${s.rpe != null ? '' : 'muted'}" data-action="rpe-pick" data-ei="${ei}" data-si="${si}" ${s.done ? 'style="border-color:var(--green)"' : ''}>${s.rpe != null ? s.rpe : '—'}</button>
         <button class="set-done-btn ${s.done ? 'success' : ''}" data-action="set-done" data-ei="${ei}" data-si="${si}">${s.done ? '✓' : '○'}</button>`).join('')}
-    </div>
+    </div>`}
     <div class="row mt12">
       <button class="ghost icon-btn" data-action="set-add" data-ei="${ei}">+ Set</button>
       <button class="ghost icon-btn" data-action="set-remove" data-ei="${ei}">− Set</button>
+      ${isJump(e) ? `<button class="ghost icon-btn" data-action="cmj-open" data-ei="${ei}">${icon('video', 15)} Measure</button>` : ''}
       <button class="ghost icon-btn grow note-btn" data-action="ex-note" data-ei="${ei}">${icon('note', 15)} ${e.notes ? esc(e.notes.slice(0, 24)) + (e.notes.length > 24 ? '…' : '') : 'Note'}</button>
     </div>
   </div>`;
@@ -896,12 +1262,13 @@ function viewPlan() {
         ${open ? `
           <div class="divider"></div>
           ${d.exercises.map((e, i) => `
-            <div class="row between tappable" style="padding:9px 0" data-action="ex-menu" data-day="${d.id}" data-i="${i}">
-              <div class="grow">
-                <div class="bold">${esc(e.name)}</div>
-                <div class="muted small">${e.sets}×${esc(e.reps)} @ ${e.weight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''} · rest ${fmtClock(e.restSeconds)}${e.alternates.length ? ' · ' + e.alternates.length + ' alt' : ''}</div>
+            <div class="row between" style="padding:9px 0">
+              <div class="grow tappable" data-action="ex-menu" data-day="${d.id}" data-i="${i}">
+                <div class="bold">${esc(e.name)}${e.superset ? ` <span class="day-pill">SS ${esc(e.superset)}</span>` : ''}</div>
+                <div class="muted small">${e.sets}×${esc(e.reps)} @ ${e.weight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''} · rest ${fmtClock(e.restSeconds)}${e.alternates.length ? ' · ' + e.alternates.length + ' alt' : ''} ${equipChip(e)}</div>
               </div>
-              <span class="chev">${icon('chevRight', 16)}</span>
+              <button class="icon-btn" data-action="ex-move" data-day="${d.id}" data-i="${i}" data-dir="-1" ${i === 0 ? 'disabled' : ''}>↑</button>
+              <button class="icon-btn" data-action="ex-move" data-day="${d.id}" data-i="${i}" data-dir="1" ${i === d.exercises.length - 1 ? 'disabled' : ''}>↓</button>
             </div>`).join('')}
           <div class="row mt8">
             <button class="ghost icon-btn" data-action="ex-add" data-day="${d.id}">+ Exercise</button>
@@ -919,8 +1286,12 @@ function exerciseHistory(name) {
   const rows = [];
   for (const s of sessions) for (const e of s.exercises) {
     if (sameExercise(e.name, name) && e.sets.length) {
-      const best = e.sets.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
-      rows.push({ date: s.date, best, e1rm: est1RM(best.weight, best.reps), sets: e.sets });
+      if (e.metric === 'height') {
+        rows.push({ date: s.date, jump: true, heightCm: bestHeight(e.sets), sets: e.sets });
+      } else {
+        const best = e.sets.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
+        rows.push({ date: s.date, jump: false, best, e1rm: est1RM(best.weight, best.reps), sets: e.sets });
+      }
     }
   }
   return rows;
@@ -965,6 +1336,8 @@ function weeklyStats(weeks = 8) {
         wk.sessions++;
         for (const e of s.exercises) {
           wk.sets += e.sets.length;
+          // Height sets have no kg × reps to contribute; they still count as sets.
+          if (e.metric === 'height') continue;
           for (const st of e.sets) wk.volume += (st.weight || 0) * (st.reps || 0);
         }
       }
@@ -995,7 +1368,12 @@ function viewHistory() {
   if (historyExercise && !exNames.includes(historyExercise)) historyExercise = '';
   const sel = historyExercise || exNames[0] || '';
   const hist = sel ? exerciseHistory(sel) : [];
-  const prBest = hist.length ? Math.max(...hist.map(r => r.e1rm)) : 0;
+  const histJump = hist.length ? hist[hist.length - 1].jump : false;
+  // A metric switch mid-history (e.g. load -> height) leaves older rows shaped
+  // for the other metric — mixing them into one chart/list produces NaN and
+  // "undefined" values, so only rows matching the newest row's metric are shown.
+  const histRows = hist.filter(r => r.jump === histJump);
+  const prBest = histRows.length ? Math.max(...histRows.map(r => histJump ? r.heightCm : r.e1rm)) : 0;
   const bwLast = bodyWeight[bodyWeight.length - 1];
   const weeks = sessions.length ? weeklyStats(8) : [];
   const thisWeek = weeks[weeks.length - 1];
@@ -1024,15 +1402,16 @@ function viewHistory() {
     <div class="card">
       ${exNames.length ? `
         <select data-bind="history-ex">${exNames.map(n => `<option ${n === sel ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
-        ${hist.length ? `
-          ${chartSvg(hist.slice(-12).map(r => ({ v: r.e1rm, d: r.date })))}
-          <div class="muted small mt8">Best est. 1RM: <b class="amber">${prBest} ${unit()}</b></div>
+        ${histRows.length ? `
+          ${chartSvg(histRows.slice(-12).map(r => ({ v: histJump ? r.heightCm : r.e1rm, d: r.date })))}
+          <div class="muted small mt8">${histJump ? `Best jump: <b class="amber">${prBest} cm</b>` : `Best est. 1RM: <b class="amber">${prBest} ${unit()}</b>`}</div>
+          ${hist.length > histRows.length ? `<div class="muted small mt8">${hist.length - histRows.length} earlier session${hist.length - histRows.length === 1 ? '' : 's'} logged this exercise with a different metric and ${hist.length - histRows.length === 1 ? 'is' : 'are'} not shown.</div>` : ''}
           <div class="divider"></div>
-          ${hist.slice(-8).reverse().map(r => `
+          ${histRows.slice(-8).reverse().map(r => `
             <div class="row between" style="padding:5px 0">
               <span class="muted small">${fmtDate(r.date)}</span>
-              <span class="small">${r.sets.map(s => `${s.weight}×${s.reps}`).join(' · ')}</span>
-              <span class="small bold ${r.e1rm >= prBest ? 'amber' : ''}">${r.e1rm >= prBest ? '🏆 ' : ''}e1RM ${r.e1rm}</span>
+              <span class="small">${histJump ? r.sets.map(s => `${s.heightCm}cm`).join(' · ') : r.sets.map(s => `${s.weight}×${s.reps}`).join(' · ')}</span>
+              <span class="small bold ${(histJump ? r.heightCm : r.e1rm) >= prBest ? 'amber' : ''}">${(histJump ? r.heightCm : r.e1rm) >= prBest ? '🏆 ' : ''}${histJump ? `${r.heightCm} cm` : `e1RM ${r.e1rm}`}</span>
             </div>`).join('')}` : '<p class="muted mt8">No logged sets for this exercise yet.</p>'}
         ${exNames.length > 1 || Object.keys(aliases).length ? `<button class="ghost wide mt8 small" data-action="merge-names" data-name="${esc(sel)}">Merge names…</button>` : ''}`
       : '<p class="empty"><span class="big">📈</span>Finish your first workout and your progress will show up here.</p>'}
@@ -1056,7 +1435,9 @@ function viewHistory() {
           ${s.exercises.map(e => `
             <div style="padding:5px 0">
               <div class="bold small">${esc(e.name)}${e.swappedFrom ? ` <span class="swap-note">(was ${esc(e.swappedFrom)})</span>` : ''}</div>
-              <div class="muted small">${e.sets.map(x => `${x.weight}${unit()}×${x.reps}${x.rpe ? '@' + x.rpe : ''}`).join(' · ')}</div>
+              <div class="muted small">${e.metric === 'height'
+                ? e.sets.map(x => `${x.heightCm} cm`).join(' · ')
+                : e.sets.map(x => `${x.weight}${unit()}×${x.reps}${x.rpe ? '@' + x.rpe : ''}`).join(' · ')}</div>
               ${e.notes ? `<div class="small amber">📝 ${esc(e.notes)}</div>` : ''}
             </div>`).join('')}
           ${s.notes ? `<div class="divider"></div><div class="small">📝 ${esc(s.notes)}</div>` : ''}
@@ -1140,7 +1521,9 @@ function viewSettings() {
       </div>
       <div class="row between" style="padding:6px 0">
         <span>Vibration</span>
-        <button class="icon-btn ${settings.vibrate ? 'success' : ''}" data-action="toggle-vibrate">${settings.vibrate ? 'On' : 'Off'}</button>
+        ${navigator.vibrate
+          ? `<button class="icon-btn ${settings.vibrate ? 'success' : ''}" data-action="toggle-vibrate">${settings.vibrate ? 'On' : 'Off'}</button>`
+          : `<span class="muted small">Not supported on this device</span>`}
       </div>
       <button class="ghost wide mt8" data-action="test-sound">🔊 Test the rest-timer sound</button>
     </div>
@@ -1197,9 +1580,19 @@ function exMenuModal(dayId, i) {
       { label: 'Close' }
     ]);
 }
+// Human-readable increment rule for the plan editor's weight field.
+function ladderHint(equipment) {
+  if (unit() !== 'kg') return '';
+  if (equipment === 'bodyweight') return 'bodyweight — leave at 0';
+  if (equipment === 'other') return 'increments not checked';
+  if (equipment === 'dumbbell') return '1 kg steps to 10 kg, then 2 kg';
+  if (equipment === 'cable' || equipment === 'machine') return '2.5 kg steps to 25 kg, then 5 kg';
+  if (equipment === 'landmine') return '1.25 kg steps (load on the end)';
+  return `2.5 kg steps from the ${resolvedBarWeight({ equipment, barWeight: null })} kg bar`;
+}
 function exEditModal(dayId, i) {
   const day = plan.days.find(d => d.id === dayId);
-  const e = i != null ? day.exercises[i] : { name: '', sets: 3, reps: '8-12', weight: 0, targetRpe: 8, restSeconds: 120, restSecondsNext: null, equipment: 'barbell', barWeight: null, description: '', alternates: [] };
+  const e = i != null ? day.exercises[i] : { name: '', sets: 3, reps: '8-12', weight: 0, targetRpe: 8, restSeconds: 120, restSecondsNext: null, equipment: 'barbell', barWeight: null, metric: 'load', superset: null, description: '', alternates: [] };
   const equipment = e.equipment || 'barbell';
   showModal(i != null ? 'Edit exercise' : 'Add exercise', `
     <label class="field"><span>Name</span><input id="f-name" value="${esc(e.name)}"></label>
@@ -1208,7 +1601,8 @@ function exEditModal(dayId, i) {
       <label class="field grow"><span>Reps</span><input id="f-reps" value="${esc(e.reps)}"></label>
     </div>
     <div class="row">
-      <label class="field grow"><span>Weight (${unit()})</span><input id="f-weight" type="number" inputmode="decimal" step="0.5" value="${e.weight}"></label>
+      <label class="field grow"><span>Weight (${unit()})</span><input id="f-weight" type="number" inputmode="decimal" step="0.5" value="${e.weight}">
+        <span class="field-hint" id="f-weight-hint">${esc(ladderHint(equipment))}</span></label>
       <label class="field grow"><span>Target RPE</span><button type="button" id="f-rpe" class="rpe-btn" data-action="edit-rpe-pick" data-v="${e.targetRpe != null ? e.targetRpe : ''}">${e.targetRpe != null ? e.targetRpe : '—'}</button></label>
     </div>
     <div class="row">
@@ -1219,6 +1613,20 @@ function exEditModal(dayId, i) {
       <select id="f-equipment" data-bind="edit-equipment">${EQUIPMENT_TYPES.map(t => `<option value="${t}" ${t === equipment ? 'selected' : ''}>${EQUIPMENT_LABELS[t]}</option>`).join('')}</select>
     </label>
     <label class="field${BAR_WEIGHT_EQUIPMENT.has(equipment) ? '' : ' hidden'}" id="f-barweight-row"><span>Bar weight (${unit()})</span><input id="f-barweight" type="number" inputmode="decimal" step="0.5" placeholder="default ${resolvedBarWeight({ equipment, barWeight: null })}" value="${e.barWeight != null ? e.barWeight : ''}"></label>
+    <label class="field"><span>What the sets measure</span>
+      <select id="f-metric">
+        <option value="load" ${e.metric !== 'height' ? 'selected' : ''}>Weight × reps (normal lift)</option>
+        <option value="height" ${e.metric === 'height' ? 'selected' : ''}>Jump height in cm (one attempt per set)</option>
+      </select>
+    </label>
+    <label class="field"><span>Superset group</span>
+      <select id="f-superset">
+        <option value="" ${!e.superset ? 'selected' : ''}>None</option>
+        ${['A', 'B', 'C', 'D'].map(t => `<option value="${t}" ${e.superset === t ? 'selected' : ''}>${t}</option>`).join('')}
+        ${e.superset && !['A', 'B', 'C', 'D'].includes(e.superset) ? `<option value="${esc(e.superset)}" selected>${esc(e.superset)}</option>` : ''}
+      </select>
+      <span class="field-hint">Members must sit next to each other in the day — use the ↑↓ buttons on the day list.</span>
+    </label>
     <label class="field"><span>How-to / description (optional)</span><textarea id="f-desc" style="min-height:60px">${esc(e.description)}</textarea></label>`,
     [
       { label: 'Save', cls: 'primary', fn: () => {
@@ -1226,11 +1634,36 @@ function exEditModal(dayId, i) {
           const rpeRaw = document.getElementById('f-rpe').dataset.v;
           const restNextRaw = mval('f-rest-next');
           const barWeightRaw = mval('f-barweight');
-          const upd = { name, sets: Math.max(1, mnum('f-sets', 3)), reps: mval('f-reps') || '8-12', weight: mnum('f-weight'),
+          const eqVal = document.getElementById('f-equipment').value;
+          const metricVal = document.getElementById('f-metric').value;
+          const barVal = barWeightRaw ? parseFloat(barWeightRaw) : null;
+          const wVal = mnum('f-weight');
+          const barResolved = barVal != null ? barVal : resolvedBarWeight({ equipment: eqVal, barWeight: null });
+          if (metricVal === 'height' && wVal) {
+            toast('A jump-height exercise carries no weight — set it to 0 (box height goes in the description)', 'err');
+            return;
+          }
+          if (metricVal !== 'height' && unit() === 'kg') {
+            const kind = weightIssueKind(eqVal, barResolved, wVal);
+            if (kind === 'bodyweight') {
+              toast(`${wVal}${unit()} — bodyweight exercises must be 0${unit()}`, 'err');
+              return;
+            } else if (kind === 'below-bar') {
+              toast(`${wVal}${unit()} is below the empty ${EQUIPMENT_LABELS[eqVal].toLowerCase()} (${barResolved}${unit()}) — is the Equipment field above set wrong? A dumbbell/cable/machine move this light usually isn't a barbell`, 'err');
+              return;
+            } else if (kind === 'off-ladder') {
+              const n = nearestRungs(eqVal, barResolved, wVal);
+              toast(`${wVal}${unit()} is not loadable on a ${EQUIPMENT_LABELS[eqVal].toLowerCase()} — try ${n.lo} or ${n.hi}`, 'err');
+              return;
+            }
+          }
+          const upd = { name, sets: Math.max(1, mnum('f-sets', 3)), reps: mval('f-reps') || '8-12', weight: wVal,
             targetRpe: rpeRaw ? parseFloat(rpeRaw) : null, restSeconds: Math.max(0, mnum('f-rest', 120)),
             restSecondsNext: restNextRaw ? Math.max(0, parseInt(restNextRaw, 10)) : null,
-            equipment: document.getElementById('f-equipment').value,
-            barWeight: barWeightRaw ? parseFloat(barWeightRaw) : null,
+            equipment: eqVal,
+            barWeight: barVal,
+            metric: metricVal,
+            superset: document.getElementById('f-superset').value || null,
             description: mval('f-desc') };
           if (i != null) Object.assign(day.exercises[i], upd);
           else day.exercises.push(Object.assign({ id: uid(), notes: '', alternates: [] }, upd));
@@ -1244,7 +1677,7 @@ function exSwapPlanModal(dayId, i) {
   const e = day.exercises[i];
   showModal('Swap ' + e.name, e.alternates.map((a, ai) => `
     <button class="wide mt8" data-action="plan-swap-pick" data-day="${dayId}" data-i="${i}" data-ai="${ai}">
-      ${esc(a.name)}${a.weight ? ` · ${a.weight}${unit()}` : ''}</button>`).join(''),
+      ${esc(a.name)}${a.weight ? ` · ${a.weight}${unit()}` : ''} ${equipChip({ equipment: a.equipment || e.equipment, barWeight: a.equipment ? a.barWeight : e.barWeight })}</button>`).join(''),
     [{ label: 'Cancel' }]);
 }
 function doPlanSwap(dayId, i, ai) {
@@ -1252,9 +1685,17 @@ function doPlanSwap(dayId, i, ai) {
   const e = day.exercises[i];
   const a = e.alternates[ai];
   // The current main exercise becomes an alternate, the chosen alternate becomes main.
+  // Equipment travels with each — without that, swap-then-swap-back changes the
+  // equipment type, which then changes the ladder the weight is checked against.
   const newAlts = e.alternates.filter((_, x) => x !== ai);
-  newAlts.unshift({ name: e.name, weight: e.weight, description: e.description });
-  Object.assign(e, { name: a.name, weight: a.weight || e.weight, description: a.description || '', alternates: newAlts });
+  newAlts.unshift({ name: e.name, weight: e.weight, description: e.description,
+    equipment: e.equipment, barWeight: e.barWeight });
+  Object.assign(e, {
+    name: a.name, weight: a.weight || e.weight, description: a.description || '',
+    equipment: a.equipment || e.equipment,
+    barWeight: a.equipment ? a.barWeight : e.barWeight,
+    alternates: newAlts
+  });
   savePlan(); closeModal(); render();
   toast('Swapped to ' + a.name);
 }
@@ -1266,13 +1707,18 @@ function sessionSwapModal(ei) {
   showModal('Swap ' + e.name, `
     ${alts.length ? alts.map((a, ai) => `
       <button class="wide mt8" data-action="session-swap-pick" data-ei="${ei}" data-ai="${ai}">
-        ${esc(a.name)}${a.weight ? ` · ${a.weight}${unit()}` : ''}</button>`).join('') : '<p class="muted small">No alternates in the plan for this one.</p>'}
+        ${esc(a.name)}${a.weight ? ` · ${a.weight}${unit()}` : ''} ${equipChip({ equipment: a.equipment || e.equipment, barWeight: a.equipment ? a.barWeight : e.barWeight })}</button>`).join('') : '<p class="muted small">No alternates in the plan for this one.</p>'}
     <div class="divider"></div>
-    <label class="field"><span>…or type any exercise</span><input id="swap-custom" placeholder="e.g. Machine Chest Press"></label>`,
+    <label class="field"><span>…or type any exercise</span><input id="swap-custom" placeholder="e.g. Machine Chest Press"></label>
+    <label class="field"><span>Equipment for the typed exercise</span>
+      <select id="swap-custom-equip">${EQUIPMENT_TYPES.map(t => `<option value="${t}" ${t === (e.equipment || 'barbell') ? 'selected' : ''}>${EQUIPMENT_LABELS[t]}</option>`).join('')}</select>
+    </label>`,
     [
       { label: 'Use typed exercise', cls: 'primary', fn: () => {
           const name = mval('swap-custom'); if (!name) { toast('Type a name first', 'err'); return; }
-          doSessionSwap(ei, { name, weight: e.sets[0] ? e.sets[0].weight : e.plannedWeight, description: '' });
+          const eq = document.getElementById('swap-custom-equip').value;
+          doSessionSwap(ei, { name, weight: e.sets[0] ? e.sets[0].weight : e.plannedWeight,
+            description: '', equipment: eq, barWeight: eq === e.equipment ? e.barWeight : null });
         } },
       { label: 'Cancel' }
     ]);
@@ -1282,6 +1728,7 @@ function doSessionSwap(ei, alt) {
   const original = e.swappedFrom || e.name;
   e.swappedFrom = original === alt.name ? null : original;
   e.name = alt.name;
+  if (alt.equipment) { e.equipment = alt.equipment; e.barWeight = alt.barWeight != null ? alt.barWeight : null; }
   if (alt.weight) e.sets.forEach(s => { if (!s.done) s.weight = alt.weight; });
   if (alt.description) e.description = alt.description;
   saveActive(); closeModal(); render();
@@ -1367,9 +1814,32 @@ function closeRpePicker() { document.getElementById('picker-root').innerHTML = '
 // ±1 rep without retyping. Positioned above the keyboard via visualViewport.
 let stepperTarget = null;
 let stepperHideTimer = null;
-function stepperStep(el) {
+/*
+ * What the stepper bar should do for the focused input. Weight steps follow the
+ * gym's ladder, so the two buttons are often asymmetric (at a 10 kg dumbbell it
+ * is −1 / +2). Returns null when the field should get no stepper at all.
+ */
+function stepperInfo(el) {
   if (!el || !el.dataset || el.dataset.bind !== 'set') return null;
-  return el.dataset.f === 'weight' ? 2.5 : el.dataset.f === 'reps' ? 1 : null;
+  const f = el.dataset.f;
+  if (f === 'reps') return { kind: 'reps', label: 'reps', down: 1, up: 1 };
+  if (f === 'heightCm') return { kind: 'height', label: 'cm', down: 0.5, up: 0.5 };
+  if (f !== 'weight') return null;
+  const ex = active && active.exercises[+el.dataset.ei];
+  if (!ex || ex.equipment === 'bodyweight') return null;   // nothing to load
+  if (unit() !== 'kg') return { kind: 'weight', label: unit(), down: 2.5, up: 2.5 };
+  const cur = parseFloat(el.value) || 0;
+  const bar = resolvedBarWeight(ex);
+  // Clamp both directions to >= 0. When `cur` sits below the ladder base (e.g. an
+  // undeclared-equipment exercise still carrying the 'barbell' default and its
+  // 20kg bar), nextWeight(dir=-1) floors at the bar — a value ABOVE `cur` — which
+  // would otherwise produce a negative down-step whose label lies and whose button
+  // moves the weight the wrong way when pressed.
+  return {
+    kind: 'weight', label: unit(),
+    down: Math.max(0, ladderRound(cur - nextWeight(ex.equipment, bar, cur, -1))),
+    up: Math.max(0, ladderRound(nextWeight(ex.equipment, bar, cur, 1) - cur))
+  };
 }
 function positionStepper() {
   if (!stepperTarget) return;
@@ -1379,15 +1849,15 @@ function positionStepper() {
   bar.style.bottom = Math.max(keyboard + 8, 74) + 'px';
 }
 function showStepper(el) {
-  const step = stepperStep(el);
-  if (step == null) return;
+  const info = stepperInfo(el);
+  if (!info) return;
   clearTimeout(stepperHideTimer);
   stepperTarget = el;
   const bar = document.getElementById('stepper-bar');
   bar.innerHTML = `
-    <button data-step="-1">−${step}</button>
-    <span class="muted small">${el.dataset.f === 'weight' ? unit() : 'reps'}</span>
-    <button data-step="1">+${step}</button>`;
+    <button data-step="-1" ${info.down === 0 ? 'disabled' : ''}>−${info.down}</button>
+    <span class="muted small">${info.label}</span>
+    <button data-step="1">+${info.up}</button>`;
   bar.classList.remove('hidden');
   positionStepper();
 }
@@ -1401,13 +1871,23 @@ document.addEventListener('focusout', e => {
 });
 document.getElementById('stepper-bar').addEventListener('pointerdown', e => {
   const btn = e.target.closest('[data-step]');
-  if (!btn || !stepperTarget) return;
+  if (!btn || !stepperTarget || btn.disabled) return;
   e.preventDefault(); // keep the input focused (no blur, keyboard stays up)
-  const delta = stepperStep(stepperTarget) * parseInt(btn.dataset.step, 10);
+  const info = stepperInfo(stepperTarget);
+  if (!info) return;
+  const dir = parseInt(btn.dataset.step, 10);
   const cur = parseFloat(stepperTarget.value);
-  const next = Math.max(0, Math.round(((isNaN(cur) ? 0 : cur) + delta) * 100) / 100);
-  stepperTarget.value = next;
+  const curN = isNaN(cur) ? 0 : cur;
+  let next;
+  if (info.kind === 'weight' && unit() === 'kg') {
+    const ex = active.exercises[+stepperTarget.dataset.ei];
+    next = nextWeight(ex.equipment, resolvedBarWeight(ex), curN, dir);
+  } else {
+    next = curN + dir * (dir > 0 ? info.up : info.down);
+  }
+  stepperTarget.value = Math.max(0, ladderRound(next));
   stepperTarget.dispatchEvent(new Event('input', { bubbles: true })); // reuse the data-bind update path
+  showStepper(stepperTarget); // the next step size may have changed (9→10 turns +1 into +2)
 });
 if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', positionStepper);
@@ -1419,8 +1899,8 @@ if (window.visualViewport) {
 // targeted DOM writes, rather than routed through the app's render().
 let cmjState = null; // { objectUrl, video, fps, detectedFps, seeking, lastMediaTime, takeoffTime, landingTime, attempts, pollTimer }
 
-function cmjVideoModal() {
-  cmjState = { objectUrl: null, video: null, fps: 30, slowFactor: settings.cmjSlowFactor || 1, captureFps: settings.cmjCaptureFps || 240, seeking: false, lastMediaTime: 0, takeoffTime: null, landingTime: null, attempts: [], pollTimer: null };
+function cmjVideoModal(targetEi) {
+  cmjState = { objectUrl: null, video: null, fps: 30, slowFactor: settings.cmjSlowFactor || 1, captureFps: settings.cmjCaptureFps || 240, seeking: false, lastMediaTime: 0, takeoffTime: null, landingTime: null, attempts: [], pollTimer: null, targetEi: targetEi != null ? targetEi : null };
   showModal('Measure CMJ via video', `
     <input type="file" id="cmj-file-input" accept="video/*">
     <details class="cmj-tips mt8">
@@ -1891,7 +2371,19 @@ function cmjAccept() {
     effectiveFps: a.effectiveFps,
     precisionCm: round1(a.precisionCm)
   }));
-  if (active) {
+  const targetEi = cmjState.targetEi;
+  const targetEx = targetEi != null && active ? active.exercises[targetEi] : null;
+  if (targetEx && isJump(targetEx)) {
+    // Fill the next empty attempt, or append one if every row is used.
+    let slot = targetEx.sets.find(s => s.heightCm == null);
+    if (!slot) { slot = { heightCm: null, done: false }; targetEx.sets.push(slot); }
+    slot.heightCm = heightCm;
+    slot.done = true;
+    // Route through the same post-completion path as tapping the checkmark, so
+    // this starts the rest timer and advances a superset's round-robin pointer.
+    completeSet(targetEi, targetEx.sets.indexOf(slot));
+    toast(`${heightCm} cm logged to ${targetEx.name} ✓`);
+  } else if (active) {
     active.readiness.cmjCm = heightCm;
     active.readiness.flightTimeMs = best.flightTimeMs;
     active.readiness.method = 'video';
@@ -1954,23 +2446,14 @@ document.addEventListener('click', e => {
 
     /* set logging */
     case 'set-done': {
-      const ei = +el.dataset.ei;
-      const ex = active.exercises[ei], s = ex.sets[+el.dataset.si];
+      const ei = +el.dataset.ei, si = +el.dataset.si;
+      const ex = active.exercises[ei], s = ex.sets[si];
       s.done = !s.done;
-      const exerciseDone = ex.sets.every(y => y.done);
-      if (s.done && exerciseDone) exExpanded.delete(ei); // auto-collapse the finished exercise
-      saveActive(); render();
-      if (s.done) {
-        const remaining = active.exercises.some(x => x.sets.some(y => !y.done));
-        if (remaining) {
-          const seconds = exerciseDone && ex.restSecondsNext != null ? ex.restSecondsNext : ex.restSeconds;
-          startRest(seconds, 'Rest — ' + ex.name);
-        }
-        buzz([60]);
-      }
+      if (s.done) completeSet(ei, si);
+      else { saveActive(); render(); }
       break;
     }
-    case 'ex-expand': exExpanded.add(+el.dataset.ei); render(); break;
+    case 'ex-expand': exExpanded.add(el.dataset.key != null ? el.dataset.key : +el.dataset.ei); render(); break;
     case 'readiness-toggle': {
       const r = active.readiness || {};
       const hasReadiness = r.cmjCm != null || r.broadJumpCm != null || r.subjectiveEnergy != null;
@@ -2002,7 +2485,9 @@ document.addEventListener('click', e => {
     case 'set-add': {
       const ex = active.exercises[+el.dataset.ei];
       const lastSet = ex.sets[ex.sets.length - 1];
-      ex.sets.push({ weight: lastSet ? lastSet.weight : ex.plannedWeight, reps: lastSet ? lastSet.reps : parseRepsLow(ex.plannedReps), rpe: ex.targetRpe, done: false });
+      ex.sets.push(isJump(ex)
+        ? { heightCm: null, done: false }
+        : { weight: lastSet ? lastSet.weight : ex.plannedWeight, reps: lastSet ? lastSet.reps : parseRepsLow(ex.plannedReps), rpe: ex.targetRpe, done: false });
       saveActive(); render(); break;
     }
     case 'set-remove': {
@@ -2014,7 +2499,7 @@ document.addEventListener('click', e => {
     case 'ex-swap': sessionSwapModal(+el.dataset.ei); break;
     case 'ex-note': exNoteModal(+el.dataset.ei); break;
     case 'plate-calc': showPlateCalculator(active.exercises[+el.dataset.ei]); break;
-    case 'cmj-open': cmjVideoModal(); break;
+    case 'cmj-open': cmjVideoModal(el.dataset.ei != null ? +el.dataset.ei : null); break;
     case 'session-swap-pick': {
       const ei = +el.dataset.ei;
       doSessionSwap(ei, active.exercises[ei].alternates[+el.dataset.ai]);
@@ -2025,6 +2510,16 @@ document.addEventListener('click', e => {
     case 'day-toggle': expandedDay = expandedDay === el.dataset.id ? null : el.dataset.id; render(); break;
     case 'ex-menu': exMenuModal(el.dataset.day, +el.dataset.i); break;
     case 'ex-add': exEditModal(el.dataset.day, null); break;
+    case 'ex-move': {
+      const day = plan.days.find(d => d.id === el.dataset.day);
+      if (!day) break;
+      const i = +el.dataset.i, j = i + (+el.dataset.dir);
+      if (j < 0 || j >= day.exercises.length) break;
+      const ex = day.exercises.splice(i, 1)[0];
+      day.exercises.splice(j, 0, ex);
+      savePlan(); render();
+      break;
+    }
     case 'plan-swap-pick': doPlanSwap(el.dataset.day, +el.dataset.i, +el.dataset.ai); break;
     case 'plan-rename':
       showModal('Rename plan', `<label class="field"><span>Plan name</span><input id="f-plan-name" value="${esc(plan.name)}"></label>`,
@@ -2098,7 +2593,13 @@ document.addEventListener('click', e => {
     case 'restore-uuid': restoreFromCode(mval('restore-uuid-input')); break;
     case 'toggle-sound': settings.sound = !settings.sound; saveSettings(); render(); break;
     case 'toggle-vibrate': settings.vibrate = !settings.vibrate; saveSettings(); render(); break;
-    case 'test-sound': beep(3); buzz(); toast('That\'s the rest-timer cue'); break;
+    case 'test-sound': {
+      beep(3); buzz();
+      const st = audioState();
+      toast(st === 'running' ? "That's the rest-timer cue"
+        : `Audio context is "${st}" — sound may not fire. Tap anywhere and retry.`, st === 'running' ? 'ok' : 'err');
+      break;
+    }
     case 'backup-copy': copyText(buildBackup()).then(ok => toast(ok ? 'Backup copied — store it somewhere safe' : 'Copy failed', ok ? 'ok' : 'err')); break;
     case 'backup-restore':
       showModal('Restore backup', `<p class="muted small">Paste a backup JSON. This replaces everything on this device.</p><textarea id="restore-area" class="mt8"></textarea>`,
@@ -2113,7 +2614,7 @@ document.addEventListener('click', e => {
             ['plan', 'sessions', 'active', 'bw', 'settings', 'updatedAt'].forEach(k => store.del(k));
             plan = defaultPlan(); sessions = []; active = null; bodyWeight = []; dataUpdatedAt = 0;
             settings = { unit: 'kg', sound: true, vibrate: true, autoSync: true };
-            stopRest(); render(); toast('Fresh start');
+            stopRest(); syncWakeLock(); render(); toast('Fresh start');
           } }, { label: 'Cancel' }]);
       break;
   }
@@ -2162,6 +2663,8 @@ document.addEventListener('change', e => {
       const input = document.getElementById('f-barweight');
       if (input) input.placeholder = 'default ' + resolvedBarWeight({ equipment: e.target.value, barWeight: null });
     }
+    const hint = document.getElementById('f-weight-hint');
+    if (hint) hint.textContent = ladderHint(e.target.value);
   }
 });
 
@@ -2171,6 +2674,10 @@ mountStaticIcons();
 syncWakeLock();
 render();
 renderRest();
+// A reload loses the scheduled cue (AudioNodes can't be persisted). Re-arm it —
+// scheduleCue is a no-op until a gesture unlocks the context, and the interval
+// fallback covers the gap until then.
+if (rest && !rest.fired) scheduleCue(Math.max(0, (rest.endsAt - Date.now()) / 1000));
 if (!store.get('onboarded', false) && sessions.length === 0) showOnboarding();
 window.addEventListener('load', initServiceWorkerUpdates);
 autoSyncOnLoad(); // reconcile with the cloud, then enable auto-push

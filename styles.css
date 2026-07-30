@@ -101,6 +101,7 @@ input.bw-weight-i { color: var(--muted); border-style: dashed; opacity: .7; }
 textarea { min-height: 110px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
 label.field { display: block; margin-bottom: 10px; font-size: 14px; color: var(--muted); }
 label.field > span { display: block; margin-bottom: 5px; }
+.field-hint { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
 
 /* ----- exercise card / set grid ----- */
 .ex-name { font-weight: 700; font-size: 17px; }
@@ -108,6 +109,14 @@ label.field > span { display: block; margin-bottom: 5px; }
 .last-line { color: var(--green); font-size: 13px; margin-top: 2px; opacity: .85; }
 .collapsed-ex { padding: 11px 14px; }
 .collapsed-ex:active { background: var(--card2); }
+
+/* ----- supersets ----- */
+.superset-card { padding: 12px 14px; }
+.superset-head { border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 4px; }
+.superset-member { padding: 8px 0; border-bottom: 1px solid var(--border); }
+.superset-member:last-child { border-bottom: 0; padding-bottom: 0; }
+.superset-member.ss-next { box-shadow: inset 3px 0 0 var(--accent); padding-left: 9px; margin-left: -12px; }
+.ss-body { padding: 0; }
 
 /* ----- session progress ----- */
 .session-progress { display: flex; align-items: center; gap: 10px; margin: 2px 4px 12px; }
@@ -156,6 +165,7 @@ label.field > span { display: block; margin-bottom: 5px; }
 .chart-label { fill: var(--muted); font-size: 10px; font-family: inherit; }
 
 .set-grid { display: grid; grid-template-columns: 30px 1fr 1fr 1fr 46px; gap: 6px; align-items: center; margin-top: 10px; }
+.set-grid.jump { grid-template-columns: 30px 1fr 46px; }
 .set-grid .head { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); text-align: center; }
 .set-grid input { text-align: center; padding: 9px 4px; }
 .set-no { text-align: center; color: var(--muted); font-weight: 600; }
@@ -260,6 +270,8 @@ label.field > span { display: block; margin-bottom: 5px; }
 /* ----- misc ----- */
 .hidden { display: none !important; }
 .day-pill { background: var(--bg2); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; font-size: 12px; color: var(--muted); }
+.equip-chip { display: inline-block; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
+  padding: 2px 7px; font-size: 11px; color: var(--muted); vertical-align: middle; }
 .pr-badge { background: rgba(255,176,46,.15); color: var(--amber); border-radius: 8px; padding: 2px 8px; font-size: 12px; font-weight: 700; }
 .swap-note { font-size: 12px; color: var(--amber); margin-top: 2px; }
 .chev { color: var(--muted); font-size: 18px; }

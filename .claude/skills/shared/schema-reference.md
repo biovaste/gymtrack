@@ -47,6 +47,10 @@ The primary input format produced by the app's "Copy coaching prompt + data" but
       "plannedReps": "6-8",
       "plannedWeight": 80,
       "targetRpe": 8,
+      "equipment": "barbell",
+      "barWeight": 20,
+      "metric": "load",
+      "superset": null,
       "swappedFrom": null,
       "notes": "Slight shoulder discomfort set 3 — manageable",
       "sets": [
@@ -54,6 +58,17 @@ The primary input format produced by the app's "Copy coaching prompt + data" but
         { "weight": 82.5, "reps": 8, "rpe": 7 },
         { "weight": 82.5, "reps": 7, "rpe": 8 },
         { "weight": 82.5, "reps": 6, "rpe": 8 }
+      ]
+    },
+    {
+      "name": "Box Jump",
+      "plannedSets": 3,
+      "equipment": "bodyweight",
+      "metric": "height",
+      "sets": [
+        { "heightCm": 31.4 },
+        { "heightCm": 30.8 },
+        { "heightCm": 29.1 }
       ]
     }
   ]
@@ -79,6 +94,11 @@ The primary input format produced by the app's "Copy coaching prompt + data" but
 | `targetRpe` | number | No | 1–10 |
 | `swappedFrom` | string \| null | No | Original exercise name if a swap occurred |
 | `durationMin` | number | No | Total session wall-clock time |
+| `equipment` | string | No | One of `barbell`, `trap-bar`, `landmine`, `training-bar`, `dumbbell`, `machine`, `cable`, `bodyweight`, `other`. **In practice this field is never actually absent** — `app.js` stamps `'barbell'` on any exercise whose plan never declared one (both on import, in `normalizePlan`, and again when a session starts). So a `barbell` value doesn't mean "confirmed barbell" — it may just mean "nobody said." A `barbell` label on a weight under ~20 kg (its own empty-bar weight) is almost certainly an undeclared dumbbell, cable or machine move wearing the fallback. Treat that combination as unknown equipment, not as a real barbell |
+| `barWeight` | number | No | Only meaningful for `barbell`/`trap-bar`/`training-bar`. Absent = the gym default (20 / 23 / 10 kg) |
+| `metric` | `"load"` \| `"height"` | No | Absent = `"load"`. A `"height"` exercise's sets carry **only** `heightCm` — no weight, reps or RPE. Never compute volume, e1RM or RPE stats from them |
+| `superset` | string \| null | No | Adjacent exercises sharing a tag were performed as an alternating superset. Relevant to fatigue reads: RPE on the second movement is inflated by the first |
+| `sets[].heightCm` | number | No | One jump attempt, in cm. `"height"` metric only |
 
 ---
 
@@ -105,10 +125,15 @@ The plan embedded in a `workout-log` export (`currentPlan`) and the format for i
           "weight": 80,
           "targetRpe": 8,
           "restSeconds": 150,
+          "restSecondsNext": 210,
+          "equipment": "barbell",
+          "barWeight": 20,
+          "metric": "load",
+          "superset": null,
           "description": "Short coaching cue",
           "notes": "",
           "alternates": [
-            { "name": "DB Bench", "weight": 30, "description": "…" }
+            { "name": "DB Bench", "weight": 30, "equipment": "dumbbell", "description": "…" }
           ]
         }
       ]
@@ -137,11 +162,21 @@ Disambiguate in the name itself: `… — Single-Arm` / `… — Two-Arm`, `Incl
 
 ### 2. Every weight must be loadable on the actual equipment
 
-Set `equipment` accurately **first** — the weight check depends on it, and it also drives whether the plate calculator appears and whether the weight field is grayed. A cable exercise mislabelled `barbell` defeats both.
+Set `equipment` accurately **first** — the weight check depends on it, and it also drives the stepper's increments, whether the plate calculator appears, and whether the weight field is grayed. A cable exercise mislabelled `barbell` defeats all of it.
 
-Then check each weight against that equipment's ladder. **Derive the ladder from what the athlete has actually logged; never assume a gym's plate and dumbbell inventory.** The specific ladder lives in the project's CLAUDE.md.
+**The ladder has breakpoints — "round to the nearest 2.5 kg" is wrong.** Dumbbells step 1 kg below 10 kg and 2 kg above it; cable and machine stacks step 2.5 kg below 25 kg and 5 kg above it. So 22.5 kg is a valid cable weight but not a valid dumbbell, and 27.5 kg is neither. The authoritative table is in the project's CLAUDE.md, and `tools/weights.test.mjs` is its executable form.
 
-*Signature of this bug in the data:* a `plannedWeight` the athlete never logs, with a nearby value logged instead — planned 22.5 kg → logged 22 kg, twice. The athlete silently works around it and the plan keeps lying. If you see planned and actual diverge by a small constant on the same lift, check loadability before reading it as auto-regulation.
+*Signature of this bug in the data:* a `plannedWeight` the athlete never logs, with a nearby value logged instead — planned 22.5 kg → logged 22 kg, twice. Since 2026-07-30 session records carry `equipment`, so this is now **checkable** rather than inferable: compare the planned weight against that equipment's ladder before reading a planned-vs-actual gap as auto-regulation. But `equipment` being *present* doesn't mean it was *declared* — see the field note above. Before trusting the comparison, sanity-check a `barbell` entry against its own weight: a "barbell" load under ~20 kg is the stamped default, not a fact, and belongs in the unknown bucket rather than fed into the barbell ladder.
+
+### 3. Superset members must be adjacent
+
+Exercises sharing a `superset` tag must sit next to each other in `days[].exercises`. A tag split across non-adjacent runs renders as two separate cards with independent rest cycles, and `tools/push-plan.mjs` rejects it.
+
+Rest inside a group uses the existing fields, with no additions: each member's own `restSeconds` is the rest taken *after its own set*, and `restSecondsNext` on the group's **last member in plan order** is the rest after the final round. So a 15 s transition and a 90 s round rest on an A1/A2 pair means `A1.restSeconds = 15`, `A2.restSeconds = 90`.
+
+### 4. Alternates carry their own equipment
+
+An `alternate` may set `equipment` and `barWeight`; omitting them means "same as the parent". **Set them whenever the alternate differs from the parent** — a dumbbell alternate under a barbell exercise, say. When absent, `push-plan.mjs` falls back to guessing the equipment from the exercise name and downgrades the weight check to a warning, so an unloadable alternate weight can slip through.
 
 ---
 
@@ -180,12 +215,13 @@ Computed at analysis time — not stored in the JSON.
 
 | Metric | Formula | Notes |
 |--------|---------|-------|
-| `completionRate` | `actual_sets / plannedSets` per exercise, averaged across session | Skip if `plannedSets` absent |
-| `velocityLossAnalogue` | `(first_set_reps − last_set_reps) / first_set_reps` at matched weight | See `science-reference.md §B` |
-| `rpeEscalation` | `last_set_rpe − first_set_rpe` at same or increasing load | Requires RPE on all sets |
+| `completionRate` | `actual_sets / plannedSets` per exercise, averaged across session | Skip if `plannedSets` absent. Skip height-metric exercises |
+| `velocityLossAnalogue` | `(first_set_reps − last_set_reps) / first_set_reps` at matched weight | See `science-reference.md §B`. Skip height-metric exercises — no reps |
+| `rpeEscalation` | `last_set_rpe − first_set_rpe` at same or increasing load | Requires RPE on all sets. Skip height-metric exercises — no RPE |
 | `neuromuscularFatigueIndex` | VLA > 0.20 OR rpeEscalation ≥ 1.5 → High; else derived from magnitude | |
 | `cmjDelta` | `current_cmjCm − previous_session_cmjCm` | Requires readiness block in both sessions |
 | `bwTrend` | `(latest_bw − mean_of_7d_bw) / mean_of_7d_bw` | Context modifier only |
+| `jumpBest` | `max(sets[].heightCm)` per `"height"` exercise per session | Training output, **not** a readiness signal — see `periodization.md §D` |
 
 ---
 
