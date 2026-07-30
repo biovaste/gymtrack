@@ -139,10 +139,12 @@ function weightProblem(equipment, weight, barWeight) {
 }
 
 /*
- * Alternates have no `equipment` field of their own — the app strips unknown keys
- * and a swap keeps the parent's equipment — so guess from the name and only fall
- * back to the parent's. Without this, a dumbbell alternate under a barbell parent
- * gets judged against the barbell ladder and warns for no reason.
+ * Fallback for alternates that omit `equipment` and `barWeight` — when omitted,
+ * they inherit the parent's. This guesses equipment from the name, which is why
+ * validatePlan reports it as a warning (inference) rather than an error. An
+ * alternate that explicitly declares `equipment` is checked as an error instead.
+ * Without this fallback, a dumbbell alternate under a barbell parent would be
+ * judged against the barbell ladder and warn for no reason.
  */
 function guessAlternateEquipment(name, parentEquipment) {
   const n = String(name || '');
