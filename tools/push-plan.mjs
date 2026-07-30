@@ -187,11 +187,15 @@ function validatePlan(plan, { unit = 'kg' } = {}) {
 
   // A superset tag must form ONE adjacent run. Split runs render as two separate
   // cards in the app with two independent rest cycles — not what was intended.
+  // Normalization here must match app.js's import sanitiser exactly (including
+  // the slice(0, 2) truncation) — otherwise two tags that are distinct here but
+  // collide once the app truncates them would pass this check clean and still
+  // split into two cards after import.
   for (const day of plan.days) {
     const runs = new Map(); // tag → number of separate adjacent runs
     let prev = null;
     for (const e of day.exercises || []) {
-      const tag = e.superset ? String(e.superset).trim().toUpperCase() : null;
+      const tag = e.superset ? String(e.superset).trim().toUpperCase().slice(0, 2) : null;
       if (tag && tag !== prev) runs.set(tag, (runs.get(tag) || 0) + 1);
       prev = tag;
     }

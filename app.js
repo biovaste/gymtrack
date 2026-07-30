@@ -546,6 +546,10 @@ function normalizePlan(raw) {
             metric: EXERCISE_METRICS.includes(e.metric) ? e.metric : 'load',
             // Adjacent exercises sharing a tag form one superset. Uppercased and
             // trimmed so "a" and "A " group together rather than silently splitting.
+            // This normalization must stay identical to the one in
+            // tools/push-plan.mjs's validatePlan — otherwise the validator can
+            // pass a plan whose tags collide only after this truncation, and the
+            // app silently splits it into two cards.
             superset: e.superset ? String(e.superset).trim().toUpperCase().slice(0, 2) : null,
             description: String(e.description || ''),
             notes: String(e.notes || ''),
@@ -1579,6 +1583,7 @@ function exEditModal(dayId, i) {
       <select id="f-superset">
         <option value="" ${!e.superset ? 'selected' : ''}>None</option>
         ${['A', 'B', 'C', 'D'].map(t => `<option value="${t}" ${e.superset === t ? 'selected' : ''}>${t}</option>`).join('')}
+        ${e.superset && !['A', 'B', 'C', 'D'].includes(e.superset) ? `<option value="${esc(e.superset)}" selected>${esc(e.superset)}</option>` : ''}
       </select>
       <span class="field-hint">Members must sit next to each other in the day — use the ↑↓ buttons on the day list.</span>
     </label>
