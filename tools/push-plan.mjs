@@ -185,6 +185,27 @@ function validatePlan(plan, { unit = 'kg' } = {}) {
     }
   }
 
+  // A superset tag must form ONE adjacent run. Split runs render as two separate
+  // cards in the app with two independent rest cycles — not what was intended.
+  for (const day of plan.days) {
+    const runs = new Map(); // tag → number of separate adjacent runs
+    let prev = null;
+    for (const e of day.exercises || []) {
+      const tag = e.superset ? String(e.superset).trim().toUpperCase() : null;
+      if (tag && tag !== prev) runs.set(tag, (runs.get(tag) || 0) + 1);
+      prev = tag;
+    }
+    for (const [tag, n] of runs) {
+      if (n > 1) {
+        errors.push(
+          `${day.name}: superset "${tag}" appears in ${n} separate non-adjacent runs. ` +
+          'Superset members must sit next to each other in the exercise list — ' +
+          'otherwise they render as separate cards with independent rest cycles.'
+        );
+      }
+    }
+  }
+
   // Metric correctness has nothing to do with the plan's unit, so these checks
   // run regardless of "kg" vs "lb" — unlike the weight-ladder checks below.
   for (const day of plan.days) {

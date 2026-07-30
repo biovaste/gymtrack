@@ -110,6 +110,14 @@ label.field > span { display: block; margin-bottom: 5px; }
 .collapsed-ex { padding: 11px 14px; }
 .collapsed-ex:active { background: var(--card2); }
 
+/* ----- supersets ----- */
+.superset-card { padding: 12px 14px; }
+.superset-head { border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 4px; }
+.superset-member { padding: 8px 0; border-bottom: 1px solid var(--border); }
+.superset-member:last-child { border-bottom: 0; padding-bottom: 0; }
+.superset-member.ss-next { box-shadow: inset 3px 0 0 var(--accent); padding-left: 9px; margin-left: -12px; }
+.ss-body { padding: 0; }
+
 /* ----- session progress ----- */
 .session-progress { display: flex; align-items: center; gap: 10px; margin: 2px 4px 12px; }
 .progress-track { flex: 1; height: 6px; background: var(--card); border-radius: 99px; overflow: hidden; }

@@ -126,6 +126,8 @@ Alternate-exercise weights and non-kg units warn but don't block. `--force` push
           "weight": 60,
           "targetRpe": 8,
           "restSeconds": 150,
+          "metric": "load",
+          "superset": null,
           "description": "1-2 sentence how-to",
           "alternates": [
             { "name": "Dumbbell Bench Press", "weight": 22, "description": "…" }

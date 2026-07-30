@@ -233,7 +233,7 @@ function weightIssueKind(equipment, barWeight, weight) {
 /* ================= default starter plan ================= */
 function defaultPlan() {
   const ex = (name, sets, reps, weight, rpe, rest, alternates = [], equipment) =>
-    ({ id: uid(), name, sets, reps, weight, targetRpe: rpe, restSeconds: rest, restSecondsNext: null, equipment: equipment || 'barbell', barWeight: null, metric: 'load', description: '', notes: '', alternates });
+    ({ id: uid(), name, sets, reps, weight, targetRpe: rpe, restSeconds: rest, restSecondsNext: null, equipment: equipment || 'barbell', barWeight: null, metric: 'load', superset: null, description: '', notes: '', alternates });
   return {
     type: 'workout-plan', version: 1, name: 'Starter Push / Pull / Legs', createdAt: today(),
     days: [
@@ -544,6 +544,9 @@ function normalizePlan(raw) {
             equipment: EQUIPMENT_TYPES.includes(e.equipment) ? e.equipment : 'barbell',
             barWeight: e.barWeight != null && e.barWeight !== '' ? parseFloat(e.barWeight) : null,
             metric: EXERCISE_METRICS.includes(e.metric) ? e.metric : 'load',
+            // Adjacent exercises sharing a tag form one superset. Uppercased and
+            // trimmed so "a" and "A " group together rather than silently splitting.
+            superset: e.superset ? String(e.superset).trim().toUpperCase().slice(0, 2) : null,
             description: String(e.description || ''),
             notes: String(e.notes || ''),
             alternates: Array.isArray(e.alternates) ? e.alternates.filter(a => a && a.name).map(a => ({
@@ -583,6 +586,55 @@ function lastPerformance(name) {
   return null;
 }
 
+/* ================= supersets ================= */
+/*
+ * A superset is a maximal run of ADJACENT exercises sharing a `superset` tag.
+ * Adjacency is the whole contract: it keeps days[].exercises a flat array, so
+ * every existing index path (history, swap, stepper, set-done) is untouched.
+ * A tag that appears in two non-adjacent runs renders as two cards — visibly
+ * wrong, and tools/push-plan.mjs rejects it before it can be pushed.
+ */
+function supersetGroups(list) {
+  const out = [];
+  for (let i = 0; i < list.length; i++) {
+    const tag = list[i].superset || null;
+    if (!tag) { out.push({ tag: null, idx: [i] }); continue; }
+    const idx = [i];
+    while (i + 1 < list.length && (list[i + 1].superset || null) === tag) { idx.push(++i); }
+    out.push({ tag, idx });
+  }
+  return out;
+}
+function groupOf(list, ei) {
+  const g = supersetGroups(list).find(x => x.idx.includes(ei));
+  return g && g.tag ? g : null;
+}
+// The next member owing set `si`, scanning after `ei` then wrapping to the start.
+// Unequal set counts just skip members that have no set at that round.
+function nextInRound(list, group, ei, si) {
+  const pos = group.idx.indexOf(ei);
+  const order = group.idx.slice(pos + 1).concat(group.idx.slice(0, pos));
+  for (const j of order) {
+    const s = list[j].sets[si];
+    if (s && !s.done) return j;
+  }
+  return null;
+}
+function groupComplete(list, group) {
+  return group.idx.every(j => list[j].sets.every(s => s.done));
+}
+// Round-robin: the single set the athlete should log next, or null when done.
+function groupNextSlot(list, group) {
+  const rounds = Math.max(...group.idx.map(j => list[j].sets.length));
+  for (let si = 0; si < rounds; si++) {
+    for (const j of group.idx) {
+      const s = list[j].sets[si];
+      if (s && !s.done) return { ei: j, si };
+    }
+  }
+  return null;
+}
+
 /* ================= session logic ================= */
 function startSession(dayId) {
   const day = plan.days.find(d => d.id === dayId);
@@ -596,7 +648,7 @@ function startSession(dayId) {
       plannedSets: e.sets, plannedReps: e.reps, plannedWeight: e.weight,
       targetRpe: e.targetRpe, restSeconds: e.restSeconds, restSecondsNext: e.restSecondsNext,
       equipment: e.equipment || 'barbell', barWeight: e.barWeight,
-      metric: e.metric === 'height' ? 'height' : 'load',
+      metric: e.metric === 'height' ? 'height' : 'load', superset: e.superset || null,
       description: e.description, alternates: e.alternates, notes: '',
       sets: e.metric === 'height'
         ? Array.from({ length: e.sets }, () => ({ heightCm: null, done: false }))
@@ -621,6 +673,7 @@ function finishSession() {
       .map(e => ({ name: e.name, plannedSets: e.plannedSets, plannedReps: e.plannedReps,
         plannedWeight: e.plannedWeight, targetRpe: e.targetRpe,
         equipment: e.equipment, barWeight: e.barWeight, metric: e.metric === 'height' ? 'height' : 'load',
+        superset: e.superset || null,
         swappedFrom: e.swappedFrom, notes: e.notes,
         sets: e.sets.filter(s => s.done).map(s => e.metric === 'height'
           ? ({ heightCm: s.heightCm })
@@ -712,6 +765,7 @@ Rules for the plan you produce:
           "equipment": "<one of: barbell, trap-bar, landmine, training-bar, dumbbell, machine, cable, bodyweight, other>",
           "barWeight": <number, optional — only for barbell/trap-bar/training-bar if the bar isn't a standard 20kg/45lb bar; omit otherwise>,
           "metric": "<optional — 'load' (default, omit) or 'height' for a jump exercise logged in cm; use equipment 'bodyweight' and weight 0 with 'height'>",
+          "superset": "<optional — a short tag like 'A' shared by adjacent exercises to log them as one alternating superset card; omit for a standalone exercise>",
           "description": "<1-2 sentence how-to>",
           "alternates": [ { "name": "<alternative exercise>", "weight": <number>, "description": "<short how-to>" } ]
         }
@@ -724,6 +778,7 @@ Rules for the plan you produce:
 - Keep rest times realistic per lift type. Set "restSecondsNext" only when the rest before switching movements should genuinely differ from the between-set rest (e.g. longer before a heavy compound, shorter before a superset).
 - Set "equipment" accurately per exercise — this drives whether the plate calculator shows up and whether the weight field is grayed out for bodyweight moves.
 - Set "metric" to "height" only for jump-height tests (e.g. box jumps, CMJ-style training sets) logged in cm; leave it out for ordinary weight × reps exercises.
+- Set "superset" to the same tag on exercises meant to be logged as one alternating superset — they must be adjacent in the "exercises" array; leave it out otherwise.
 
 My data:
 `;
@@ -732,7 +787,7 @@ ${url}
 
 It contains my recent sessions (actual weights, reps, RPE), notes, body weight and current plan. Review it, then write my next workout plan.
 
-Reply with ONLY a JSON code block of type "workout-plan" (weights in ${unit()}) using the same field structure as the "plan" object in that data: days[] → exercises[] with name, sets, reps (string), weight, targetRpe, restSeconds, restSecondsNext (optional, only if it should differ from restSeconds), equipment (one of: barbell, trap-bar, landmine, training-bar, dumbbell, machine, cable, bodyweight, other), barWeight (optional, only if the bar isn't a standard 20kg/45lb bar), metric (optional, "load" default or "height" for a jump exercise logged in cm — use equipment "bodyweight" and weight 0 with it), description, and 1-2 alternates each. Progress weights from my logged RPE vs target (at/under target → increase; over → hold or reduce). I'll paste your JSON back into the app to load it.`;
+Reply with ONLY a JSON code block of type "workout-plan" (weights in ${unit()}) using the same field structure as the "plan" object in that data: days[] → exercises[] with name, sets, reps (string), weight, targetRpe, restSeconds, restSecondsNext (optional, only if it should differ from restSeconds), equipment (one of: barbell, trap-bar, landmine, training-bar, dumbbell, machine, cable, bodyweight, other), barWeight (optional, only if the bar isn't a standard 20kg/45lb bar), metric (optional, "load" default or "height" for a jump exercise logged in cm — use equipment "bodyweight" and weight 0 with it), superset (optional, a short tag shared by adjacent exercises to log as one alternating superset), description, and 1-2 alternates each. Progress weights from my logged RPE vs target (at/under target → increase; over → hold or reduce). I'll paste your JSON back into the app to load it.`;
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); return true; }
   catch (e) {
@@ -1039,7 +1094,9 @@ function viewActiveSession() {
         <span class="chev">${icon('chevRight', 16)}</span>
       </div>
     </div>`}
-    ${active.exercises.map((e, ei) => exerciseCard(e, ei)).join('')}
+    ${supersetGroups(active.exercises).map(g => g.tag
+      ? supersetCard(g)
+      : exerciseCard(active.exercises[g.idx[0]], g.idx[0])).join('')}
     <h2 class="section">Session notes</h2>
     <div class="card">
       <textarea data-bind="session-notes" placeholder="How did it go? Anything Claude should know? (sleep, pain, energy…)">${esc(active.notes)}</textarea>
@@ -1047,10 +1104,40 @@ function viewActiveSession() {
     <button class="wide success mt12" data-action="confirm-finish">Finish workout</button>
     <button class="wide ghost danger mt8" data-action="confirm-discard">Discard session</button>`;
 }
-function exerciseCard(e, ei) {
+function supersetCard(group) {
+  const list = active.exercises;
+  const rounds = Math.max(...group.idx.map(j => list[j].sets.length));
+  const doneRounds = Array.from({ length: rounds }, (_, si) =>
+    group.idx.every(j => !list[j].sets[si] || list[j].sets[si].done)).filter(Boolean).length;
+  const complete = groupComplete(list, group);
+  const key = 'ss:' + group.tag;
+  if (complete && !exExpanded.has(key)) {
+    return `
+    <div class="card collapsed-ex tappable" data-action="ex-expand" data-key="${esc(key)}">
+      <div class="row between">
+        <div class="grow"><span class="green bold">✓</span> <span class="bold">Superset ${esc(group.tag)}</span>
+          <span class="muted small">· ${group.idx.map(j => esc(list[j].name)).join(' + ')}</span></div>
+        <span class="chev">${icon('chevDown', 18)}</span>
+      </div>
+    </div>`;
+  }
+  const slot = groupNextSlot(list, group);
+  return `
+  <div class="card superset-card">
+    <div class="superset-head row between">
+      <span class="bold">Superset ${esc(group.tag)}</span>
+      <span class="muted small">${complete ? 'complete' : `round ${Math.min(doneRounds + 1, rounds)} of ${rounds}`}</span>
+    </div>
+    ${group.idx.map(j => `<div class="superset-member${slot && slot.ei === j ? ' ss-next' : ''}">${exerciseCard(list[j], j, { inGroup: true })}</div>`).join('')}
+  </div>`;
+}
+function exerciseCard(e, ei, opts) {
+  const inGroup = !!(opts && opts.inGroup);
   const doneCount = e.sets.filter(s => s.done).length;
   const allDone = doneCount === e.sets.length && e.sets.length > 0;
-  if (allDone && !exExpanded.has(ei)) {
+  // Inside a superset the whole group collapses as a unit, so a member never
+  // collapses on its own — the athlete still needs its rows for the next round.
+  if (allDone && !inGroup && !exExpanded.has(ei)) {
     let summary;
     if (isJump(e)) {
       summary = `${e.sets.length} attempt${e.sets.length === 1 ? '' : 's'} · best ${bestHeight(e.sets)} cm`;
@@ -1070,7 +1157,7 @@ function exerciseCard(e, ei) {
   const lastP = lastPerformance(e.name);
   const lastRpe = lastP ? Math.max(0, ...lastP.sets.map(s => s.rpe || 0)) : 0;
   return `
-  <div class="card">
+  <div class="${inGroup ? 'ss-body' : 'card'}">
     <div class="row between">
       <div class="grow">
         <div class="ex-name">${allDone ? '✅ ' : ''}${esc(e.name)}</div>
@@ -1133,12 +1220,13 @@ function viewPlan() {
         ${open ? `
           <div class="divider"></div>
           ${d.exercises.map((e, i) => `
-            <div class="row between tappable" style="padding:9px 0" data-action="ex-menu" data-day="${d.id}" data-i="${i}">
-              <div class="grow">
-                <div class="bold">${esc(e.name)}</div>
+            <div class="row between" style="padding:9px 0">
+              <div class="grow tappable" data-action="ex-menu" data-day="${d.id}" data-i="${i}">
+                <div class="bold">${esc(e.name)}${e.superset ? ` <span class="day-pill">SS ${esc(e.superset)}</span>` : ''}</div>
                 <div class="muted small">${e.sets}×${esc(e.reps)} @ ${e.weight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''} · rest ${fmtClock(e.restSeconds)}${e.alternates.length ? ' · ' + e.alternates.length + ' alt' : ''} ${equipChip(e)}</div>
               </div>
-              <span class="chev">${icon('chevRight', 16)}</span>
+              <button class="icon-btn" data-action="ex-move" data-day="${d.id}" data-i="${i}" data-dir="-1" ${i === 0 ? 'disabled' : ''}>↑</button>
+              <button class="icon-btn" data-action="ex-move" data-day="${d.id}" data-i="${i}" data-dir="1" ${i === d.exercises.length - 1 ? 'disabled' : ''}>↓</button>
             </div>`).join('')}
           <div class="row mt8">
             <button class="ghost icon-btn" data-action="ex-add" data-day="${d.id}">+ Exercise</button>
@@ -1460,7 +1548,7 @@ function ladderHint(equipment) {
 }
 function exEditModal(dayId, i) {
   const day = plan.days.find(d => d.id === dayId);
-  const e = i != null ? day.exercises[i] : { name: '', sets: 3, reps: '8-12', weight: 0, targetRpe: 8, restSeconds: 120, restSecondsNext: null, equipment: 'barbell', barWeight: null, metric: 'load', description: '', alternates: [] };
+  const e = i != null ? day.exercises[i] : { name: '', sets: 3, reps: '8-12', weight: 0, targetRpe: 8, restSeconds: 120, restSecondsNext: null, equipment: 'barbell', barWeight: null, metric: 'load', superset: null, description: '', alternates: [] };
   const equipment = e.equipment || 'barbell';
   showModal(i != null ? 'Edit exercise' : 'Add exercise', `
     <label class="field"><span>Name</span><input id="f-name" value="${esc(e.name)}"></label>
@@ -1486,6 +1574,13 @@ function exEditModal(dayId, i) {
         <option value="load" ${e.metric !== 'height' ? 'selected' : ''}>Weight × reps (normal lift)</option>
         <option value="height" ${e.metric === 'height' ? 'selected' : ''}>Jump height in cm (one attempt per set)</option>
       </select>
+    </label>
+    <label class="field"><span>Superset group</span>
+      <select id="f-superset">
+        <option value="" ${!e.superset ? 'selected' : ''}>None</option>
+        ${['A', 'B', 'C', 'D'].map(t => `<option value="${t}" ${e.superset === t ? 'selected' : ''}>${t}</option>`).join('')}
+      </select>
+      <span class="field-hint">Members must sit next to each other in the day — use the ↑↓ buttons on the day list.</span>
     </label>
     <label class="field"><span>How-to / description (optional)</span><textarea id="f-desc" style="min-height:60px">${esc(e.description)}</textarea></label>`,
     [
@@ -1523,6 +1618,7 @@ function exEditModal(dayId, i) {
             equipment: eqVal,
             barWeight: barVal,
             metric: metricVal,
+            superset: document.getElementById('f-superset').value || null,
             description: mval('f-desc') };
           if (i != null) Object.assign(day.exercises[i], upd);
           else day.exercises.push(Object.assign({ id: uid(), notes: '', alternates: [] }, upd));
@@ -2298,23 +2394,43 @@ document.addEventListener('click', e => {
 
     /* set logging */
     case 'set-done': {
-      const ei = +el.dataset.ei;
-      const ex = active.exercises[ei], s = ex.sets[+el.dataset.si];
+      const ei = +el.dataset.ei, si = +el.dataset.si;
+      const ex = active.exercises[ei], s = ex.sets[si];
       s.done = !s.done;
+      const group = groupOf(active.exercises, ei);
       const exerciseDone = ex.sets.every(y => y.done);
-      if (s.done && exerciseDone) exExpanded.delete(ei); // auto-collapse the finished exercise
+      // Inside a group the whole group collapses together, so don't collapse a member.
+      if (s.done && exerciseDone && !group) exExpanded.delete(ei);
       saveActive(); render();
       if (s.done) {
         const remaining = active.exercises.some(x => x.sets.some(y => !y.done));
         if (remaining) {
-          const seconds = exerciseDone && ex.restSecondsNext != null ? ex.restSecondsNext : ex.restSeconds;
-          startRest(seconds, 'Rest — ' + ex.name);
+          if (group) {
+            const nextEi = nextInRound(active.exercises, group, ei, si);
+            if (nextEi != null) {
+              // Mid-round: this exercise's own restSeconds is the short transition.
+              startRest(ex.restSeconds, '→ ' + active.exercises[nextEi].name);
+            } else if (!groupComplete(active.exercises, group)) {
+              const rounds = Math.max(...group.idx.map(j => active.exercises[j].sets.length));
+              startRest(ex.restSeconds, `Round ${Math.min(si + 2, rounds)} of ${rounds}`);
+            } else {
+              // Group finished. The next-movement rest is authored on the group's LAST
+              // member in plan order — with unequal set counts the last member to
+              // finish need not be that one, so don't read it off `ex`.
+              const lastEx = active.exercises[group.idx[group.idx.length - 1]];
+              startRest(lastEx.restSecondsNext != null ? lastEx.restSecondsNext : lastEx.restSeconds,
+                'Rest — next movement');
+            }
+          } else {
+            const seconds = exerciseDone && ex.restSecondsNext != null ? ex.restSecondsNext : ex.restSeconds;
+            startRest(seconds, 'Rest — ' + ex.name);
+          }
         }
         buzz([60]);
       }
       break;
     }
-    case 'ex-expand': exExpanded.add(+el.dataset.ei); render(); break;
+    case 'ex-expand': exExpanded.add(el.dataset.key != null ? el.dataset.key : +el.dataset.ei); render(); break;
     case 'readiness-toggle': {
       const r = active.readiness || {};
       const hasReadiness = r.cmjCm != null || r.broadJumpCm != null || r.subjectiveEnergy != null;
@@ -2371,6 +2487,16 @@ document.addEventListener('click', e => {
     case 'day-toggle': expandedDay = expandedDay === el.dataset.id ? null : el.dataset.id; render(); break;
     case 'ex-menu': exMenuModal(el.dataset.day, +el.dataset.i); break;
     case 'ex-add': exEditModal(el.dataset.day, null); break;
+    case 'ex-move': {
+      const day = plan.days.find(d => d.id === el.dataset.day);
+      if (!day) break;
+      const i = +el.dataset.i, j = i + (+el.dataset.dir);
+      if (j < 0 || j >= day.exercises.length) break;
+      const ex = day.exercises.splice(i, 1)[0];
+      day.exercises.splice(j, 0, ex);
+      savePlan(); render();
+      break;
+    }
     case 'plan-swap-pick': doPlanSwap(el.dataset.day, +el.dataset.i, +el.dataset.ai); break;
     case 'plan-rename':
       showModal('Rename plan', `<label class="field"><span>Plan name</span><input id="f-plan-name" value="${esc(plan.name)}"></label>`,
