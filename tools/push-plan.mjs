@@ -190,12 +190,19 @@ function validatePlan(plan, { unit = 'kg' } = {}) {
       for (const e of day.exercises || []) {
         const p = weightProblem(e.equipment, e.weight, e.barWeight);
         if (p) errors.push(`${day.name} → ${e.name}: ${e.weight} kg ${p}`);
-        // Alternate equipment is inferred, so these are warnings rather than errors.
+        // An alternate that declares its own equipment is checked as an error, the
+        // same as a main exercise. Only an alternate that omits it falls back to the
+        // name-based guess, which stays a warning because it is inference.
         for (const a of e.alternates || []) {
           if (!a.weight) continue; // 0 = bodyweight/interval alternate
-          const aEq = guessAlternateEquipment(a.name, e.equipment);
-          const ap = weightProblem(aEq, a.weight, aEq === e.equipment ? e.barWeight : null);
-          if (ap) warnings.push(`${day.name} → ${e.name} → alternate "${a.name}": ${a.weight} kg ${ap} (equipment inferred as "${aEq || 'barbell'}")`);
+          if (a.equipment) {
+            const ap = weightProblem(a.equipment, a.weight, a.barWeight);
+            if (ap) errors.push(`${day.name} → ${e.name} → alternate "${a.name}": ${a.weight} kg ${ap}`);
+          } else {
+            const aEq = guessAlternateEquipment(a.name, e.equipment);
+            const ap = weightProblem(aEq, a.weight, aEq === e.equipment ? e.barWeight : null);
+            if (ap) warnings.push(`${day.name} → ${e.name} → alternate "${a.name}": ${a.weight} kg ${ap} (equipment inferred as "${aEq || 'barbell'}" — set "equipment" on the alternate to check this properly)`);
+          }
         }
       }
     }

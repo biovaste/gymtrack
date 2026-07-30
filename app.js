@@ -118,6 +118,15 @@ function resolvedBarWeight(e) {
   if (e.barWeight != null) return e.barWeight;
   return BAR_WEIGHT_DEFAULTS[e.equipment]?.[unit()] ?? (unit() === 'lb' ? 45 : 20);
 }
+// Compact equipment label for exercise cards, plan rows and swap sheets.
+// Bar weight is shown only when it is meaningful and non-default.
+function equipChip(e) {
+  const eq = e.equipment;
+  if (!eq) return '';
+  let label = EQUIPMENT_LABELS[eq] || eq;
+  if (BAR_WEIGHT_EQUIPMENT.has(eq) && e.barWeight != null) label += ` · ${e.barWeight}${unit()}`;
+  return `<span class="equip-chip">${esc(label)}</span>`;
+}
 
 /* ================= loadable-weight ladder ================= */
 /*
@@ -438,7 +447,11 @@ function normalizePlan(raw) {
             description: String(e.description || ''),
             notes: String(e.notes || ''),
             alternates: Array.isArray(e.alternates) ? e.alternates.filter(a => a && a.name).map(a => ({
-              name: String(a.name), weight: parseFloat(a.weight) || 0, description: String(a.description || '')
+              name: String(a.name), weight: parseFloat(a.weight) || 0, description: String(a.description || ''),
+              // Omitted equipment means "same as the parent" — keep it absent rather than
+              // defaulting to barbell, so a swap inherits instead of silently relabelling.
+              equipment: EQUIPMENT_TYPES.includes(a.equipment) ? a.equipment : null,
+              barWeight: a.barWeight != null && a.barWeight !== '' ? parseFloat(a.barWeight) : null
             })) : []
           };
         })
@@ -501,6 +514,7 @@ function finishSession() {
     exercises: active.exercises
       .map(e => ({ name: e.name, plannedSets: e.plannedSets, plannedReps: e.plannedReps,
         plannedWeight: e.plannedWeight, targetRpe: e.targetRpe,
+        equipment: e.equipment, barWeight: e.barWeight,
         swappedFrom: e.swappedFrom, notes: e.notes,
         sets: e.sets.filter(s => s.done).map(s => ({ weight: s.weight, reps: s.reps, rpe: s.rpe })) }))
       .filter(e => e.sets.length)
@@ -940,7 +954,7 @@ function exerciseCard(e, ei) {
     <div class="row between">
       <div class="grow">
         <div class="ex-name">${allDone ? '✅ ' : ''}${esc(e.name)}</div>
-        <div class="target-line">Plan: ${e.plannedSets}×${esc(e.plannedReps)} @ ${e.plannedWeight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''} · rest ${fmtClock(e.restSeconds)}</div>
+        <div class="target-line">Plan: ${e.plannedSets}×${esc(e.plannedReps)} @ ${e.plannedWeight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''} · rest ${fmtClock(e.restSeconds)} ${equipChip(e)}</div>
         ${lastP ? `<div class="last-line">Last: ${lastP.sets.map(s => `${s.weight}×${s.reps}`).join(' · ')}${lastRpe ? ` @RPE ${lastRpe}` : ''} — ${fmtDate(lastP.date)}</div>` : ''}
         ${e.swappedFrom ? `<div class="swap-note">↺ swapped from ${esc(e.swappedFrom)}</div>` : ''}
       </div>
@@ -991,7 +1005,7 @@ function viewPlan() {
             <div class="row between tappable" style="padding:9px 0" data-action="ex-menu" data-day="${d.id}" data-i="${i}">
               <div class="grow">
                 <div class="bold">${esc(e.name)}</div>
-                <div class="muted small">${e.sets}×${esc(e.reps)} @ ${e.weight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''} · rest ${fmtClock(e.restSeconds)}${e.alternates.length ? ' · ' + e.alternates.length + ' alt' : ''}</div>
+                <div class="muted small">${e.sets}×${esc(e.reps)} @ ${e.weight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''} · rest ${fmtClock(e.restSeconds)}${e.alternates.length ? ' · ' + e.alternates.length + ' alt' : ''} ${equipChip(e)}</div>
               </div>
               <span class="chev">${icon('chevRight', 16)}</span>
             </div>`).join('')}
@@ -1365,7 +1379,7 @@ function exSwapPlanModal(dayId, i) {
   const e = day.exercises[i];
   showModal('Swap ' + e.name, e.alternates.map((a, ai) => `
     <button class="wide mt8" data-action="plan-swap-pick" data-day="${dayId}" data-i="${i}" data-ai="${ai}">
-      ${esc(a.name)}${a.weight ? ` · ${a.weight}${unit()}` : ''}</button>`).join(''),
+      ${esc(a.name)}${a.weight ? ` · ${a.weight}${unit()}` : ''} ${equipChip({ equipment: a.equipment || e.equipment, barWeight: a.equipment ? a.barWeight : e.barWeight })}</button>`).join(''),
     [{ label: 'Cancel' }]);
 }
 function doPlanSwap(dayId, i, ai) {
@@ -1373,9 +1387,17 @@ function doPlanSwap(dayId, i, ai) {
   const e = day.exercises[i];
   const a = e.alternates[ai];
   // The current main exercise becomes an alternate, the chosen alternate becomes main.
+  // Equipment travels with each — without that, swap-then-swap-back changes the
+  // equipment type, which then changes the ladder the weight is checked against.
   const newAlts = e.alternates.filter((_, x) => x !== ai);
-  newAlts.unshift({ name: e.name, weight: e.weight, description: e.description });
-  Object.assign(e, { name: a.name, weight: a.weight || e.weight, description: a.description || '', alternates: newAlts });
+  newAlts.unshift({ name: e.name, weight: e.weight, description: e.description,
+    equipment: e.equipment, barWeight: e.barWeight });
+  Object.assign(e, {
+    name: a.name, weight: a.weight || e.weight, description: a.description || '',
+    equipment: a.equipment || e.equipment,
+    barWeight: a.equipment ? a.barWeight : e.barWeight,
+    alternates: newAlts
+  });
   savePlan(); closeModal(); render();
   toast('Swapped to ' + a.name);
 }
@@ -1387,13 +1409,18 @@ function sessionSwapModal(ei) {
   showModal('Swap ' + e.name, `
     ${alts.length ? alts.map((a, ai) => `
       <button class="wide mt8" data-action="session-swap-pick" data-ei="${ei}" data-ai="${ai}">
-        ${esc(a.name)}${a.weight ? ` · ${a.weight}${unit()}` : ''}</button>`).join('') : '<p class="muted small">No alternates in the plan for this one.</p>'}
+        ${esc(a.name)}${a.weight ? ` · ${a.weight}${unit()}` : ''} ${equipChip({ equipment: a.equipment || e.equipment, barWeight: a.equipment ? a.barWeight : e.barWeight })}</button>`).join('') : '<p class="muted small">No alternates in the plan for this one.</p>'}
     <div class="divider"></div>
-    <label class="field"><span>…or type any exercise</span><input id="swap-custom" placeholder="e.g. Machine Chest Press"></label>`,
+    <label class="field"><span>…or type any exercise</span><input id="swap-custom" placeholder="e.g. Machine Chest Press"></label>
+    <label class="field"><span>Equipment for the typed exercise</span>
+      <select id="swap-custom-equip">${EQUIPMENT_TYPES.map(t => `<option value="${t}" ${t === (e.equipment || 'barbell') ? 'selected' : ''}>${EQUIPMENT_LABELS[t]}</option>`).join('')}</select>
+    </label>`,
     [
       { label: 'Use typed exercise', cls: 'primary', fn: () => {
           const name = mval('swap-custom'); if (!name) { toast('Type a name first', 'err'); return; }
-          doSessionSwap(ei, { name, weight: e.sets[0] ? e.sets[0].weight : e.plannedWeight, description: '' });
+          const eq = document.getElementById('swap-custom-equip').value;
+          doSessionSwap(ei, { name, weight: e.sets[0] ? e.sets[0].weight : e.plannedWeight,
+            description: '', equipment: eq, barWeight: eq === e.equipment ? e.barWeight : null });
         } },
       { label: 'Cancel' }
     ]);
@@ -1403,6 +1430,7 @@ function doSessionSwap(ei, alt) {
   const original = e.swappedFrom || e.name;
   e.swappedFrom = original === alt.name ? null : original;
   e.name = alt.name;
+  if (alt.equipment) { e.equipment = alt.equipment; e.barWeight = alt.barWeight != null ? alt.barWeight : null; }
   if (alt.weight) e.sets.forEach(s => { if (!s.done) s.weight = alt.weight; });
   if (alt.description) e.description = alt.description;
   saveActive(); closeModal(); render();
