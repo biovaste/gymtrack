@@ -32,6 +32,7 @@ Before any interaction with the user, gather the following from available source
 - Program structure: priority-ordered flex model (A → B → C → D) or named split days (push/pull/legs, etc.)
 - Which readiness signals the user tracks (CMJ, HRV, RHR, Telegram readiness scores, subjective energy)
 - The gym's **loadable-weight ladder** (plate, dumbbell and stack increments) — every weight you write must land on it. See "Plan Authoring Constraints" in `../shared/schema-reference.md`
+- Whether any exercise uses `metric: "height"` — **jumps do not progress by adding load.** Report the height trend and adjust attempt count or placement; never write a weight onto a height-metric exercise
 
 **From the file system (Claude Code only):**
 - Search for a phase-level training plan file (e.g. `phase2-training-plan.md`, `training-plan.md`, or similar in `Physical Training/` or the project root)
@@ -124,19 +125,23 @@ Do not proceed to Phase 4 until the user has responded.
 
 ### Weight Progression (Auto-Regulation per Lift)
 
-| Last week's result | Adjustment |
-|-------------------|------------|
-| Actual RPE < target by ≥ 0.5 | +2.5 kg (or +5 lb) |
-| Actual RPE within ±0.5 of target | Same weight — target upper end of rep range |
-| Actual RPE > target by ≥ 0.5 | Same weight, or −2.5 kg; consider −1 set |
+| Condition | Action |
+|---|---|
+| Actual RPE < target by ≥ 0.5 | **+1 rung** on that exercise's ladder |
+| Actual RPE within 0.5 of target | Hold |
+| Actual RPE > target by ≥ 0.5 | Hold, or **−1 rung**; consider −1 set |
 | Session skipped entirely | Repeat same weight; note the repeat |
 | Physical constraint flag on a lift | Freeze weight; add a note from user context |
+
+**"One rung" is equipment-dependent, not 2.5 kg.** On a barbell it is 2.5 kg; on a dumbbell it is 1 kg below 10 kg and 2 kg above; on a cable or machine stack it is 2.5 kg below 25 kg and 5 kg above. Read the exercise's `equipment` and step on that ladder. See "Plan Authoring Constraints §2" in `../shared/schema-reference.md`.
 
 If no RPE data from last week (standalone mode): hold current weights; note the limitation.
 
 **Never invent a starting load.** When splitting an exercise out of a superset or adding a new one, derive its weight *and* `equipment` from that movement's logged data — or ask. A guessed "estimate — correct it on the first set" becomes the plan of record and can carry a wrong equipment type with it, which then defeats the loadability check built on top of it.
 
-**Round every result to a loadable rung.** A +2.5 kg step is only valid if the gym can actually make that weight — on a dumbbell or a stack it usually cannot. Round to the nearest rung on the ladder from Phase 0 and say so in PROGRESSION NOTES; never write a weight the athlete would have to silently work around. Full rules in "Plan Authoring Constraints" (`../shared/schema-reference.md`).
+Splitting an exercise out of a superset also changes the **rest structure**, not just the exercise list: the member's `restSeconds` was a short transition to its partner, and standing alone that becomes its inter-set rest. Re-author both rest values, or the plan silently prescribes 15-second rests on a standalone compound.
+
+**Round every result to a loadable rung.** A step is only valid if the gym can actually make that weight — the ladder has breakpoints (dumbbell, cable, machine), so "round to the nearest 2.5 kg" is wrong off a barbell. Round to the nearest rung on the ladder from Phase 0 and say so in PROGRESSION NOTES; never write a weight the athlete would have to silently work around. Full rules in "Plan Authoring Constraints §2" (`../shared/schema-reference.md`).
 
 ### Volume Regulation
 

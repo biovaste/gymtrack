@@ -220,3 +220,117 @@ NEXT ACTION: Log RPE (1–10) on your next session to unlock fatigue and progres
 
 CONFIDENCE: Low — effort and comparison data absent.
 ```
+
+---
+
+## Test Case: Superset Inflates the Second Movement's RPE
+
+### Input Data
+
+```json
+{
+  "type": "workout-log",
+  "unit": "kg",
+  "sessions": [
+    {
+      "date": "2026-07-29T18:00:00.000Z",
+      "dayName": "Day A — Push Superset",
+      "durationMin": 41,
+      "notes": "",
+      "exercises": [
+        {
+          "name": "Incline DB Press",
+          "plannedSets": 3,
+          "plannedReps": "8-10",
+          "plannedWeight": 22,
+          "targetRpe": 8,
+          "equipment": "dumbbell",
+          "metric": "load",
+          "superset": "A",
+          "swappedFrom": null,
+          "notes": "",
+          "sets": [
+            { "weight": 22, "reps": 9, "rpe": 8 },
+            { "weight": 22, "reps": 8, "rpe": 8 },
+            { "weight": 22, "reps": 8, "rpe": 8 }
+          ]
+        },
+        {
+          "name": "Cable Fly",
+          "plannedSets": 3,
+          "plannedReps": "12-15",
+          "plannedWeight": 15,
+          "targetRpe": 8,
+          "equipment": "cable",
+          "metric": "load",
+          "superset": "A",
+          "swappedFrom": null,
+          "notes": "",
+          "sets": [
+            { "weight": 15, "reps": 12, "rpe": 9 },
+            { "weight": 15, "reps": 11, "rpe": 9 },
+            { "weight": 15, "reps": 12, "rpe": 9 }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-07-22T18:00:00.000Z",
+      "dayName": "Day A — Push",
+      "durationMin": 38,
+      "notes": "",
+      "exercises": [
+        {
+          "name": "Cable Fly",
+          "plannedSets": 3,
+          "plannedReps": "12-15",
+          "plannedWeight": 15,
+          "targetRpe": 8,
+          "equipment": "cable",
+          "metric": "load",
+          "superset": null,
+          "swappedFrom": null,
+          "notes": "",
+          "sets": [
+            { "weight": 15, "reps": 13, "rpe": 8 },
+            { "weight": 15, "reps": 12, "rpe": 8 },
+            { "weight": 15, "reps": 13, "rpe": 8 }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Processing Path (July 29 Session)
+
+**Step 1 — STaR Pain Check:** No pain keywords in any notes field. Clear.
+
+**Step 2 — Completeness:** `plannedSets` present, RPE on all sets, no readiness block. Confidence: **Medium**.
+
+**Step 3 — Completion Rate:** Both exercises 3/3 sets. `completionRate = 1.0`.
+
+**Step 4 — Superset Check (before reading RPE as a load signal):** Both exercises carry `superset: "A"` and sit adjacent in the session — an A1/A2 pair. Cable Fly is A2. Its RPE (9, one point over the 8 target) is read against this: the later member in a superset carries fatigue from the one immediately before it, so an elevated RPE here is expected, not a signal that 15 kg is too heavy.
+
+Confirming against the July 22 session, where Cable Fly was trained standalone at the same 15 kg: RPE sat at target (8) for three sets. Same weight, same reps range, one point of RPE difference — attributable to superset placement, not the load. This is exactly why the two sessions must **not** be compared as if both measured the same thing.
+
+**Step 5 — VLA:** Incline DB Press 9→8→8 reps at matched weight, VLA ≈ 0.11 — below the 0.20 flag. Cable Fly 12→11→12, VLA ≈ 0.08. No fatigue flag from either.
+
+**Step 6 — Signal Priority:** No mechanical, no high fatigue, no unmanaged load-tolerance. The superset-inflated RPE is the one thing worth surfacing, framed correctly.
+
+---
+
+### Output
+
+```
+SESSION RESULT: Push superset completed as planned — both movements hit their target sets and reps.
+
+KEY POSITIVE: Incline DB Press held 22 kg for 8-9 reps across all three sets at the target RPE.
+
+KEY LIMITER: Cable Fly ran one RPE point over target (9 vs. 8) — expected for the second movement in a superset, not a sign the 15 kg is too heavy (it sat at RPE 8 for the same weight the last time it was trained standalone).
+
+NEXT ACTION: Keep 15 kg on Cable Fly inside the superset; judge it against superset sessions, not standalone ones.
+
+CONFIDENCE: Medium — RPE present, no readiness data.
+```

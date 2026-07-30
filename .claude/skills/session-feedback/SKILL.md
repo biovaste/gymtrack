@@ -71,6 +71,12 @@ digraph session_feedback {
 For detailed signal definitions and thresholds, see `../shared/science-reference.md`.
 For field names and derived metric formulas, see `../shared/schema-reference.md`.
 
+**Check loadability before reading a planned-vs-actual weight gap.** Session records carry `equipment`, so an unloadable planned weight is now checkable rather than a guess. Planned 22.5 kg on a dumbbell with 22 kg logged is not auto-regulation — it is a weight the gym cannot make, and the plan needs fixing rather than the athlete's effort interpreting. See "Plan Authoring Constraints §2" in `../shared/schema-reference.md`.
+
+**Height-metric exercises have no RPE, no volume and no e1RM.** For a `metric: "height"` exercise, comment on the attempt-to-attempt drop within the session (a fall across three attempts is neuromuscular fatigue or a technique breakdown) and on best-vs-history. Do not compute tonnage, and do not compare against `readiness.cmjCm` — different measurement conditions.
+
+**Supersets inflate the second movement's RPE.** When exercises share a `superset` tag, the later member's RPE reflects accumulated fatigue from the earlier one. Do not read it as a load problem, and do not compare it against the same exercise's RPE from a block where it stood alone.
+
 ---
 
 ## Special Cases
@@ -115,4 +121,4 @@ CONFIDENCE: High / Medium / Low
 |------|----------|
 | `../shared/science-reference.md` | STaR framework, VLA formula + thresholds, external focus rule, BW modifier, citations |
 | `../shared/schema-reference.md` | GymTrack JSON field definitions, confidence tiers, derived metric formulas, generic data guidance |
-| `examples.md` | Three worked examples: power session (High confidence), mechanical pain cutoff, generic text input |
+| `examples.md` | Four worked examples: power session (High confidence), mechanical pain cutoff, generic text input, superset RPE read |

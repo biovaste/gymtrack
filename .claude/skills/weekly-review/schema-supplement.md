@@ -16,6 +16,7 @@ Computed from a `workout-log` (or `gymtrack-backup`) over the trailing 7 days. N
 | `bwWeeklyTrend` | `bodyWeight[]` entries | `mean(last 3 entries) − mean(first 3 entries)` in the 7-day window |
 | `subjectiveEnergyAvg` | `readiness.subjectiveEnergy` per session | `mean()` across sessions that logged it |
 | `sessionVlaMap` | VLA per exercise per session | Map of `{exerciseName → VLA}` for the main lifts |
+| `jumpBestWeekly` | `heightCm` on `metric: "height"` exercises | `max(heightCm)` across the window, per exercise. Kept **separate** from `cmjWeeklyDelta` — different measurement conditions |
 
 ### Edge Cases
 
@@ -49,7 +50,8 @@ What the weekly-review skill is allowed to change in the workout plan, and what 
 
 | Change | Allowed by default | Requires explicit confirmation |
 |--------|-------------------|-------------------------------|
-| Exercise weights (± 2.5 kg) | ✓ | — |
+| Exercise weights (**± 1 rung on that equipment's ladder**) | ✓ | — |
+| Attempt count on a `metric: "height"` exercise | ✓ | — |
 | Sets (−1 for fatigue, −40% for deload) | ✓ | — |
 | Rep scheme (progress to next range in the plan's scheme) | ✓ | — |
 | Day order / which days to do | ✓ | — |
@@ -58,6 +60,13 @@ What the weekly-review skill is allowed to change in the workout plan, and what 
 | Adding new exercises | — | ✓ must confirm |
 | Removing exercises | — | ✓ must confirm |
 | Restructuring day splits | — | ✓ must confirm |
+| Changing an exercise's `equipment` | — | ✓ must confirm |
+| Changing an exercise's `metric` | — | ✓ must confirm |
+| Creating or dissolving a superset | — | ✓ must confirm |
+
+**Why `equipment` needs confirmation:** it silently changes which ladder the weight is checked against, whether the plate calculator appears, and the stepper's increments. Changing it to make a weight "valid" inverts the check — fix the weight instead.
+
+**Why a superset needs confirmation:** it is a restructuring, and it changes the meaning of both members' `restSeconds`.
 
 **Immutable fields during a weekly update:** `type`, `version`, `name` (keep block name). Day `id` and exercise `id` fields must be preserved exactly — the app uses them for session matching.
 
