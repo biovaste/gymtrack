@@ -315,7 +315,7 @@ CONFIDENCE: Low — effort and comparison data absent.
 
 Confirming against the July 22 session, where Cable Fly was trained standalone at the same 15 kg: RPE sat at target (8) for three sets. Same weight, same reps range, one point of RPE difference — attributable to superset placement, not the load. This is exactly why the two sessions must **not** be compared as if both measured the same thing.
 
-**Step 5 — VLA:** Incline DB Press 9→8→8 reps at matched weight, VLA ≈ 0.11 — below the 0.20 flag. Cable Fly 12→11→12, VLA ≈ 0.08. No fatigue flag from either.
+**Step 5 — VLA:** Incline DB Press 9→8→8 reps at matched weight, VLA ≈ 0.11 — below the 0.20 flag. Cable Fly 12→11→12, VLA = 0 — VLA measures first vs. last reps, so a recoverable dip scores zero. No fatigue flag from either.
 
 **Step 6 — Signal Priority:** No mechanical, no high fatigue, no unmanaged load-tolerance. The superset-inflated RPE is the one thing worth surfacing, framed correctly.
 
