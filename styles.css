@@ -157,6 +157,7 @@ label.field > span { display: block; margin-bottom: 5px; }
 .chart-label { fill: var(--muted); font-size: 10px; font-family: inherit; }
 
 .set-grid { display: grid; grid-template-columns: 30px 1fr 1fr 1fr 46px; gap: 6px; align-items: center; margin-top: 10px; }
+.set-grid.jump { grid-template-columns: 30px 1fr 46px; }
 .set-grid .head { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); text-align: center; }
 .set-grid input { text-align: center; padding: 9px 4px; }
 .set-no { text-align: center; color: var(--muted); font-weight: 600; }

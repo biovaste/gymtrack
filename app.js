@@ -128,6 +128,16 @@ function equipChip(e) {
   return `<span class="equip-chip">${esc(label)}</span>`;
 }
 
+/*
+ * What an exercise's sets measure. 'load' is the default (weight × reps × RPE);
+ * 'height' logs one jump attempt per row in cm and carries no weight, reps or
+ * RPE at all — absent rather than zero, so nothing downstream mistakes a jump
+ * for a 0 kg lift.
+ */
+const EXERCISE_METRICS = ['load', 'height'];
+const isJump = e => e.metric === 'height';
+const bestHeight = sets => sets.reduce((m, s) => (s.heightCm != null && s.heightCm > m ? s.heightCm : m), 0);
+
 /* ================= loadable-weight ladder ================= */
 /*
  * The gym's real weight increments, derived from what has actually been logged.
@@ -223,7 +233,7 @@ function weightIssueKind(equipment, barWeight, weight) {
 /* ================= default starter plan ================= */
 function defaultPlan() {
   const ex = (name, sets, reps, weight, rpe, rest, alternates = [], equipment) =>
-    ({ id: uid(), name, sets, reps, weight, targetRpe: rpe, restSeconds: rest, restSecondsNext: null, equipment: equipment || 'barbell', barWeight: null, description: '', notes: '', alternates });
+    ({ id: uid(), name, sets, reps, weight, targetRpe: rpe, restSeconds: rest, restSecondsNext: null, equipment: equipment || 'barbell', barWeight: null, metric: 'load', description: '', notes: '', alternates });
   return {
     type: 'workout-plan', version: 1, name: 'Starter Push / Pull / Legs', createdAt: today(),
     days: [
@@ -533,6 +543,7 @@ function normalizePlan(raw) {
             restSecondsNext: e.restSecondsNext != null && e.restSecondsNext !== '' ? parseInt(e.restSecondsNext, 10) : null,
             equipment: EQUIPMENT_TYPES.includes(e.equipment) ? e.equipment : 'barbell',
             barWeight: e.barWeight != null && e.barWeight !== '' ? parseFloat(e.barWeight) : null,
+            metric: EXERCISE_METRICS.includes(e.metric) ? e.metric : 'load',
             description: String(e.description || ''),
             notes: String(e.notes || ''),
             alternates: Array.isArray(e.alternates) ? e.alternates.filter(a => a && a.name).map(a => ({
@@ -582,8 +593,11 @@ function startSession(dayId) {
       plannedSets: e.sets, plannedReps: e.reps, plannedWeight: e.weight,
       targetRpe: e.targetRpe, restSeconds: e.restSeconds, restSecondsNext: e.restSecondsNext,
       equipment: e.equipment || 'barbell', barWeight: e.barWeight,
+      metric: e.metric === 'height' ? 'height' : 'load',
       description: e.description, alternates: e.alternates, notes: '',
-      sets: Array.from({ length: e.sets }, () => ({ weight: e.weight, reps: parseRepsLow(e.reps), rpe: e.targetRpe, done: false }))
+      sets: e.metric === 'height'
+        ? Array.from({ length: e.sets }, () => ({ heightCm: null, done: false }))
+        : Array.from({ length: e.sets }, () => ({ weight: e.weight, reps: parseRepsLow(e.reps), rpe: e.targetRpe, done: false }))
     }))
   };
   exExpanded = new Set(); readinessOpen = null;
@@ -603,9 +617,11 @@ function finishSession() {
     exercises: active.exercises
       .map(e => ({ name: e.name, plannedSets: e.plannedSets, plannedReps: e.plannedReps,
         plannedWeight: e.plannedWeight, targetRpe: e.targetRpe,
-        equipment: e.equipment, barWeight: e.barWeight,
+        equipment: e.equipment, barWeight: e.barWeight, metric: e.metric === 'height' ? 'height' : 'load',
         swappedFrom: e.swappedFrom, notes: e.notes,
-        sets: e.sets.filter(s => s.done).map(s => ({ weight: s.weight, reps: s.reps, rpe: s.rpe })) }))
+        sets: e.sets.filter(s => s.done).map(s => e.metric === 'height'
+          ? ({ heightCm: s.heightCm })
+          : ({ weight: s.weight, reps: s.reps, rpe: s.rpe })) }))
       .filter(e => e.sets.length)
   };
   const rd = active.readiness || {};
@@ -627,11 +643,15 @@ function finishSession() {
 function detectPRs(record) {
   const prs = [];
   for (const e of record.exercises) {
-    const newBest = Math.max(...e.sets.map(s => est1RM(s.weight, s.reps)));
+    const jump = e.metric === 'height';
+    const score = ex => jump ? bestHeight(ex.sets) : Math.max(...ex.sets.map(s => est1RM(s.weight, s.reps)));
+    const newBest = score(e);
     let oldBest = 0;
     for (const s of sessions) for (const ex of s.exercises) {
-      if (sameExercise(ex.name, e.name))
-        for (const set of ex.sets) oldBest = Math.max(oldBest, est1RM(set.weight, set.reps));
+      // Compare like with like: a height PR must not be measured against loads.
+      if (sameExercise(ex.name, e.name) && (ex.metric === 'height') === jump) {
+        oldBest = Math.max(oldBest, score(ex));
+      }
     }
     if (newBest > oldBest && oldBest > 0) prs.push(canonicalName(e.name));
   }
@@ -688,6 +708,7 @@ Rules for the plan you produce:
           "restSecondsNext": <number, optional — rest before moving to the next movement, omit if same as restSeconds>,
           "equipment": "<one of: barbell, trap-bar, landmine, training-bar, dumbbell, machine, cable, bodyweight, other>",
           "barWeight": <number, optional — only for barbell/trap-bar/training-bar if the bar isn't a standard 20kg/45lb bar; omit otherwise>,
+          "metric": "<optional — 'load' (default, omit) or 'height' for a jump exercise logged in cm; use equipment 'bodyweight' and weight 0 with 'height'>",
           "description": "<1-2 sentence how-to>",
           "alternates": [ { "name": "<alternative exercise>", "weight": <number>, "description": "<short how-to>" } ]
         }
@@ -699,6 +720,7 @@ Rules for the plan you produce:
 - Always include 1-2 "alternates" per exercise (for busy equipment) and a short "description" for each.
 - Keep rest times realistic per lift type. Set "restSecondsNext" only when the rest before switching movements should genuinely differ from the between-set rest (e.g. longer before a heavy compound, shorter before a superset).
 - Set "equipment" accurately per exercise — this drives whether the plate calculator shows up and whether the weight field is grayed out for bodyweight moves.
+- Set "metric" to "height" only for jump-height tests (e.g. box jumps, CMJ-style training sets) logged in cm; leave it out for ordinary weight × reps exercises.
 
 My data:
 `;
@@ -707,7 +729,7 @@ ${url}
 
 It contains my recent sessions (actual weights, reps, RPE), notes, body weight and current plan. Review it, then write my next workout plan.
 
-Reply with ONLY a JSON code block of type "workout-plan" (weights in ${unit()}) using the same field structure as the "plan" object in that data: days[] → exercises[] with name, sets, reps (string), weight, targetRpe, restSeconds, restSecondsNext (optional, only if it should differ from restSeconds), equipment (one of: barbell, trap-bar, landmine, training-bar, dumbbell, machine, cable, bodyweight, other), barWeight (optional, only if the bar isn't a standard 20kg/45lb bar), description, and 1-2 alternates each. Progress weights from my logged RPE vs target (at/under target → increase; over → hold or reduce). I'll paste your JSON back into the app to load it.`;
+Reply with ONLY a JSON code block of type "workout-plan" (weights in ${unit()}) using the same field structure as the "plan" object in that data: days[] → exercises[] with name, sets, reps (string), weight, targetRpe, restSeconds, restSecondsNext (optional, only if it should differ from restSeconds), equipment (one of: barbell, trap-bar, landmine, training-bar, dumbbell, machine, cable, bodyweight, other), barWeight (optional, only if the bar isn't a standard 20kg/45lb bar), metric (optional, "load" default or "height" for a jump exercise logged in cm — use equipment "bodyweight" and weight 0 with it), description, and 1-2 alternates each. Progress weights from my logged RPE vs target (at/under target → increase; over → hold or reduce). I'll paste your JSON back into the app to load it.`;
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); return true; }
   catch (e) {
@@ -1026,12 +1048,18 @@ function exerciseCard(e, ei) {
   const doneCount = e.sets.filter(s => s.done).length;
   const allDone = doneCount === e.sets.length && e.sets.length > 0;
   if (allDone && !exExpanded.has(ei)) {
-    const best = e.sets.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
+    let summary;
+    if (isJump(e)) {
+      summary = `${e.sets.length} attempt${e.sets.length === 1 ? '' : 's'} · best ${bestHeight(e.sets)} cm`;
+    } else {
+      const best = e.sets.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
+      summary = `${e.sets.length} sets · best ${best.weight}×${best.reps}`;
+    }
     return `
     <div class="card collapsed-ex tappable" data-action="ex-expand" data-ei="${ei}">
       <div class="row between">
         <div class="grow"><span class="green bold">✓</span> <span class="bold">${esc(e.name)}</span>
-          <span class="muted small">· ${e.sets.length} sets · best ${best.weight}×${best.reps}</span></div>
+          <span class="muted small">· ${esc(summary)}</span></div>
         <span class="chev">${icon('chevDown', 18)}</span>
       </div>
     </div>`;
@@ -1043,14 +1071,24 @@ function exerciseCard(e, ei) {
     <div class="row between">
       <div class="grow">
         <div class="ex-name">${allDone ? '✅ ' : ''}${esc(e.name)}</div>
-        <div class="target-line">Plan: ${e.plannedSets}×${esc(e.plannedReps)} @ ${e.plannedWeight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''} · rest ${fmtClock(e.restSeconds)} ${equipChip(e)}</div>
-        ${lastP ? `<div class="last-line">Last: ${lastP.sets.map(s => `${s.weight}×${s.reps}`).join(' · ')}${lastRpe ? ` @RPE ${lastRpe}` : ''} — ${fmtDate(lastP.date)}</div>` : ''}
+        <div class="target-line">${isJump(e)
+          ? `Plan: ${e.plannedSets} attempt${e.plannedSets === 1 ? '' : 's'} · rest ${fmtClock(e.restSeconds)} ${equipChip(e)}`
+          : `Plan: ${e.plannedSets}×${esc(e.plannedReps)} @ ${e.plannedWeight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''} · rest ${fmtClock(e.restSeconds)} ${equipChip(e)}`}</div>
+        ${lastP ? `<div class="last-line">Last: ${isJump(e) ? `best ${bestHeight(lastP.sets)} cm` : lastP.sets.map(s => `${s.weight}×${s.reps}`).join(' · ') + (lastRpe ? ` @RPE ${lastRpe}` : '')} — ${fmtDate(lastP.date)}</div>` : ''}
         ${e.swappedFrom ? `<div class="swap-note">↺ swapped from ${esc(e.swappedFrom)}</div>` : ''}
       </div>
       <button class="icon-btn" data-action="ex-info" data-ei="${ei}" title="Explain">${icon('info', 18)}</button>
-      ${PLATE_EQUIPMENT.has(e.equipment || 'barbell') ? `<button class="icon-btn" data-action="plate-calc" data-ei="${ei}" title="Plate calculator">${icon('plate', 18)}</button>` : ''}
+      ${!isJump(e) && PLATE_EQUIPMENT.has(e.equipment || 'barbell') ? `<button class="icon-btn" data-action="plate-calc" data-ei="${ei}" title="Plate calculator">${icon('plate', 18)}</button>` : ''}
       <button class="icon-btn" data-action="ex-swap" data-ei="${ei}" title="Swap">${icon('swap', 18)}</button>
     </div>
+    ${isJump(e) ? `
+    <div class="set-grid jump">
+      <div class="head">#</div><div class="head">cm</div><div class="head">✓</div>
+      ${e.sets.map((s, si) => `
+        <div class="set-no">${si + 1}</div>
+        <input class="${s.done ? 'set-row-done-i' : ''}" type="number" inputmode="decimal" step="0.5" value="${s.heightCm != null ? s.heightCm : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="heightCm" ${s.done ? 'style="border-color:var(--green)"' : ''}>
+        <button class="set-done-btn ${s.done ? 'success' : ''}" data-action="set-done" data-ei="${ei}" data-si="${si}">${s.done ? '✓' : '○'}</button>`).join('')}
+    </div>` : `
     <div class="set-grid">
       <div class="head">#</div><div class="head">${unit()}</div><div class="head">Reps</div><div class="head">RPE</div><div class="head">✓</div>
       ${e.sets.map((s, si) => `
@@ -1059,10 +1097,11 @@ function exerciseCard(e, ei) {
         <input type="number" inputmode="numeric" value="${s.reps != null ? s.reps : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="reps" ${s.done ? 'style="border-color:var(--green)"' : ''}>
         <button class="rpe-btn ${s.rpe != null ? '' : 'muted'}" data-action="rpe-pick" data-ei="${ei}" data-si="${si}" ${s.done ? 'style="border-color:var(--green)"' : ''}>${s.rpe != null ? s.rpe : '—'}</button>
         <button class="set-done-btn ${s.done ? 'success' : ''}" data-action="set-done" data-ei="${ei}" data-si="${si}">${s.done ? '✓' : '○'}</button>`).join('')}
-    </div>
+    </div>`}
     <div class="row mt12">
       <button class="ghost icon-btn" data-action="set-add" data-ei="${ei}">+ Set</button>
       <button class="ghost icon-btn" data-action="set-remove" data-ei="${ei}">− Set</button>
+      ${isJump(e) ? `<button class="ghost icon-btn" data-action="cmj-open" data-ei="${ei}">${icon('video', 15)} Measure</button>` : ''}
       <button class="ghost icon-btn grow note-btn" data-action="ex-note" data-ei="${ei}">${icon('note', 15)} ${e.notes ? esc(e.notes.slice(0, 24)) + (e.notes.length > 24 ? '…' : '') : 'Note'}</button>
     </div>
   </div>`;
@@ -1114,8 +1153,12 @@ function exerciseHistory(name) {
   const rows = [];
   for (const s of sessions) for (const e of s.exercises) {
     if (sameExercise(e.name, name) && e.sets.length) {
-      const best = e.sets.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
-      rows.push({ date: s.date, best, e1rm: est1RM(best.weight, best.reps), sets: e.sets });
+      if (e.metric === 'height') {
+        rows.push({ date: s.date, jump: true, heightCm: bestHeight(e.sets), sets: e.sets });
+      } else {
+        const best = e.sets.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
+        rows.push({ date: s.date, jump: false, best, e1rm: est1RM(best.weight, best.reps), sets: e.sets });
+      }
     }
   }
   return rows;
@@ -1160,6 +1203,8 @@ function weeklyStats(weeks = 8) {
         wk.sessions++;
         for (const e of s.exercises) {
           wk.sets += e.sets.length;
+          // Height sets have no kg × reps to contribute; they still count as sets.
+          if (e.metric === 'height') continue;
           for (const st of e.sets) wk.volume += (st.weight || 0) * (st.reps || 0);
         }
       }
@@ -1190,7 +1235,8 @@ function viewHistory() {
   if (historyExercise && !exNames.includes(historyExercise)) historyExercise = '';
   const sel = historyExercise || exNames[0] || '';
   const hist = sel ? exerciseHistory(sel) : [];
-  const prBest = hist.length ? Math.max(...hist.map(r => r.e1rm)) : 0;
+  const histJump = hist.length ? hist[hist.length - 1].jump : false;
+  const prBest = hist.length ? Math.max(...hist.map(r => histJump ? r.heightCm : r.e1rm)) : 0;
   const bwLast = bodyWeight[bodyWeight.length - 1];
   const weeks = sessions.length ? weeklyStats(8) : [];
   const thisWeek = weeks[weeks.length - 1];
@@ -1220,14 +1266,14 @@ function viewHistory() {
       ${exNames.length ? `
         <select data-bind="history-ex">${exNames.map(n => `<option ${n === sel ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
         ${hist.length ? `
-          ${chartSvg(hist.slice(-12).map(r => ({ v: r.e1rm, d: r.date })))}
-          <div class="muted small mt8">Best est. 1RM: <b class="amber">${prBest} ${unit()}</b></div>
+          ${chartSvg(hist.slice(-12).map(r => ({ v: histJump ? r.heightCm : r.e1rm, d: r.date })))}
+          <div class="muted small mt8">${histJump ? `Best jump: <b class="amber">${prBest} cm</b>` : `Best est. 1RM: <b class="amber">${prBest} ${unit()}</b>`}</div>
           <div class="divider"></div>
           ${hist.slice(-8).reverse().map(r => `
             <div class="row between" style="padding:5px 0">
               <span class="muted small">${fmtDate(r.date)}</span>
-              <span class="small">${r.sets.map(s => `${s.weight}×${s.reps}`).join(' · ')}</span>
-              <span class="small bold ${r.e1rm >= prBest ? 'amber' : ''}">${r.e1rm >= prBest ? '🏆 ' : ''}e1RM ${r.e1rm}</span>
+              <span class="small">${histJump ? r.sets.map(s => `${s.heightCm}cm`).join(' · ') : r.sets.map(s => `${s.weight}×${s.reps}`).join(' · ')}</span>
+              <span class="small bold ${(histJump ? r.heightCm : r.e1rm) >= prBest ? 'amber' : ''}">${(histJump ? r.heightCm : r.e1rm) >= prBest ? '🏆 ' : ''}${histJump ? `${r.heightCm} cm` : `e1RM ${r.e1rm}`}</span>
             </div>`).join('')}` : '<p class="muted mt8">No logged sets for this exercise yet.</p>'}
         ${exNames.length > 1 || Object.keys(aliases).length ? `<button class="ghost wide mt8 small" data-action="merge-names" data-name="${esc(sel)}">Merge names…</button>` : ''}`
       : '<p class="empty"><span class="big">📈</span>Finish your first workout and your progress will show up here.</p>'}
@@ -1406,7 +1452,7 @@ function ladderHint(equipment) {
 }
 function exEditModal(dayId, i) {
   const day = plan.days.find(d => d.id === dayId);
-  const e = i != null ? day.exercises[i] : { name: '', sets: 3, reps: '8-12', weight: 0, targetRpe: 8, restSeconds: 120, restSecondsNext: null, equipment: 'barbell', barWeight: null, description: '', alternates: [] };
+  const e = i != null ? day.exercises[i] : { name: '', sets: 3, reps: '8-12', weight: 0, targetRpe: 8, restSeconds: 120, restSecondsNext: null, equipment: 'barbell', barWeight: null, metric: 'load', description: '', alternates: [] };
   const equipment = e.equipment || 'barbell';
   showModal(i != null ? 'Edit exercise' : 'Add exercise', `
     <label class="field"><span>Name</span><input id="f-name" value="${esc(e.name)}"></label>
@@ -1427,6 +1473,12 @@ function exEditModal(dayId, i) {
       <select id="f-equipment" data-bind="edit-equipment">${EQUIPMENT_TYPES.map(t => `<option value="${t}" ${t === equipment ? 'selected' : ''}>${EQUIPMENT_LABELS[t]}</option>`).join('')}</select>
     </label>
     <label class="field${BAR_WEIGHT_EQUIPMENT.has(equipment) ? '' : ' hidden'}" id="f-barweight-row"><span>Bar weight (${unit()})</span><input id="f-barweight" type="number" inputmode="decimal" step="0.5" placeholder="default ${resolvedBarWeight({ equipment, barWeight: null })}" value="${e.barWeight != null ? e.barWeight : ''}"></label>
+    <label class="field"><span>What the sets measure</span>
+      <select id="f-metric">
+        <option value="load" ${e.metric !== 'height' ? 'selected' : ''}>Weight × reps (normal lift)</option>
+        <option value="height" ${e.metric === 'height' ? 'selected' : ''}>Jump height in cm (one attempt per set)</option>
+      </select>
+    </label>
     <label class="field"><span>How-to / description (optional)</span><textarea id="f-desc" style="min-height:60px">${esc(e.description)}</textarea></label>`,
     [
       { label: 'Save', cls: 'primary', fn: () => {
@@ -1435,10 +1487,15 @@ function exEditModal(dayId, i) {
           const restNextRaw = mval('f-rest-next');
           const barWeightRaw = mval('f-barweight');
           const eqVal = document.getElementById('f-equipment').value;
+          const metricVal = document.getElementById('f-metric').value;
           const barVal = barWeightRaw ? parseFloat(barWeightRaw) : null;
           const wVal = mnum('f-weight');
           const barResolved = barVal != null ? barVal : resolvedBarWeight({ equipment: eqVal, barWeight: null });
-          if (unit() === 'kg') {
+          if (metricVal === 'height' && wVal) {
+            toast('A jump-height exercise carries no weight — set it to 0 (box height goes in the description)', 'err');
+            return;
+          }
+          if (metricVal !== 'height' && unit() === 'kg') {
             const kind = weightIssueKind(eqVal, barResolved, wVal);
             if (kind === 'bodyweight') {
               toast(`${wVal}${unit()} — bodyweight exercises must be 0${unit()}`, 'err');
@@ -1457,6 +1514,7 @@ function exEditModal(dayId, i) {
             restSecondsNext: restNextRaw ? Math.max(0, parseInt(restNextRaw, 10)) : null,
             equipment: eqVal,
             barWeight: barVal,
+            metric: metricVal,
             description: mval('f-desc') };
           if (i != null) Object.assign(day.exercises[i], upd);
           else day.exercises.push(Object.assign({ id: uid(), notes: '', alternates: [] }, upd));
@@ -1616,6 +1674,7 @@ function stepperInfo(el) {
   if (!el || !el.dataset || el.dataset.bind !== 'set') return null;
   const f = el.dataset.f;
   if (f === 'reps') return { kind: 'reps', label: 'reps', down: 1, up: 1 };
+  if (f === 'heightCm') return { kind: 'height', label: 'cm', down: 0.5, up: 0.5 };
   if (f !== 'weight') return null;
   const ex = active && active.exercises[+el.dataset.ei];
   if (!ex || ex.equipment === 'bodyweight') return null;   // nothing to load
@@ -1686,8 +1745,8 @@ if (window.visualViewport) {
 // targeted DOM writes, rather than routed through the app's render().
 let cmjState = null; // { objectUrl, video, fps, detectedFps, seeking, lastMediaTime, takeoffTime, landingTime, attempts, pollTimer }
 
-function cmjVideoModal() {
-  cmjState = { objectUrl: null, video: null, fps: 30, slowFactor: settings.cmjSlowFactor || 1, captureFps: settings.cmjCaptureFps || 240, seeking: false, lastMediaTime: 0, takeoffTime: null, landingTime: null, attempts: [], pollTimer: null };
+function cmjVideoModal(targetEi) {
+  cmjState = { objectUrl: null, video: null, fps: 30, slowFactor: settings.cmjSlowFactor || 1, captureFps: settings.cmjCaptureFps || 240, seeking: false, lastMediaTime: 0, takeoffTime: null, landingTime: null, attempts: [], pollTimer: null, targetEi: targetEi != null ? targetEi : null };
   showModal('Measure CMJ via video', `
     <input type="file" id="cmj-file-input" accept="video/*">
     <details class="cmj-tips mt8">
@@ -2158,7 +2217,17 @@ function cmjAccept() {
     effectiveFps: a.effectiveFps,
     precisionCm: round1(a.precisionCm)
   }));
-  if (active) {
+  const targetEi = cmjState.targetEi;
+  const targetEx = targetEi != null && active ? active.exercises[targetEi] : null;
+  if (targetEx && isJump(targetEx)) {
+    // Fill the next empty attempt, or append one if every row is used.
+    let slot = targetEx.sets.find(s => s.heightCm == null);
+    if (!slot) { slot = { heightCm: null, done: false }; targetEx.sets.push(slot); }
+    slot.heightCm = heightCm;
+    slot.done = true;
+    saveActive();
+    toast(`${heightCm} cm logged to ${targetEx.name} ✓`);
+  } else if (active) {
     active.readiness.cmjCm = heightCm;
     active.readiness.flightTimeMs = best.flightTimeMs;
     active.readiness.method = 'video';
@@ -2269,7 +2338,9 @@ document.addEventListener('click', e => {
     case 'set-add': {
       const ex = active.exercises[+el.dataset.ei];
       const lastSet = ex.sets[ex.sets.length - 1];
-      ex.sets.push({ weight: lastSet ? lastSet.weight : ex.plannedWeight, reps: lastSet ? lastSet.reps : parseRepsLow(ex.plannedReps), rpe: ex.targetRpe, done: false });
+      ex.sets.push(isJump(ex)
+        ? { heightCm: null, done: false }
+        : { weight: lastSet ? lastSet.weight : ex.plannedWeight, reps: lastSet ? lastSet.reps : parseRepsLow(ex.plannedReps), rpe: ex.targetRpe, done: false });
       saveActive(); render(); break;
     }
     case 'set-remove': {
@@ -2281,7 +2352,7 @@ document.addEventListener('click', e => {
     case 'ex-swap': sessionSwapModal(+el.dataset.ei); break;
     case 'ex-note': exNoteModal(+el.dataset.ei); break;
     case 'plate-calc': showPlateCalculator(active.exercises[+el.dataset.ei]); break;
-    case 'cmj-open': cmjVideoModal(); break;
+    case 'cmj-open': cmjVideoModal(el.dataset.ei != null ? +el.dataset.ei : null); break;
     case 'session-swap-pick': {
       const ei = +el.dataset.ei;
       doSessionSwap(ei, active.exercises[ei].alternates[+el.dataset.ai]);

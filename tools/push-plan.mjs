@@ -190,6 +190,13 @@ function validatePlan(plan, { unit = 'kg' } = {}) {
   } else {
     for (const day of plan.days) {
       for (const e of day.exercises || []) {
+        if (e.metric != null && e.metric !== 'load' && e.metric !== 'height') {
+          errors.push(`${day.name} → ${e.name}: metric "${e.metric}" is not one of "load", "height".`);
+        }
+        if (e.metric === 'height') {
+          if (e.weight) errors.push(`${day.name} → ${e.name}: a height-metric exercise must have weight 0 — box height goes in "description".`);
+          continue; // the weight ladder does not apply
+        }
         const p = weightProblem(e.equipment, e.weight, e.barWeight);
         if (p) errors.push(`${day.name} → ${e.name}: ${e.weight} kg ${p}`);
         // An alternate that declares its own equipment is checked as an error, the
