@@ -114,13 +114,23 @@ const LADDER_DESC = {
   landmine: 'landmine plate load must be a multiple of 1.25 kg',
 };
 
+// MIRRORS the weightIssueKind() in the app.js LADDER-START/LADDER-END block —
+// the decision is shared so the UI guard and this validator can't diverge at
+// the call site again. tools/weights.test.mjs sweeps both copies.
+export function weightIssueKind(equipment, barWeight, weight) {
+  if (equipment === 'bodyweight') return (weight || 0) === 0 ? null : 'bodyweight';
+  if (equipment === 'other' || !weight) return null;
+  if (isLoadable(equipment, barWeight, weight)) return null;
+  return ladderRound(weight - ladderBase(equipment, barWeight)) < -1e-9 ? 'below-bar' : 'off-ladder';
+}
+
 function weightProblem(equipment, weight, barWeight) {
   const eq = equipment || 'barbell';
-  if (eq === 'bodyweight') return (weight || 0) === 0 ? null : 'bodyweight moves must have weight 0';
-  if (eq === 'other' || !weight) return null;
-  if (isLoadable(eq, barWeight, weight)) return null;
+  const kind = weightIssueKind(eq, barWeight, weight);
+  if (!kind) return null;
+  if (kind === 'bodyweight') return 'bodyweight moves must have weight 0';
   const base = ladderBase(eq, barWeight);
-  if (ladderRound(weight - base) < -1e-9) {
+  if (kind === 'below-bar') {
     return `below the empty ${eq} (${base} kg) — is the equipment type wrong?`;
   }
   const lo = nextWeight(eq, barWeight, weight, -1), hi = nextWeight(eq, barWeight, weight, 1);

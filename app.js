@@ -192,6 +192,16 @@ function nearestRungs(equipment, barWeight, weight) {
   if (equipment === 'bodyweight' || equipment === 'other') return { lo: null, hi: null };
   return { lo: nextWeight(equipment, barWeight, weight, -1), hi: nextWeight(equipment, barWeight, weight, 1) };
 }
+// Why a weight is not loadable, or null when it is fine. The caller builds the
+// message — keeping this block free of unit()/DOM so the test can evaluate it.
+// A falsy weight is always acceptable: 0 is the placeholder a new exercise
+// starts at, and a bodyweight move must be exactly 0.
+function weightIssueKind(equipment, barWeight, weight) {
+  if (equipment === 'bodyweight') return (weight || 0) === 0 ? null : 'bodyweight';
+  if (equipment === 'other' || !weight) return null;
+  if (isLoadable(equipment, barWeight, weight)) return null;
+  return ladderRound(weight - ladderBase(equipment, barWeight)) < -1e-9 ? 'below-bar' : 'off-ladder';
+}
 /* LADDER-END */
 
 /* ================= default starter plan ================= */
@@ -1315,16 +1325,26 @@ function exEditModal(dayId, i) {
           const eqVal = document.getElementById('f-equipment').value;
           const barVal = barWeightRaw ? parseFloat(barWeightRaw) : null;
           const wVal = mnum('f-weight');
-          if (unit() === 'kg' && !isLoadable(eqVal, barVal != null ? barVal : resolvedBarWeight({ equipment: eqVal, barWeight: null }), wVal)) {
-            const n = nearestRungs(eqVal, barVal != null ? barVal : resolvedBarWeight({ equipment: eqVal, barWeight: null }), wVal);
-            toast(`${wVal}${unit()} is not loadable on a ${EQUIPMENT_LABELS[eqVal].toLowerCase()} — try ${n.lo} or ${n.hi}`, 'err');
-            return;
+          const barResolved = barVal != null ? barVal : resolvedBarWeight({ equipment: eqVal, barWeight: null });
+          if (unit() === 'kg') {
+            const kind = weightIssueKind(eqVal, barResolved, wVal);
+            if (kind === 'bodyweight') {
+              toast(`${wVal}${unit()} — bodyweight exercises must be 0${unit()}`, 'err');
+              return;
+            } else if (kind === 'below-bar') {
+              toast(`${wVal}${unit()} is below the empty ${EQUIPMENT_LABELS[eqVal].toLowerCase()} (${barResolved}${unit()})`, 'err');
+              return;
+            } else if (kind === 'off-ladder') {
+              const n = nearestRungs(eqVal, barResolved, wVal);
+              toast(`${wVal}${unit()} is not loadable on a ${EQUIPMENT_LABELS[eqVal].toLowerCase()} — try ${n.lo} or ${n.hi}`, 'err');
+              return;
+            }
           }
-          const upd = { name, sets: Math.max(1, mnum('f-sets', 3)), reps: mval('f-reps') || '8-12', weight: mnum('f-weight'),
+          const upd = { name, sets: Math.max(1, mnum('f-sets', 3)), reps: mval('f-reps') || '8-12', weight: wVal,
             targetRpe: rpeRaw ? parseFloat(rpeRaw) : null, restSeconds: Math.max(0, mnum('f-rest', 120)),
             restSecondsNext: restNextRaw ? Math.max(0, parseInt(restNextRaw, 10)) : null,
-            equipment: document.getElementById('f-equipment').value,
-            barWeight: barWeightRaw ? parseFloat(barWeightRaw) : null,
+            equipment: eqVal,
+            barWeight: barVal,
             description: mval('f-desc') };
           if (i != null) Object.assign(day.exercises[i], upd);
           else day.exercises.push(Object.assign({ id: uid(), notes: '', alternates: [] }, upd));

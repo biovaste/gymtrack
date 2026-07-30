@@ -37,12 +37,12 @@ function loadAppLadder() {
   const block = src.slice(start, end);
   const ctx = {};
   vm.createContext(ctx);
-  vm.runInContext(block + '\n;({ nextWeight, isLoadable, nearestRungs, ladderRungs, ladderFor, ladderBase });', ctx);
-  return vm.runInContext('({ nextWeight, isLoadable, nearestRungs, ladderRungs, ladderFor, ladderBase })', ctx);
+  vm.runInContext(block + '\n;({ nextWeight, isLoadable, nearestRungs, ladderRungs, ladderFor, ladderBase, weightIssueKind });', ctx);
+  return vm.runInContext('({ nextWeight, isLoadable, nearestRungs, ladderRungs, ladderFor, ladderBase, weightIssueKind })', ctx);
 }
 
 const app = loadAppLadder();
-const { nextWeight, isLoadable, nearestRungs } = app;
+const { nextWeight, isLoadable, nearestRungs, weightIssueKind } = app;
 
 /* ---- boundary behaviour required by the spec ---- */
 check('DB 10 up   → 12',   nextWeight('dumbbell', null, 10, 1), 12);
@@ -88,23 +88,38 @@ const nr = nearestRungs('trap-bar', 23, 85);
 check('trap bar 85 nearest lo', nr.lo, 83);
 check('trap bar 85 nearest hi', nr.hi, 85.5);
 
+/* ---- weightIssueKind: the classifier the UI guard and the validator share ---- */
+check('placeholder 0 on a barbell is allowed', weightIssueKind('barbell', 20, 0), null);
+check('bodyweight 0 is allowed',               weightIssueKind('bodyweight', null, 0), null);
+check('bodyweight 5 is flagged',               weightIssueKind('bodyweight', null, 5), 'bodyweight');
+check('barbell 19 is below the bar',           weightIssueKind('barbell', 20, 19), 'below-bar');
+check('dumbbell 22.5 is off-ladder',           weightIssueKind('dumbbell', null, 22.5), 'off-ladder');
+check('cable 22.5 is allowed',                 weightIssueKind('cable', null, 22.5), null);
+check('other is never flagged',                weightIssueKind('other', null, 33.3), null);
+
 /* ---- the two ladder copies must agree ---- */
 const validator = await import('./push-plan.mjs');
-if (typeof validator.isLoadable !== 'function') {
+if (typeof validator.isLoadable !== 'function' || typeof validator.weightIssueKind !== 'function') {
   failures++;
-  console.error('FAIL  push-plan.mjs does not export isLoadable — export it so this test can compare the copies.');
+  console.error('FAIL  push-plan.mjs does not export isLoadable/weightIssueKind — export them so this test can compare the copies.');
 } else {
-  let mismatches = 0;
+  let mismatches = 0, kindMismatches = 0;
   for (const [eq, bar] of [['barbell', 20], ['trap-bar', 23], ['training-bar', 10],
                            ['dumbbell', null], ['cable', null], ['machine', null],
                            ['landmine', null], ['bodyweight', null]]) {
     for (let w = 0; w <= 200; w += 0.25) {
-      const a = isLoadable(eq, bar, Math.round(w * 100) / 100);
-      const b = validator.isLoadable(eq, bar, Math.round(w * 100) / 100);
+      const wr = Math.round(w * 100) / 100;
+      const a = isLoadable(eq, bar, wr);
+      const b = validator.isLoadable(eq, bar, wr);
       if (a !== b) { mismatches++; if (mismatches < 5) console.error(`  drift: ${eq} ${w} app=${a} validator=${b}`); }
+
+      const ka = weightIssueKind(eq, bar, wr);
+      const kb = validator.weightIssueKind(eq, bar, wr);
+      if (ka !== kb) { kindMismatches++; if (kindMismatches < 5) console.error(`  kind drift: ${eq} ${w} app=${ka} validator=${kb}`); }
     }
   }
   check('app.js and push-plan.mjs ladders agree', mismatches, 0);
+  check('app.js and push-plan.mjs weightIssueKind agree', kindMismatches, 0);
 }
 
 console.log(failures ? `\n${failures} failing check(s)` : '\nAll checks passed');
