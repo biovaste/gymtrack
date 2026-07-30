@@ -302,9 +302,14 @@ let audioCtx = null;
 function unlockAudio() {
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+    // WebKit uses a non-standard 'interrupted' state after a screen lock, an incoming
+    // call, or another app taking audio — and stays there. Checking only for
+    // 'suspended' left the context dead, so the timer cue silently produced nothing
+    // while the Test button still worked (a user gesture makes WebKit auto-resume).
+    if (audioCtx.state !== 'running') audioCtx.resume();
   } catch (e) {}
 }
+function audioState() { return audioCtx ? audioCtx.state : 'none'; }
 function beep(times = 3, freq = 880) {
   if (!settings.sound) return;
   unlockAudio();
@@ -326,9 +331,71 @@ function buzz(pattern = [200, 100, 200]) {
   if (settings.vibrate && navigator.vibrate) { try { navigator.vibrate(pattern); } catch (e) {} }
 }
 
+/*
+ * A near-silent looping source. Without it an idle context gets suspended, which
+ * freezes currentTime and strands any pre-scheduled cue. Runs only while a
+ * session is active, so it costs nothing the rest of the time.
+ */
+let keepAlive = null;
+function startKeepAlive() {
+  unlockAudio();
+  if (!audioCtx || keepAlive) return;
+  try {
+    const buf = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+    const src = audioCtx.createBufferSource(), g = audioCtx.createGain();
+    src.buffer = buf; src.loop = true;
+    g.gain.value = 0.0001;
+    src.connect(g); g.connect(audioCtx.destination);
+    src.start();
+    keepAlive = src;
+  } catch (e) {}
+}
+function stopKeepAlive() {
+  if (!keepAlive) return;
+  try { keepAlive.stop(); } catch (e) {}
+  keepAlive = null;
+}
+
+/*
+ * Schedule the rest cue `seconds` from now on the audio clock rather than firing
+ * it from setInterval. startRest() is always reached from a tap, so the context
+ * is live at scheduling time; the audio thread then delivers on time regardless
+ * of main-thread throttling. The interval keeps a late fallback for the case
+ * where the context dies before the scheduled time arrives.
+ */
+function scheduleCue(seconds) {
+  cancelCue();
+  if (!settings.sound) return;
+  unlockAudio();
+  if (!audioCtx || !rest) return;
+  try {
+    const nodes = [];
+    const t0 = audioCtx.currentTime + seconds;
+    for (let i = 0; i < 3; i++) {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = 880;
+      o.connect(g); g.connect(audioCtx.destination);
+      const t = t0 + i * 0.38;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.6, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+      o.start(t); o.stop(t + 0.32);
+      if (i === 0) o.onended = () => { if (rest) { rest.cueFired = true; saveRest(); } };
+      nodes.push(o);
+    }
+    rest.cueNodes = nodes;
+  } catch (e) {}
+}
+function cancelCue() {
+  if (!rest || !rest.cueNodes) return;
+  for (const o of rest.cueNodes) { try { o.onended = null; o.stop(); } catch (e) {} }
+  rest.cueNodes = null;
+}
+
 /* ================= wake lock (keep screen on during a session) ================= */
 let wakeLock = null;
 async function syncWakeLock() {
+  if (active) startKeepAlive(); else stopKeepAlive();
   try {
     if (active && !wakeLock && 'wakeLock' in navigator) {
       wakeLock = await navigator.wakeLock.request('screen');
@@ -337,23 +404,36 @@ async function syncWakeLock() {
   } catch (e) { wakeLock = null; }
 }
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') { syncWakeLock(); }
+  if (document.visibilityState === 'visible') { unlockAudio(); syncWakeLock(); }
   else if (syncReady && settings.autoSync && dataUpdatedAt > lastSyncedAt) {
     clearTimeout(syncTimer); workerPush({ silent: true }); // flush unsynced changes before backgrounding
   }
 });
 
 /* ================= rest timer ================= */
-let rest = store.get('rest', null); // { endsAt, total, label, fired } — persisted so a reload mid-rest doesn't lose the countdown
-const saveRest = () => rest ? store.set('rest', rest) : store.del('rest');
+let rest = store.get('rest', null); // { endsAt, total, label, fired, cueFired } — persisted so a reload mid-rest doesn't lose the countdown
+// cueNodes holds live AudioNodes and must never be persisted.
+const saveRest = () => {
+  if (!rest) { store.del('rest'); return; }
+  const { cueNodes, ...persistable } = rest;
+  store.set('rest', persistable);
+};
 function startRest(seconds, label) {
   if (!seconds || seconds <= 0) return;
   unlockAudio();
-  rest = { endsAt: Date.now() + seconds * 1000, total: seconds, label: label || 'Rest', fired: false };
+  rest = { endsAt: Date.now() + seconds * 1000, total: seconds, label: label || 'Rest', fired: false, cueFired: false, cueNodes: null };
+  scheduleCue(seconds);
   saveRest(); renderRest();
 }
-function adjustRest(delta) { if (rest) { rest.endsAt += delta * 1000; rest.total = Math.max(rest.total + delta, 1); saveRest(); renderRest(); } }
-function stopRest() { rest = null; saveRest(); renderRest(); }
+function adjustRest(delta) {
+  if (!rest) return;
+  rest.endsAt += delta * 1000;
+  rest.total = Math.max(rest.total + delta, 1);
+  const remain = (rest.endsAt - Date.now()) / 1000;
+  if (remain > 0) { rest.fired = false; rest.cueFired = false; scheduleCue(remain); }
+  saveRest(); renderRest();
+}
+function stopRest() { cancelCue(); rest = null; saveRest(); renderRest(); }
 function renderRest() {
   const el = document.getElementById('rest-banner');
   if (!rest) { el.classList.add('hidden'); el.classList.remove('over'); return; }
@@ -376,8 +456,15 @@ function renderRest() {
 setInterval(() => {
   if (rest) {
     const remain = (rest.endsAt - Date.now()) / 1000;
-    if (remain <= 0 && !rest.fired) { rest.fired = true; saveRest(); beep(3); buzz(); }
-    if (remain <= -30) { rest = null; saveRest(); }  // auto-dismiss 30s after firing
+    // Fallback only: the cue is normally delivered by scheduleCue() on the audio
+    // clock. Beep here only if that never landed, so a dead context still gets a
+    // late cue and a delivered one never doubles up.
+    if (remain <= 0 && !rest.fired) {
+      rest.fired = true;
+      if (!rest.cueFired) { beep(3); buzz(); } else buzz();
+      saveRest();
+    }
+    if (remain <= -30) { cancelCue(); rest = null; saveRest(); }  // auto-dismiss 30s after firing
     renderRest();
   }
   // live session clock
@@ -1246,7 +1333,9 @@ function viewSettings() {
       </div>
       <div class="row between" style="padding:6px 0">
         <span>Vibration</span>
-        <button class="icon-btn ${settings.vibrate ? 'success' : ''}" data-action="toggle-vibrate">${settings.vibrate ? 'On' : 'Off'}</button>
+        ${navigator.vibrate
+          ? `<button class="icon-btn ${settings.vibrate ? 'success' : ''}" data-action="toggle-vibrate">${settings.vibrate ? 'On' : 'Off'}</button>`
+          : `<span class="muted small">Not supported on this device</span>`}
       </div>
       <button class="ghost wide mt8" data-action="test-sound">🔊 Test the rest-timer sound</button>
     </div>
@@ -2274,7 +2363,13 @@ document.addEventListener('click', e => {
     case 'restore-uuid': restoreFromCode(mval('restore-uuid-input')); break;
     case 'toggle-sound': settings.sound = !settings.sound; saveSettings(); render(); break;
     case 'toggle-vibrate': settings.vibrate = !settings.vibrate; saveSettings(); render(); break;
-    case 'test-sound': beep(3); buzz(); toast('That\'s the rest-timer cue'); break;
+    case 'test-sound': {
+      beep(3); buzz();
+      const st = audioState();
+      toast(st === 'running' ? "That's the rest-timer cue"
+        : `Audio context is "${st}" — sound may not fire. Tap anywhere and retry.`, st === 'running' ? 'ok' : 'err');
+      break;
+    }
     case 'backup-copy': copyText(buildBackup()).then(ok => toast(ok ? 'Backup copied — store it somewhere safe' : 'Copy failed', ok ? 'ok' : 'err')); break;
     case 'backup-restore':
       showModal('Restore backup', `<p class="muted small">Paste a backup JSON. This replaces everything on this device.</p><textarea id="restore-area" class="mt8"></textarea>`,
@@ -2349,6 +2444,10 @@ mountStaticIcons();
 syncWakeLock();
 render();
 renderRest();
+// A reload loses the scheduled cue (AudioNodes can't be persisted). Re-arm it —
+// scheduleCue is a no-op until a gesture unlocks the context, and the interval
+// fallback covers the gap until then.
+if (rest && !rest.fired) scheduleCue(Math.max(0, (rest.endsAt - Date.now()) / 1000));
 if (!store.get('onboarded', false) && sessions.length === 0) showOnboarding();
 window.addEventListener('load', initServiceWorkerUpdates);
 autoSyncOnLoad(); // reconcile with the cloud, then enable auto-push
