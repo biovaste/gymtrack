@@ -31,6 +31,7 @@ Before any interaction with the user, gather the following from available source
 - Current training phase/block name and its primary goals
 - Program structure: priority-ordered flex model (A → B → C → D) or named split days (push/pull/legs, etc.)
 - Which readiness signals the user tracks (CMJ, HRV, RHR, Telegram readiness scores, subjective energy)
+- The gym's **loadable-weight ladder** (plate, dumbbell and stack increments) — every weight you write must land on it. See "Plan Authoring Constraints" in `../shared/schema-reference.md`
 
 **From the file system (Claude Code only):**
 - Search for a phase-level training plan file (e.g. `phase2-training-plan.md`, `training-plan.md`, or similar in `Physical Training/` or the project root)
@@ -133,6 +134,10 @@ Do not proceed to Phase 4 until the user has responded.
 
 If no RPE data from last week (standalone mode): hold current weights; note the limitation.
 
+**Never invent a starting load.** When splitting an exercise out of a superset or adding a new one, derive its weight *and* `equipment` from that movement's logged data — or ask. A guessed "estimate — correct it on the first set" becomes the plan of record and can carry a wrong equipment type with it, which then defeats the loadability check built on top of it.
+
+**Round every result to a loadable rung.** A +2.5 kg step is only valid if the gym can actually make that weight — on a dumbbell or a stack it usually cannot. Round to the nearest rung on the ladder from Phase 0 and say so in PROGRESSION NOTES; never write a weight the athlete would have to silently work around. Full rules in "Plan Authoring Constraints" (`../shared/schema-reference.md`).
+
 ### Volume Regulation
 
 - Negative readiness trend (≥ 2 signals flagged in Phase 2) → −1 set on all compound lifts
@@ -208,6 +213,8 @@ Generate the complete updated `workout-plan` JSON in a code fence:
   node tools/push-plan.mjs <path-to-json>
   ```
   Write the JSON to the scratchpad directory first, then run the push. The plan-only Worker endpoint (`POST /data/:uuid/plan`) preserves all sessions and body weight.
+
+  The script **validates before it pushes** and exits non-zero on duplicate exercise names or weights that are not loadable on the declared `equipment`. If it refuses, fix the plan — do not reach for `--force`, and never present a refused plan to the user as pushed. Warnings (alternate weights, non-kg units) do not block the push but are worth reading.
 - **Standalone / Cowork:** Instruct the user to paste the JSON block into the app's Claude tab → "Import a plan from Claude".
 - Always show the JSON regardless of mode (transparency + manual fallback).
 

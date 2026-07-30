@@ -23,7 +23,7 @@ The user provides data in one of three ways:
 
 1. **Paste export JSON** — `type: "workout-log"` from the app's Claude tab, or raw JSON
 2. **Share URL** — fetch `https://api.gymtrack.hithitpull.fi/data/{uuid}` and parse the backup as a `gymtrack-backup` (use `sessions` + `currentPlan` + `bodyWeight`)
-3. **Plain text session** — any structured gym session text; apply graceful degradation (see `schema-reference.md`)
+3. **Plain text session** — any structured gym session text; apply graceful degradation (see `../shared/schema-reference.md`)
 
 Identify the most recent session and analyse it against the session immediately before it (for trend signals).
 
@@ -68,8 +68,8 @@ digraph session_feedback {
 }
 ```
 
-For detailed signal definitions and thresholds, see `science-reference.md`.
-For field names and derived metric formulas, see `schema-reference.md`.
+For detailed signal definitions and thresholds, see `../shared/science-reference.md`.
+For field names and derived metric formulas, see `../shared/schema-reference.md`.
 
 ---
 
@@ -97,13 +97,14 @@ CONFIDENCE: High / Medium / Low
 
 **Length:** 50–100 words. Absolute maximum: 120 words.
 
-**External focus rule (mandatory):** All NEXT ACTION language must target the implement or environment — never internal anatomy. "Push the floor away" not "contract your quads." See `science-reference.md §C` for the full constraint and examples.
+**External focus rule (mandatory):** All NEXT ACTION language must target the implement or environment — never internal anatomy. "Push the floor away" not "contract your quads." See `../shared/science-reference.md §C` for the full constraint and examples.
 
 **Do not:**
 - Surface more than one positive and one limiter
 - Diagnose structural injuries ("you have tendinitis")
 - Create programs or prescribe future sessions
 - Invent metrics that are not in the data
+- Assert that logged data is a mistake. When a value looks anomalous — identical loads on adjacent exercises, a load far above plan — the boring physical explanation is usually right (a shared machine or station, an in-session ramp). Report it as an observation or ask; never as "likely a duplicated entry"
 - Output anything beyond the five-field structure above
 
 ---

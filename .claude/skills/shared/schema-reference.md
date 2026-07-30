@@ -121,6 +121,30 @@ The plan embedded in a `workout-log` export (`currentPlan`) and the format for i
 
 ---
 
+## Plan Authoring Constraints
+
+Two constraints on any plan written for the app. Both have already reached the phone broken, and both are now enforced by `tools/push-plan.mjs`, which refuses to push a plan that violates them.
+
+### 1. Exercise names must be unique across the entire plan
+
+Exercise history, "last time" lookups and the `aliases` map are keyed on the exercise **name globally** — not per day. Two different movements sharing a name silently merge into one progression history, so their loads and RPEs get compared against each other.
+
+*What this looked like in practice:* `Cable Triceps Extension` sat on both Day A (single-arm, 20 kg) and Day B (two-arm, 40 kg). One name, two movements, one polluted history — and auto-regulation reading a 20 → 40 kg jump as progress.
+
+Disambiguate in the name itself: `… — Single-Arm` / `… — Two-Arm`, `Incline …`, `… (Paused)`.
+
+**Renaming an exercise orphans its history.** When you rename, add an `aliases` entry — `{ "old name lowercased": "New Canonical Name" }` — so past sessions still resolve. Where one old name covers two movements, alias it to whichever has the most history and relabel the minority's session records so each lands on the right canonical name.
+
+### 2. Every weight must be loadable on the actual equipment
+
+Set `equipment` accurately **first** — the weight check depends on it, and it also drives whether the plate calculator appears and whether the weight field is grayed. A cable exercise mislabelled `barbell` defeats both.
+
+Then check each weight against that equipment's ladder. **Derive the ladder from what the athlete has actually logged; never assume a gym's plate and dumbbell inventory.** The specific ladder lives in the project's CLAUDE.md.
+
+*Signature of this bug in the data:* a `plannedWeight` the athlete never logs, with a nearby value logged instead — planned 22.5 kg → logged 22 kg, twice. The athlete silently works around it and the plan keeps lying. If you see planned and actual diverge by a small constant on the same lift, check loadability before reading it as auto-regulation.
+
+---
+
 ## Full Backup Schema (`gymtrack-backup`)
 
 What the Cloudflare Worker stores and returns on `GET /data/:uuid`.

@@ -96,6 +96,18 @@ node tools/push-plan.mjs path/to/plan.json      # or pipe the JSON via stdin
 The script does a safe read-modify-write — only the plan changes, your logged sessions
 and body weight are kept — and bumps the sync timestamp so the app pulls it on launch.
 
+It also **validates before pushing** and refuses a plan that would corrupt your history
+or send you an impossible weight:
+
+- **Duplicate exercise names** anywhere in the plan. Exercise history is keyed on name
+  across all days, so two different movements sharing a name merge into one progression
+  history. Give each a distinct name (`… — Single-Arm` / `… — Two-Arm`).
+- **Weights that aren't loadable** on the declared `equipment` — a 22.5 kg dumbbell when
+  they go in 2 kg steps, or 85 kg on a 23 kg trap bar (83 and 85.5 are the real rungs).
+  Set `equipment` accurately or this check can't work.
+
+Alternate-exercise weights and non-kg units warn but don't block. `--force` pushes anyway.
+
 ### Plan JSON schema
 
 ```json
