@@ -1159,6 +1159,7 @@ function viewActiveSession() {
     ${supersetGroups(active.exercises).map(g => g.tag
       ? supersetCard(g)
       : exerciseCard(active.exercises[g.idx[0]], g.idx[0])).join('')}
+    <button class="ghost wide mt8" data-action="session-ex-add">+ Add exercise</button>
     <h2 class="section">Session notes</h2>
     <div class="card">
       <textarea data-bind="session-notes" placeholder="How did it go? Anything Claude should know? (sleep, pain, energy…)">${esc(active.notes)}</textarea>
@@ -1617,6 +1618,32 @@ function ladderHint(equipment) {
   if (equipment === 'landmine') return '1.25 kg steps (load on the end)';
   return `2.5 kg steps from the ${resolvedBarWeight({ equipment, barWeight: null })} kg bar`;
 }
+/*
+ * The one place a weight is judged before it can be saved. Shared by the plan
+ * editor and the mid-session add modal — a second hand-written copy of this
+ * block is exactly how a "22.5 kg dumbbell" gets into a plan through whichever
+ * screen was forgotten. Returns a ready-to-toast message, or null when fine.
+ */
+function weightValidationError({ equipment, barWeight, weight, metric }) {
+  if (metric === 'height') {
+    return weight
+      ? 'A jump-height exercise carries no weight — set it to 0 (box height goes in the description)'
+      : null;
+  }
+  if (unit() !== 'kg') return null; // the ladder is kg-only
+  const bar = barWeight != null ? barWeight : resolvedBarWeight({ equipment, barWeight: null });
+  const kind = weightIssueKind(equipment, bar, weight);
+  if (kind === 'bodyweight') return `${weight}${unit()} — bodyweight exercises must be 0${unit()}`;
+  if (kind === 'below-bar') {
+    return `${weight}${unit()} is below the empty ${EQUIPMENT_LABELS[equipment].toLowerCase()} (${bar}${unit()}) — ` +
+      'is the Equipment field set wrong? A dumbbell/cable/machine move this light usually isn\'t a barbell';
+  }
+  if (kind === 'off-ladder') {
+    const n = nearestRungs(equipment, bar, weight);
+    return `${weight}${unit()} is not loadable on a ${EQUIPMENT_LABELS[equipment].toLowerCase()} — try ${n.lo} or ${n.hi}`;
+  }
+  return null;
+}
 function exEditModal(dayId, i) {
   const day = plan.days.find(d => d.id === dayId);
   const e = i != null ? day.exercises[i] : { name: '', sets: 3, reps: '8-12', weight: 0, targetRpe: 8, restSeconds: 120, restSecondsNext: null, equipment: 'barbell', barWeight: null, metric: 'load', superset: null, description: '', alternates: [] };
@@ -1665,25 +1692,8 @@ function exEditModal(dayId, i) {
           const metricVal = document.getElementById('f-metric').value;
           const barVal = barWeightRaw ? parseFloat(barWeightRaw) : null;
           const wVal = mnum('f-weight');
-          const barResolved = barVal != null ? barVal : resolvedBarWeight({ equipment: eqVal, barWeight: null });
-          if (metricVal === 'height' && wVal) {
-            toast('A jump-height exercise carries no weight — set it to 0 (box height goes in the description)', 'err');
-            return;
-          }
-          if (metricVal !== 'height' && unit() === 'kg') {
-            const kind = weightIssueKind(eqVal, barResolved, wVal);
-            if (kind === 'bodyweight') {
-              toast(`${wVal}${unit()} — bodyweight exercises must be 0${unit()}`, 'err');
-              return;
-            } else if (kind === 'below-bar') {
-              toast(`${wVal}${unit()} is below the empty ${EQUIPMENT_LABELS[eqVal].toLowerCase()} (${barResolved}${unit()}) — is the Equipment field above set wrong? A dumbbell/cable/machine move this light usually isn't a barbell`, 'err');
-              return;
-            } else if (kind === 'off-ladder') {
-              const n = nearestRungs(eqVal, barResolved, wVal);
-              toast(`${wVal}${unit()} is not loadable on a ${EQUIPMENT_LABELS[eqVal].toLowerCase()} — try ${n.lo} or ${n.hi}`, 'err');
-              return;
-            }
-          }
+          const wErr = weightValidationError({ equipment: eqVal, barWeight: barVal, weight: wVal, metric: metricVal });
+          if (wErr) { toast(wErr, 'err'); return; }
           const upd = { name, sets: Math.max(1, mnum('f-sets', 3)), reps: mval('f-reps') || '8-12', weight: wVal,
             targetRpe: rpeRaw ? parseFloat(rpeRaw) : null, restSeconds: Math.max(0, mnum('f-rest', 120)),
             restSecondsNext: restNextRaw ? Math.max(0, parseInt(restNextRaw, 10)) : null,
@@ -1760,6 +1770,88 @@ function doSessionSwap(ei, alt) {
   if (alt.description) e.description = alt.description;
   saveActive(); closeModal(); render();
   toast('Swapped to ' + alt.name);
+}
+/*
+ * Add a movement to the workout already in progress. Session-only by default —
+ * the checkbox is for the case where the improvised extra turns out to be part
+ * of the routine after all.
+ *
+ * The new exercise always lands at the END of the list and always carries
+ * superset: null, which is what keeps it from breaking superset adjacency: a
+ * trailing tagged group stays a contiguous run when an untagged exercise is
+ * appended after it.
+ */
+function sessionAddExerciseModal() {
+  if (!active) return;
+  const day = plan.days.find(d => d.id === active.dayId);
+  showModal('Add exercise', `
+    <p class="muted small">Logged in this session only, unless you tick the box below.</p>
+    <label class="field"><span>Name</span><input id="a-name" placeholder="e.g. Face Pull"></label>
+    <div class="row">
+      <label class="field grow"><span>Sets</span><input id="a-sets" type="number" inputmode="numeric" value="3"></label>
+      <label class="field grow"><span>Reps</span><input id="a-reps" value="8-12"></label>
+    </div>
+    <div class="row">
+      <label class="field grow"><span>Weight (${unit()})</span><input id="a-weight" type="number" inputmode="decimal" step="0.5" value="0">
+        <span class="field-hint" id="a-weight-hint">${esc(ladderHint('barbell'))}</span></label>
+      <label class="field grow"><span>Rest (sec)</span><input id="a-rest" type="number" inputmode="numeric" value="120"></label>
+    </div>
+    <label class="field"><span>Equipment</span>
+      <select id="a-equipment" data-bind="add-equipment">${EQUIPMENT_TYPES.map(t => `<option value="${t}">${EQUIPMENT_LABELS[t]}</option>`).join('')}</select>
+    </label>
+    <label class="field"><span>What the sets measure</span>
+      <select id="a-metric">
+        <option value="load" selected>Weight × reps (normal lift)</option>
+        <option value="height">Jump height in cm (one attempt per set)</option>
+      </select>
+    </label>
+    ${day ? `<label class="merge-row"><input type="checkbox" id="a-to-plan"><span class="small">Also add to <b>${esc(day.name)}</b> in my plan</span></label>` : ''}`,
+    [
+      { label: 'Add', cls: 'primary', fn: () => {
+          const name = mval('a-name');
+          if (!name) { toast('Name is required', 'err'); return; }
+          const eqVal = document.getElementById('a-equipment').value;
+          const metricVal = document.getElementById('a-metric').value;
+          const wVal = mnum('a-weight');
+          const planBox = document.getElementById('a-to-plan');
+          const toPlan = !!(day && planBox && planBox.checked);
+
+          // Exercise history, PR tracking and the aliases map are all keyed on
+          // name GLOBALLY, so two different movements sharing a name silently
+          // merge into one progression history. Same rule push-plan.mjs enforces.
+          if (active.exercises.some(x => sameExercise(x.name, name))) {
+            toast(`"${name}" is already in this session — give it a distinct name`, 'err'); return;
+          }
+          if (toPlan && plan.days.some(d => d.exercises.some(x => sameExercise(x.name, name)))) {
+            toast(`"${name}" already exists in your plan — history is keyed on name, so give it a distinct one`, 'err'); return;
+          }
+          const wErr = weightValidationError({ equipment: eqVal, barWeight: null, weight: wVal, metric: metricVal });
+          if (wErr) { toast(wErr, 'err'); return; }
+
+          const sets = Math.max(1, mnum('a-sets', 3));
+          const reps = mval('a-reps') || '8-12';
+          const rest = Math.max(0, mnum('a-rest', 120));
+          if (toPlan) {
+            day.exercises.push({ id: uid(), name, sets, reps, weight: wVal, targetRpe: null,
+              restSeconds: rest, restSecondsNext: null, equipment: eqVal, barWeight: null,
+              metric: metricVal, superset: null, description: '', notes: '', alternates: [] });
+            savePlan();
+          }
+          active.exercises.push({
+            name, planId: null, swappedFrom: null,
+            plannedSets: sets, plannedReps: reps, plannedWeight: wVal,
+            targetRpe: null, restSeconds: rest, restSecondsNext: null,
+            equipment: eqVal, barWeight: null, metric: metricVal, superset: null,
+            description: '', alternates: [], notes: '',
+            sets: metricVal === 'height'
+              ? Array.from({ length: sets }, () => ({ heightCm: null, done: false }))
+              : Array.from({ length: sets }, () => ({ weight: wVal, reps: parseRepsLow(reps), rpe: null, done: false }))
+          });
+          saveActive(); closeModal(); render();
+          toast(toPlan ? `Added ${name} — also saved to ${day.name}` : `Added ${name} for today`);
+        } },
+      { label: 'Cancel' }
+    ]);
 }
 function exInfoModal(ei) {
   const e = active.exercises[ei];
@@ -2598,6 +2690,7 @@ document.addEventListener('click', e => {
     case 'ex-info': exInfoModal(+el.dataset.ei); break;
     case 'ex-swap': sessionSwapModal(+el.dataset.ei); break;
     case 'ex-note': exNoteModal(+el.dataset.ei); break;
+    case 'session-ex-add': sessionAddExerciseModal(); break;
     case 'plate-calc': showPlateCalculator(active.exercises[+el.dataset.ei]); break;
     case 'cmj-open': cmjVideoModal(el.dataset.ei != null ? +el.dataset.ei : null); break;
     case 'session-swap-pick': {
@@ -2765,6 +2858,10 @@ document.addEventListener('change', e => {
       if (input) input.placeholder = 'default ' + resolvedBarWeight({ equipment: e.target.value, barWeight: null });
     }
     const hint = document.getElementById('f-weight-hint');
+    if (hint) hint.textContent = ladderHint(e.target.value);
+  }
+  if (bind === 'add-equipment') {
+    const hint = document.getElementById('a-weight-hint');
     if (hint) hint.textContent = ladderHint(e.target.value);
   }
 });
