@@ -1,49 +1,13 @@
 # GymTrack — bug-fix backlog
 
 Known bugs and deferred cleanups, each verified present in `main` as of the commit that added it
-here. Most came out of code review and are invisible in normal use; item 1 was hit on the phone
-and is the only one a user actually sees.
+here. All came out of code review and are invisible in normal use.
 
 Ordered by value, highest first.
 
 ---
 
-## 1. Discarding a session leaves the confirm modal on screen
-
-**Reported from the phone, 2026-07-31.** Tapping **Discard session** → **Discard** clears the
-session but leaves the confirmation modal covering the screen; the app looks stuck on the discard
-view. The home view *is* rebuilt correctly underneath — it's the overlay that never goes away.
-
-**Where:** `app.js` — the `confirm-discard` case, the `Discard` button's `fn`.
-
-**Cause:** the handler runs `active = null; saveActive(); stopRest(); syncWakeLock(); render();`
-and never calls `closeModal()`. The `modal-btn` dispatcher only auto-closes a modal when the
-button has **no** handler (`if (fn) fn(); else closeModal();`), so any button with a handler is
-responsible for closing itself. `finishSession` does; this one doesn't.
-
-It also skips `exExpanded = new Set(); readinessOpen = null;`, which `finishSession` does reset —
-so collapsed-card and readiness-panel state from the discarded session leaks into the next one.
-
-**Fix:** make the discard teardown match `finishSession`'s:
-
-```js
-fn: () => {
-  active = null; saveActive(); stopRest(); syncWakeLock();
-  exExpanded = new Set(); readinessOpen = null;
-  closeModal(); render();
-}
-```
-
-Better still, extract the shared teardown both paths need into one function so they cannot drift
-again — this is the second time these two paths have diverged (`reset-all` was missing
-`syncWakeLock()` for the same reason).
-
-**Verify:** start a session, log a set, expand/collapse a card, discard → the modal closes and the
-Workout tab shows the day list. Start another session → no card is pre-collapsed.
-
----
-
-## 2. `push-plan.mjs` can't validate a plan without the network
+## 1. `push-plan.mjs` can't validate a plan without the network
 
 **Where:** `tools/push-plan.mjs` — `main()` calls `resolveUUID()` then fetches the backup, and
 only reaches `validatePlan(newPlan, …)` afterwards. `validatePlan` is not exported.
@@ -66,7 +30,7 @@ and no `GYMTRACK_UUID` set.
 
 ---
 
-## 3. The plan editor can build supersets the validator would reject
+## 2. The plan editor can build supersets the validator would reject
 
 **Where:** `app.js` — the `f-superset` select (~line 1623) and the `ex-move` action.
 
@@ -89,7 +53,7 @@ move the whole group together or warn before splitting one.
 
 ---
 
-## 4. Swapping a jump exercise to a load alternate keeps the cm grid
+## 3. Swapping a jump exercise to a load alternate keeps the cm grid
 
 **Where:** `app.js` — the alternates sanitiser (~line 556) keeps `name`, `weight`, `description`,
 `equipment`, `barWeight`. There is no `metric`.
@@ -103,31 +67,6 @@ carry alternates — but the data it produces is wrong, not just ugly.
 as `equipment`), carry it through the sanitiser and both swap paths, and rebuild the set rows when
 the metric changes. Decide what happens to already-logged sets on that exercise — probably refuse
 the swap once any set is done, rather than silently discarding them.
-
----
-
-## 5. `exInfoModal` shows "@ 0kg · RPE" for a jump exercise
-
-**Where:** `app.js` — `exInfoModal`, the `Target:` line.
-
-The line is built unconditionally as `plannedSets × plannedReps @ plannedWeight`, so tapping
-**Explain** on a jump exercise reads `Target: 3×1 @ 0kg`. Cosmetic — every other jump surface
-(card, history, collapsed summary, "Last:") already branches on the metric; this one was missed.
-
-**Fix:** branch on `isJump(e)` and show `3 attempts` instead.
-
----
-
-## 6. Dead branch in `adjustRest`
-
-**Where:** `app.js` — `adjustRest(delta)`, the `if (remain > 0)` guard.
-
-`adjustRest` is only ever called from `rest-add` with `delta = 15`, so remaining time can never go
-to zero or below and the else-path is unreachable. Harmless, but it reads as though a "−15s"
-control exists somewhere.
-
-**Fix:** either add the "−15s" control the branch implies, or drop the branch. Prefer adding the
-control — shortening a rest is a real thing to want mid-session.
 
 ---
 

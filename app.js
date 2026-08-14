@@ -439,10 +439,16 @@ function startRest(seconds, label) {
 }
 function adjustRest(delta) {
   if (!rest) return;
-  rest.endsAt += delta * 1000;
+  // Shortening must not push endsAt into the past. The tick loop auto-dismisses a
+  // rest 30s after it ends, so an un-clamped −15s on a nearly-finished rest could
+  // skip the "Rest over — GO!" state entirely. Clamping lands it exactly on zero.
+  rest.endsAt = Math.max(Date.now(), rest.endsAt + delta * 1000);
   rest.total = Math.max(rest.total + delta, 1);
   const remain = (rest.endsAt - Date.now()) / 1000;
-  if (remain > 0) { rest.fired = false; rest.cueFired = false; scheduleCue(remain); }
+  rest.fired = false; rest.cueFired = false;
+  // Past zero there is nothing left to schedule — drop the outgoing oscillator and
+  // let the tick loop deliver the cue on its next pass instead.
+  if (remain > 0) scheduleCue(remain); else cancelCue();
   saveRest(); renderRest();
 }
 function stopRest() { cancelCue(); rest = null; saveRest(); renderRest(); }
@@ -460,6 +466,7 @@ function renderRest() {
         <div class="muted small">${over ? 'Rest over — GO! 🔥' : esc(rest.label)}</div>
         <div class="rest-time ${over ? 'green' : ''}">${over ? '0:00' : fmtClock(remain)}</div>
       </div>
+      ${over ? '' : '<button class="icon-btn" data-action="rest-sub">−15s</button>'}
       <button class="icon-btn" data-action="rest-add">+15s</button>
       <button class="icon-btn ${over ? 'success' : ''}" data-action="rest-skip">${over ? 'OK' : 'Skip'}</button>
     </div>
@@ -667,6 +674,16 @@ function parseRepsLow(reps) {
   const m = String(reps).match(/\d+/);
   return m ? parseInt(m[0], 10) : 8;
 }
+// Everything that must be reset when the active session goes away, whichever way
+// it goes away (saved, discarded, or wiped by reset-all). Extracted because these
+// three paths drifted three separate times: discard forgot closeModal() and left
+// its own confirm sheet covering the screen, discard and reset-all both forgot
+// exExpanded/readinessOpen so collapsed-card state leaked into the next session,
+// and reset-all forgot syncWakeLock(). Callers still own closeModal()/render().
+function endSession() {
+  active = null; saveActive(); stopRest(); syncWakeLock();
+  exExpanded = new Set(); readinessOpen = null;
+}
 function finishSession() {
   if (!active) return;
   const durationMin = Math.max(1, Math.round((Date.now() - active.startedAt) / 60000));
@@ -688,15 +705,17 @@ function finishSession() {
   if (rd.cmjCm != null || rd.broadJumpCm != null || rd.subjectiveEnergy != null) record.readiness = rd;
   const prs = detectPRs(record);
   sessions.push(record); saveSessions();
-  active = null; saveActive(); stopRest(); syncWakeLock();
-  exExpanded = new Set(); readinessOpen = null;
+  endSession();
   closeModal(); render();
   const setCount = record.exercises.reduce((n, e) => n + e.sets.length, 0);
   let html = `<p>Saved <b>${esc(record.dayName)}</b> — ${setCount} sets in ${fmtDur(durationMin)}.</p>`;
   if (prs.length) html += `<p class="mt8">🏆 New PRs: ${prs.map(p => `<span class="pr-badge">${esc(p)}</span>`).join(' ')}</p>`;
   const syncing = settings.autoSync;
   html += `<p class="muted small mt8">${syncing ? '☁️ Syncing to the cloud for your AI coach…' : 'Head to the AI Coach tab to export this for your next plan update.'}</p>`;
-  showModal('Workout complete 🎉', html);
+  // Explicit action rather than the implicit "Close" default: the way out of this
+  // sheet should be obvious, and it lands you back on the day list.
+  showModal('Workout complete 🎉', html, [{ label: 'Done', cls: 'primary',
+    fn: () => { closeModal(); tab = 'workout'; render(); window.scrollTo(0, 0); } }]);
   beep(2, 1100);
   if (syncing) workerPush({ silent: true }); // push the finished session right away
 }
@@ -1737,8 +1756,13 @@ function doSessionSwap(ei, alt) {
 function exInfoModal(ei) {
   const e = active.exercises[ei];
   const desc = e.description || lookupExplanation(e.name) || 'No description available — ask your AI coach to include a "description" for each exercise in your next plan.';
+  // A jump has no load or rep target — every other jump surface already branches
+  // on the metric, so building this line unconditionally read "Target: 3×1 @ 0kg".
+  const target = isJump(e)
+    ? `${e.plannedSets} attempt${e.plannedSets === 1 ? '' : 's'}`
+    : `${e.plannedSets}×${esc(e.plannedReps)} @ ${e.plannedWeight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''}`;
   showModal(e.name, `<p>${esc(desc)}</p>
-    <p class="muted small mt12">Target: ${e.plannedSets}×${esc(e.plannedReps)} @ ${e.plannedWeight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''}</p>`);
+    <p class="muted small mt12">Target: ${target}</p>`);
 }
 function showPlateCalculator(e) {
   const isLb = unit() === 'lb';
@@ -2429,6 +2453,7 @@ document.addEventListener('click', e => {
 
     /* rest timer */
     case 'rest-add': adjustRest(15); break;
+    case 'rest-sub': adjustRest(-15); break;
     case 'rest-skip': stopRest(); break;
 
     /* session lifecycle */
@@ -2441,7 +2466,11 @@ document.addEventListener('click', e => {
     }
     case 'confirm-discard':
       showModal('Discard session?', '<p>All logged sets from this session will be lost.</p>',
-        [{ label: 'Discard', cls: 'danger', fn: () => { active = null; saveActive(); stopRest(); syncWakeLock(); render(); } }, { label: 'Keep going' }]);
+        [{ label: 'Discard', cls: 'danger', fn: () => {
+            // A button WITH a handler owns closing its own modal — the modal-btn
+            // dispatcher only auto-closes handler-less buttons.
+            endSession(); closeModal(); render(); toast('Session discarded');
+          } }, { label: 'Keep going' }]);
       break;
 
     /* set logging */
@@ -2611,10 +2640,11 @@ document.addEventListener('click', e => {
     case 'reset-all':
       showModal('Reset everything?', '<p>Deletes your plan, all sessions, body weight log and settings from this device. Consider copying a backup first.</p>',
         [{ label: 'Reset', cls: 'danger', fn: () => {
+            endSession(); // clears `active` and its UI state, stops rest, releases the wake lock
             ['plan', 'sessions', 'active', 'bw', 'settings', 'updatedAt'].forEach(k => store.del(k));
-            plan = defaultPlan(); sessions = []; active = null; bodyWeight = []; dataUpdatedAt = 0;
+            plan = defaultPlan(); sessions = []; bodyWeight = []; dataUpdatedAt = 0;
             settings = { unit: 'kg', sound: true, vibrate: true, autoSync: true };
-            stopRest(); syncWakeLock(); render(); toast('Fresh start');
+            closeModal(); render(); toast('Fresh start');
           } }, { label: 'Cancel' }]);
       break;
   }
