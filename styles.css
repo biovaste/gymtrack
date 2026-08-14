@@ -109,6 +109,7 @@ label.field > span { display: block; margin-bottom: 5px; }
 .last-line { color: var(--green); font-size: 13px; margin-top: 2px; opacity: .85; }
 .collapsed-ex { padding: 11px 14px; }
 .collapsed-ex:active { background: var(--card2); }
+.collapsed-note { margin-top: 4px; display: flex; align-items: center; gap: 5px; opacity: .9; }
 
 /* ----- supersets ----- */
 .superset-card { padding: 12px 14px; }

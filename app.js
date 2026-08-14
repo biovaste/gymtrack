@@ -31,6 +31,7 @@ const ICONS = {
   back: '<path d="M15 18l-6-6 6-6"/>',
   chevRight: '<path d="M9 18l6-6-6-6"/>',
   chevDown: '<path d="M6 9l6 6 6-6"/>',
+  chevUp: '<path d="M6 15l6-6 6 6"/>',
   video: '<rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="M15.5 11l6-3.5v9l-6-3.5"/>',
   copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>'
@@ -1174,7 +1175,7 @@ function supersetCard(group) {
   const key = 'ss:' + group.tag;
   if (complete && !exExpanded.has(key)) {
     return `
-    <div class="card collapsed-ex tappable" data-action="ex-expand" data-key="${esc(key)}">
+    <div class="card collapsed-ex tappable" data-action="ex-toggle" data-key="${esc(key)}">
       <div class="row between">
         <div class="grow"><span class="green bold">✓</span> <span class="bold">Superset ${esc(group.tag)}</span>
           <span class="muted small">· ${group.idx.map(j => esc(list[j].name)).join(' + ')}</span></div>
@@ -1188,6 +1189,7 @@ function supersetCard(group) {
     <div class="superset-head row between">
       <span class="bold">Superset ${esc(group.tag)}</span>
       <span class="muted small">${complete ? 'complete' : `round ${Math.min(doneRounds + 1, rounds)} of ${rounds}`}</span>
+      ${complete ? `<button class="icon-btn" data-action="ex-toggle" data-key="${esc(key)}" title="Collapse">${icon('chevUp', 18)}</button>` : ''}
     </div>
     ${group.idx.map(j => `<div class="superset-member${slot && slot.ei === j ? ' ss-next' : ''}">${exerciseCard(list[j], j, { inGroup: true })}</div>`).join('')}
   </div>`;
@@ -1206,11 +1208,16 @@ function exerciseCard(e, ei, opts) {
       const best = e.sets.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
       summary = `${e.sets.length} sets · best ${best.weight}×${best.reps}`;
     }
+    // The note button carries its own data-action, and the delegated listener
+    // resolves via closest('[data-action]'), so it wins over the row's expand
+    // handler — the note is reachable without expanding the card back open.
     return `
-    <div class="card collapsed-ex tappable" data-action="ex-expand" data-ei="${ei}">
+    <div class="card collapsed-ex tappable" data-action="ex-toggle" data-ei="${ei}">
       <div class="row between">
         <div class="grow"><span class="green bold">✓</span> <span class="bold">${esc(e.name)}</span>
-          <span class="muted small">· ${esc(summary)}</span></div>
+          <span class="muted small">· ${esc(summary)}</span>
+          ${e.notes ? `<div class="small amber collapsed-note">${icon('note', 13)} ${esc(e.notes.slice(0, 60))}${e.notes.length > 60 ? '…' : ''}</div>` : ''}</div>
+        <button class="icon-btn" data-action="ex-note" data-ei="${ei}" title="Note">${icon('note', 16)}</button>
         <span class="chev">${icon('chevDown', 18)}</span>
       </div>
     </div>`;
@@ -1231,6 +1238,7 @@ function exerciseCard(e, ei, opts) {
       <button class="icon-btn" data-action="ex-info" data-ei="${ei}" title="Explain">${icon('info', 18)}</button>
       ${!isJump(e) && PLATE_EQUIPMENT.has(e.equipment || 'barbell') ? `<button class="icon-btn" data-action="plate-calc" data-ei="${ei}" title="Plate calculator">${icon('plate', 18)}</button>` : ''}
       <button class="icon-btn" data-action="ex-swap" data-ei="${ei}" title="Swap">${icon('swap', 18)}</button>
+      ${allDone && !inGroup ? `<button class="icon-btn" data-action="ex-toggle" data-ei="${ei}" title="Collapse">${icon('chevUp', 18)}</button>` : ''}
     </div>
     ${isJump(e) ? `
     <div class="set-grid jump">
@@ -2538,7 +2546,14 @@ document.addEventListener('click', e => {
       else { saveActive(); render(); }
       break;
     }
-    case 'ex-expand': exExpanded.add(el.dataset.key != null ? el.dataset.key : +el.dataset.ei); render(); break;
+    case 'ex-toggle': {
+      // Keys are dual-typed on purpose: a plain exercise is keyed by index, a
+      // superset by 'ss:'+tag, because the whole group collapses as a unit.
+      const k = el.dataset.key != null ? el.dataset.key : +el.dataset.ei;
+      if (exExpanded.has(k)) exExpanded.delete(k); else exExpanded.add(k);
+      render();
+      break;
+    }
     case 'readiness-toggle': {
       const r = active.readiness || {};
       const hasReadiness = r.cmjCm != null || r.broadJumpCm != null || r.subjectiveEnergy != null;
