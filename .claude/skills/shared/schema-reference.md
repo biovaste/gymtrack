@@ -201,7 +201,9 @@ Rest inside a group uses the existing fields, with no additions: each member's o
 
 ### 4. Alternates carry their own equipment
 
-An `alternate` may set `equipment` and `barWeight`; omitting them means "same as the parent". **Set them whenever the alternate differs from the parent** — a dumbbell alternate under a barbell exercise, say. When absent, `push-plan.mjs` falls back to guessing the equipment from the exercise name and downgrades the weight check to a warning, so an unloadable alternate weight can slip through.
+An `alternate` may set `equipment`, `barWeight` and `metric`; omitting any of them means "same as the parent". **Set them whenever the alternate differs from the parent** — a dumbbell alternate under a barbell exercise, say. When `equipment` is absent, `push-plan.mjs` falls back to guessing it from the exercise name and downgrades the weight check to a warning, so an unloadable alternate weight can slip through.
+
+`metric` matters most under a jump: an alternate under a `height` exercise inherits `height`, so a loaded alternate must declare `"metric": "load"` explicitly or it is rejected as a jump carrying weight. In the app, swapping across a metric change rebuilds the set rows, and is **refused once any set on that exercise is logged** rather than discarding them.
 
 ---
 

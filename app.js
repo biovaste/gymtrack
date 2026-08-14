@@ -587,7 +587,11 @@ function normalizePlan(raw) {
               // Omitted equipment means "same as the parent" — keep it absent rather than
               // defaulting to barbell, so a swap inherits instead of silently relabelling.
               equipment: EQUIPMENT_TYPES.includes(a.equipment) ? a.equipment : null,
-              barWeight: a.barWeight != null && a.barWeight !== '' ? parseFloat(a.barWeight) : null
+              barWeight: a.barWeight != null && a.barWeight !== '' ? parseFloat(a.barWeight) : null,
+              // Same inherit-when-omitted rule as equipment. Without this, swapping a
+              // jump exercise for a loaded alternate left the exercise on metric
+              // 'height' — a "# | cm | ✓" grid with nowhere to put weight or reps.
+              metric: EXERCISE_METRICS.includes(a.metric) ? a.metric : null
             })) : []
           };
         })
@@ -640,10 +644,28 @@ function supersetGroups(list) {
   }
   return out;
 }
+// How many separate adjacent runs each tag forms. MIRRORS the check in
+// tools/push-plan.mjs — used to refuse an edit that would split a group, since
+// push-plan only sees a plan on its way out and the phone edits it in place.
+function supersetRunCounts(list) {
+  const runs = new Map();
+  let prev = null;
+  for (const e of list) {
+    const tag = e.superset || null;
+    if (tag && tag !== prev) runs.set(tag, (runs.get(tag) || 0) + 1);
+    prev = tag;
+  }
+  return runs;
+}
 function groupOf(list, ei) {
   const g = supersetGroups(list).find(x => x.idx.includes(ei));
-  return g && g.tag ? g : null;
+  // A one-member "group" is not a superset. Treating it as one wraps a single
+  // exercise in a superset card and routes it through the round-robin rest
+  // logic for a round it is the only member of — so the whole superset path
+  // stays off until there are actually two members to alternate between.
+  return g && g.tag && g.idx.length > 1 ? g : null;
 }
+const isRealGroup = g => !!(g.tag && g.idx.length > 1);
 // The next member owing set `si`, scanning after `ei` then wrapping to the start.
 // Unequal set counts just skip members that have no set at that round.
 function nextInRound(list, group, ei, si) {
@@ -1235,7 +1257,7 @@ function viewActiveSession() {
       </div>
     </div>`}
     ${warmupCard()}
-    ${supersetGroups(active.exercises).map(g => g.tag
+    ${supersetGroups(active.exercises).map(g => isRealGroup(g)
       ? supersetCard(g)
       : exerciseCard(active.exercises[g.idx[0]], g.idx[0])).join('')}
     <button class="ghost wide mt8" data-action="session-ex-add">+ Add exercise</button>
@@ -1410,7 +1432,14 @@ function viewPlan() {
           <span class="day-pill">${d.exercises.length} exercise${d.exercises.length === 1 ? '' : 's'}</span>
           <span class="chev">${icon(open ? 'chevDown' : 'chevRight', 16)}</span>
         </div>
-        ${open ? `
+        ${open ? (() => {
+          // ↑↓ move whole superset groups, so they disable at GROUP boundaries:
+          // every member of the first group has ↑ disabled, not just the first
+          // exercise in the day.
+          const groups = supersetGroups(d.exercises);
+          const groupOfIdx = new Map();
+          groups.forEach((g, gi) => g.idx.forEach(x => groupOfIdx.set(x, gi)));
+          return `
           <div class="divider"></div>
           ${d.exercises.map((e, i) => `
             <div class="row between" style="padding:9px 0">
@@ -1418,15 +1447,16 @@ function viewPlan() {
                 <div class="bold">${esc(e.name)}${e.superset ? ` <span class="day-pill">SS ${esc(e.superset)}</span>` : ''}</div>
                 <div class="muted small">${e.warmupSets ? `${e.warmupSets}w + ` : ''}${e.sets}×${esc(e.reps)} @ ${e.weight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''} · rest ${fmtClock(e.restSeconds)}${e.alternates.length ? ' · ' + e.alternates.length + ' alt' : ''} ${equipChip(e)}</div>
               </div>
-              <button class="icon-btn" data-action="ex-move" data-day="${d.id}" data-i="${i}" data-dir="-1" ${i === 0 ? 'disabled' : ''}>↑</button>
-              <button class="icon-btn" data-action="ex-move" data-day="${d.id}" data-i="${i}" data-dir="1" ${i === d.exercises.length - 1 ? 'disabled' : ''}>↓</button>
+              <button class="icon-btn" data-action="ex-move" data-day="${d.id}" data-i="${i}" data-dir="-1" ${groupOfIdx.get(i) === 0 ? 'disabled' : ''}>↑</button>
+              <button class="icon-btn" data-action="ex-move" data-day="${d.id}" data-i="${i}" data-dir="1" ${groupOfIdx.get(i) === groups.length - 1 ? 'disabled' : ''}>↓</button>
             </div>`).join('')}
           <div class="row mt8">
             <button class="ghost icon-btn" data-action="ex-add" data-day="${d.id}">+ Exercise</button>
             <button class="ghost icon-btn" data-action="day-warmup" data-id="${d.id}">Warm-up${(d.warmup || []).length ? ` (${d.warmup.length})` : ''}</button>
             <button class="ghost icon-btn" data-action="day-rename" data-id="${d.id}">Rename</button>
             <button class="ghost icon-btn red" data-action="day-delete" data-id="${d.id}">Delete</button>
-          </div>` : ''}
+          </div>`;
+        })() : ''}
       </div>`;
     }).join('')}
     <button class="wide mt8" data-action="day-add">+ Add day</button>
@@ -1829,6 +1859,19 @@ function exEditModal(dayId, i) {
           const wVal = mnum('f-weight');
           const wErr = weightValidationError({ equipment: eqVal, barWeight: barVal, weight: wVal, metric: metricVal });
           if (wErr) { toast(wErr, 'err'); return; }
+          // A tag must form ONE adjacent run. Split across the day it renders as
+          // two cards with independent rest cycles, both headed "Superset A" and
+          // sharing a collapse key. push-plan.mjs refuses this on push; without
+          // the same check here it can still be built by editing on the phone.
+          const ssVal = document.getElementById('f-superset').value || null;
+          if (ssVal) {
+            const sim = day.exercises.map((x, xi) => ({ superset: xi === i ? ssVal : (x.superset || null) }));
+            if (i == null) sim.push({ superset: ssVal });
+            if ((supersetRunCounts(sim).get(ssVal) || 0) > 1) {
+              toast(`Superset ${ssVal} would be split across the day — move its members next to each other with the ↑↓ buttons first`, 'err');
+              return;
+            }
+          }
           const warmN = Math.max(0, mnum('f-warmupsets', 0));
           if (metricVal === 'height' && warmN) {
             toast('A jump exercise has no load to ramp — mark a warm-up attempt by tapping its row number during the session', 'err');
@@ -1840,7 +1883,7 @@ function exEditModal(dayId, i) {
             equipment: eqVal,
             barWeight: barVal,
             metric: metricVal,
-            superset: document.getElementById('f-superset').value || null,
+            superset: ssVal,
             description: mval('f-desc') };
           if (i != null) Object.assign(day.exercises[i], upd);
           else day.exercises.push(Object.assign({ id: uid(), notes: '', alternates: [] }, upd));
@@ -1886,11 +1929,16 @@ function doPlanSwap(dayId, i, ai) {
   // equipment type, which then changes the ladder the weight is checked against.
   const newAlts = e.alternates.filter((_, x) => x !== ai);
   newAlts.unshift({ name: e.name, weight: e.weight, description: e.description,
-    equipment: e.equipment, barWeight: e.barWeight });
+    equipment: e.equipment, barWeight: e.barWeight, metric: e.metric || 'load' });
+  const newMetric = a.metric || e.metric || 'load';
   Object.assign(e, {
     name: a.name, weight: a.weight || e.weight, description: a.description || '',
     equipment: a.equipment || e.equipment,
     barWeight: a.equipment ? a.barWeight : e.barWeight,
+    metric: newMetric,
+    // A jump prescribes no load; a lift needs one. Carrying the old value across
+    // a metric change would produce a plan the validator rejects on next push.
+    ...(newMetric === 'height' ? { weight: 0 } : {}),
     alternates: newAlts
   });
   savePlan(); closeModal(); render();
@@ -1922,11 +1970,28 @@ function sessionSwapModal(ei) {
 }
 function doSessionSwap(ei, alt) {
   const e = active.exercises[ei];
+  const newMetric = alt.metric || e.metric || 'load';
+  const metricChanged = newMetric !== (e.metric || 'load');
+  // The two metrics log different shapes — kg × reps per row vs one height per
+  // row — so a change has to rebuild the grid. Refuse once anything is logged
+  // rather than silently discarding sets the athlete actually did.
+  if (metricChanged && e.sets.some(s => s.done)) {
+    toast(`${alt.name} is logged as ${newMetric === 'height' ? 'jump height' : 'weight × reps'} — swap it before logging sets, not after`, 'err');
+    return;
+  }
   const original = e.swappedFrom || e.name;
   e.swappedFrom = original === alt.name ? null : original;
   e.name = alt.name;
   if (alt.equipment) { e.equipment = alt.equipment; e.barWeight = alt.barWeight != null ? alt.barWeight : null; }
-  if (alt.weight) e.sets.forEach(s => { if (!s.done) s.weight = alt.weight; });
+  if (metricChanged) {
+    e.metric = newMetric;
+    const n = e.sets.length;
+    e.sets = newMetric === 'height'
+      ? Array.from({ length: n }, () => ({ heightCm: null, done: false }))
+      : Array.from({ length: n }, () => ({ weight: alt.weight || 0, reps: parseRepsLow(e.plannedReps), rpe: e.targetRpe, done: false }));
+  } else if (alt.weight) {
+    e.sets.forEach(s => { if (!s.done) s.weight = alt.weight; });
+  }
   if (alt.description) e.description = alt.description;
   saveActive(); closeModal(); render();
   toast('Swapped to ' + alt.name);
@@ -2890,10 +2955,19 @@ document.addEventListener('click', e => {
     case 'ex-move': {
       const day = plan.days.find(d => d.id === el.dataset.day);
       if (!day) break;
-      const i = +el.dataset.i, j = i + (+el.dataset.dir);
-      if (j < 0 || j >= day.exercises.length) break;
-      const ex = day.exercises.splice(i, 1)[0];
-      day.exercises.splice(j, 0, ex);
+      // Moves operate on GROUPS, not individual exercises. Sliding one member out
+      // of the middle of a superset silently splits it into two cards with
+      // independent rest cycles — the exact state push-plan.mjs refuses to push.
+      // Since supersetGroups partitions the list into contiguous runs, swapping
+      // two neighbouring groups is a single splice.
+      const groups = supersetGroups(day.exercises);
+      const gi = groups.findIndex(g => g.idx.includes(+el.dataset.i));
+      const ti = gi + (+el.dataset.dir);
+      if (gi === -1 || ti < 0 || ti >= groups.length) break;
+      const a = groups[Math.min(gi, ti)], b = groups[Math.max(gi, ti)];
+      const aEx = a.idx.map(x => day.exercises[x]);
+      const bEx = b.idx.map(x => day.exercises[x]);
+      day.exercises.splice(a.idx[0], a.idx.length + b.idx.length, ...bEx, ...aEx);
       savePlan(); render();
       break;
     }

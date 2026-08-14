@@ -93,6 +93,12 @@ set GYMTRACK_UUID=<your-uuid>
 node tools/push-plan.mjs path/to/plan.json      # or pipe the JSON via stdin
 ```
 
+To check a plan without sending it anywhere — no UUID, no network:
+
+```bash
+node tools/push-plan.mjs --check path/to/plan.json
+```
+
 The script does a safe read-modify-write — only the plan changes, your logged sessions
 and body weight are kept — and bumps the sync timestamp so the app pulls it on launch.
 

@@ -19,6 +19,7 @@
  * Usage:
  *   node tools/push-plan.mjs path/to/plan.json          # plan from a file
  *   node tools/push-plan.mjs --uuid <uuid> plan.json    # explicit UUID
+ *   node tools/push-plan.mjs --check plan.json          # validate only — no UUID, no network
  *   echo '<workout-plan json>' | node tools/push-plan.mjs   # or via stdin
  */
 import { readFileSync } from 'node:fs';
@@ -164,7 +165,7 @@ function guessAlternateEquipment(name, parentEquipment) {
  *      movements' loads into one progression history.
  *   2. Weights that cannot be loaded on the actual equipment.
  */
-function validatePlan(plan, { unit = 'kg' } = {}) {
+export function validatePlan(plan, { unit = 'kg' } = {}) {
   const errors = [], warnings = [];
 
   const seen = new Map();
@@ -220,6 +221,11 @@ function validatePlan(plan, { unit = 'kg' } = {}) {
       if (e.metric === 'height' && e.weight) {
         errors.push(`${day.name} → ${e.name}: a height-metric exercise must have weight 0 — box height goes in "description".`);
       }
+      for (const a of e.alternates || []) {
+        if (a.metric != null && a.metric !== 'load' && a.metric !== 'height') {
+          errors.push(`${day.name} → ${e.name} → alternate "${a.name}": metric "${a.metric}" is not one of "load", "height".`);
+        }
+      }
       if (e.warmupSets != null) {
         const n = Number(e.warmupSets);
         if (!Number.isInteger(n) || n < 0) {
@@ -268,6 +274,21 @@ function validatePlan(plan, { unit = 'kg' } = {}) {
         // same as a main exercise. Only an alternate that omits it falls back to the
         // name-based guess, which stays a warning because it is inference.
         for (const a of e.alternates || []) {
+          // An alternate inherits `metric` when it omits one, same rule as
+          // `equipment`. So a loaded alternate sitting under a jump is not
+          // exempt from checking — it is either mislabelled (needs its own
+          // "metric": "load") or it genuinely shouldn't carry weight. Skipping
+          // the whole exercise here is what let a 22.5 kg dumbbell alternate
+          // ride in under a Box Jump unnoticed.
+          if ((a.metric != null ? a.metric : e.metric) === 'height') {
+            if (a.weight) {
+              errors.push(
+                `${day.name} → ${e.name} → alternate "${a.name}": ${a.weight} kg on a height-metric alternate. ` +
+                'Add "metric": "load" to it if it is a lift, otherwise set weight 0.'
+              );
+            }
+            continue;
+          }
           if (!a.weight) continue; // 0 = bodyweight/interval alternate
           if (a.equipment) {
             const ap = weightProblem(a.equipment, a.weight, a.barWeight);
@@ -284,11 +305,14 @@ function validatePlan(plan, { unit = 'kg' } = {}) {
   return { errors, warnings };
 }
 
+const FLAGS = new Set(['--check', '--force']);
 function readNewPlan() {
-  // Skip --uuid <val> pair; the first remaining arg is the plan file (or read stdin).
+  // Skip --uuid <val> pair and bare flags; the first remaining arg is the plan
+  // file (or read stdin).
   let fileArg = null;
   for (let i = 2; i < process.argv.length; i++) {
     if (process.argv[i] === '--uuid') { i++; continue; }
+    if (FLAGS.has(process.argv[i])) continue;
     fileArg = process.argv[i]; break;
   }
   let raw = fileArg ? readFileSync(fileArg, 'utf8') : readFileSync(0, 'utf8');
@@ -299,7 +323,33 @@ function readNewPlan() {
   return plan;
 }
 
+function reportProblems(errors, warnings) {
+  for (const w of warnings) console.warn('⚠ ' + w);
+  if (errors.length) {
+    console.error(`✗ ${errors.length} problem(s):`);
+    for (const e of errors) console.error('  • ' + e);
+  }
+}
+
+/*
+ * --check validates and exits, touching neither resolveUUID() nor the network.
+ * Without it the only way to test a plan was to push it for real, so every agent
+ * that has worked on this file wrote its own throwaway copy of the validator to
+ * reach the same function. It also makes validatePlan unit-testable — see
+ * tools/validate.test.mjs.
+ */
+function checkOnly() {
+  const newPlan = readNewPlan();
+  const { errors, warnings } = validatePlan(newPlan, { unit: 'kg' });
+  reportProblems(errors, warnings);
+  if (errors.length) { process.exitCode = 1; return; }
+  const exercises = newPlan.days.reduce((n, d) => n + (d.exercises || []).length, 0);
+  console.log(`✓ "${newPlan.name || '(unnamed)'}" looks valid — ${newPlan.days.length} day(s), ${exercises} exercise(s)${
+    warnings.length ? `, ${warnings.length} warning(s)` : ''}. Nothing was pushed.`);
+}
+
 async function main() {
+  if (process.argv.includes('--check')) { checkOnly(); return; }
   const uuid = resolveUUID();
   const newPlan = readNewPlan();
 
@@ -318,10 +368,9 @@ async function main() {
   }
 
   const { errors, warnings } = validatePlan(newPlan, { unit: backup.settings?.unit || 'kg' });
-  for (const w of warnings) console.warn('⚠ ' + w);
+  reportProblems(errors, warnings);
   if (errors.length) {
-    console.error(`✗ Plan not pushed — ${errors.length} problem(s):`);
-    for (const e of errors) console.error('  • ' + e);
+    console.error('  Plan not pushed.');
     if (!process.argv.includes('--force')) {
       console.error('  Fix these, or re-run with --force if the plan is genuinely right.');
       process.exitCode = 1;

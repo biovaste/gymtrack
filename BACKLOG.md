@@ -1,72 +1,21 @@
 # GymTrack — bug-fix backlog
 
 Known bugs and deferred cleanups, each verified present in `main` as of the commit that added it
-here. All came out of code review and are invisible in normal use.
+here.
 
-Ordered by value, highest first.
+**Empty as of 2026-08-14.** All six items in the previous list have been fixed:
 
----
+| # | What it was | Fixed by |
+|---|---|---|
+| 1 | Discarding a session left the confirm modal on screen | `endSession()` — one teardown for save/discard/reset |
+| 2 | `push-plan.mjs` couldn't validate a plan without the network | `validatePlan` exported, `--check` flag, `tools/validate.test.mjs` |
+| 3 | The plan editor could build supersets the validator rejects | Adjacency check on save; ↑↓ move whole groups; a one-member group renders as a normal card |
+| 4 | Swapping a jump exercise to a load alternate kept the cm grid | `metric` on alternates (inherit when omitted); a metric-changing swap rebuilds the rows and is refused once sets are logged |
+| 5 | `exInfoModal` showed "@ 0kg · RPE" for a jump | Branches on `isJump` — "Target: 3 attempts" |
+| 6 | Dead branch in `adjustRest` | Added the −15s control it implied, with `endsAt` clamped to now |
 
-## 1. `push-plan.mjs` can't validate a plan without the network
-
-**Where:** `tools/push-plan.mjs` — `main()` calls `resolveUUID()` then fetches the backup, and
-only reaches `validatePlan(newPlan, …)` afterwards. `validatePlan` is not exported.
-
-**Why it matters:** there is no way to check a plan before pushing it. Anyone writing a plan has
-to either push it for real or hand-roll a copy of the module to reach the validator. Three
-separate agents did exactly that during the equipment/supersets/jumps work, each writing a
-throwaway script to test the same function. It also means the validator can't be unit-tested,
-so the duplicate-name, loadable-weight, superset-adjacency and metric checks have no coverage
-of their own — only the ladder underneath them does.
-
-**Fix:** export `validatePlan`, and add a `--check` flag that reads the plan, validates, prints
-the result and exits without touching `resolveUUID` or the network. Roughly ten lines. Then add
-validator cases to `tools/weights.test.mjs` (or a sibling `tools/validate.test.mjs`): duplicate
-names, a split superset run, an unloadable weight per equipment type, a height exercise carrying
-a weight.
-
-**Verify:** `node tools/push-plan.mjs --check <plan.json>` reports problems with no network access
-and no `GYMTRACK_UUID` set.
-
----
-
-## 2. The plan editor can build supersets the validator would reject
-
-**Where:** `app.js` — the `f-superset` select (~line 1623) and the `ex-move` action.
-
-Three related gaps, all in-app only. `tools/push-plan.mjs` catches the first on push; the editor
-does not catch any of them at the point of editing:
-
-- Tagging two **non-adjacent** exercises with the same letter renders them as two separate cards,
-  both headed "Superset A", each with its own rest cycle. They also share a collapse key
-  (`'ss:' + tag`), so collapsing one collapses both.
-- A group of **one member** is allowed, producing a superset card wrapping a single exercise.
-- **`ex-move`** can move an exercise into or out of the middle of a group, silently splitting or
-  merging it, with no warning.
-
-**Why it matters:** low, because plans normally arrive via `push-plan.mjs`, which refuses a split
-run. This only bites when editing on the phone.
-
-**Fix:** validate on save in `exEditModal` — refuse a tag that would create a non-adjacent run and
-say why. Either reject a one-member group or render it as a normal exercise. For `ex-move`, either
-move the whole group together or warn before splitting one.
-
----
-
-## 3. Swapping a jump exercise to a load alternate keeps the cm grid
-
-**Where:** `app.js` — the alternates sanitiser (~line 556) keeps `name`, `weight`, `description`,
-`equipment`, `barWeight`. There is no `metric`.
-
-**Why it matters:** `doSessionSwap` copies the alternate's equipment onto the live exercise but
-has no metric to copy, so `e.metric` stays `'height'`. Swapping Box Jump for a loaded alternate
-leaves a `# | cm | ✓` grid with nowhere to record weight or reps. Rare — jump exercises rarely
-carry alternates — but the data it produces is wrong, not just ugly.
-
-**Fix:** add optional `metric` to the alternate schema (omitted = inherit the parent's, same rule
-as `equipment`), carry it through the sanitiser and both swap paths, and rebuild the set rows when
-the metric changes. Decide what happens to already-logged sets on that exercise — probably refuse
-the swap once any set is done, rather than silently discarding them.
+Add new items here as they're found. Keep them ordered by value, highest first, and say where the
+bug is and what it costs — not just what to change.
 
 ---
 
@@ -85,3 +34,5 @@ the swap once any set is done, rather than silently discarding them.
   AI: a `barbell` label on a sub-20 kg weight is almost certainly an undeclared dumbbell or cable.
 - **`lb` mode has no ladder.** The stepper falls back to a flat 2.5 and loadability is not
   validated. Kg-only is fine for the current user.
+- **The session progress bar counts warm-up sets** while every statistic excludes them. Deliberate:
+  the bar answers "how far through this session am I", and a warm-up set is work you did.
