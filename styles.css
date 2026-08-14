@@ -178,6 +178,17 @@ label.field > span { display: block; margin-bottom: 5px; }
 .set-grid .head { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); text-align: center; }
 .set-grid input { text-align: center; padding: 9px 4px; }
 .set-no { text-align: center; color: var(--muted); font-weight: 600; }
+/* The row number doubles as the warm-up toggle, so it has to look tappable
+   without competing with the ✓ button for attention. */
+.set-no-btn {
+  padding: 0; height: 42px; background: none; border: 0;
+  color: var(--muted); font-weight: 600; font-size: 14px;
+}
+.set-no-btn:active { background: var(--card2); border-radius: 8px; }
+.set-no-btn.warm { color: var(--amber); }
+.set-grid input.warm-i { opacity: .62; }
+.warmup-set { opacity: .55; }
+.warmup-done { text-decoration: line-through; opacity: .5; }
 .set-done-btn {
   height: 42px; border-radius: 10px; font-size: 17px; padding: 0;
   display: flex; align-items: center; justify-content: center;

@@ -137,7 +137,18 @@ function equipChip(e) {
  */
 const EXERCISE_METRICS = ['load', 'height'];
 const isJump = e => e.metric === 'height';
-const bestHeight = sets => sets.reduce((m, s) => (s.heightCm != null && s.heightCm > m ? s.heightCm : m), 0);
+/*
+ * Warm-up sets are logged like any other set but must never reach a statistic:
+ * a ramp-up single would deflate average intensity, inflate tonnage, and could
+ * never be a PR. Every stat surface reads through workingSets(); the session
+ * progress bar deliberately does not, because a warm-up set IS work you did and
+ * the bar answers "how far through this session am I".
+ *
+ * `warmup` is omitted rather than set false when absent, so session records
+ * written before this existed keep their exact shape.
+ */
+const workingSets = sets => sets.filter(s => !s.warmup);
+const bestHeight = sets => sets.reduce((m, s) => (!s.warmup && s.heightCm != null && s.heightCm > m ? s.heightCm : m), 0);
 
 /* ================= loadable-weight ladder ================= */
 /*
@@ -285,6 +296,7 @@ let expandedSession = null;   // history view expansion
 let historyExercise = '';     // history exercise picker
 let exExpanded = new Set();   // manually re-expanded completed exercises in the active session
 let readinessOpen = null;     // null = auto (open until data/sets exist), true/false = manual override
+let warmupOpen = null;        // null = auto (open until every item is checked), true/false = manual override
 
 /* cloud-sync runtime state */
 let dataUpdatedAt = store.get('updatedAt', 0); // last meaningful local change (for last-write-wins)
@@ -539,11 +551,20 @@ function normalizePlan(raw) {
       if (!Array.isArray(d.exercises)) throw new Error(`Day "${d.name || '?'}" needs an "exercises" array.`);
       return {
         id: d.id || uid(), name: String(d.name || 'Day'),
+        // Day-level warm-up: a checklist of general prep (bike, band work,
+        // mobility), not logged sets. Bare strings are accepted so a plan can
+        // write ["Bike 5 min", "Band pull-apart x20"] without ceremony.
+        warmup: Array.isArray(d.warmup) ? d.warmup.map(w => (typeof w === 'string'
+          ? { name: w.trim(), detail: '' }
+          : { name: String(w && w.name || '').trim(), detail: String(w && w.detail || '') })).filter(w => w.name) : [],
         exercises: d.exercises.map(e => {
           if (!e.name) throw new Error('Every exercise needs a "name".');
           return {
             id: e.id || uid(), name: String(e.name),
             sets: Math.max(1, parseInt(e.sets, 10) || 3),
+            // Ramp-up sets prepended to the working sets. `sets` keeps meaning
+            // WORKING sets, so raising warmupSets never changes the prescription.
+            warmupSets: Math.max(0, parseInt(e.warmupSets, 10) || 0),
             reps: String(e.reps != null ? e.reps : '8-12'),
             weight: parseFloat(e.weight) || 0,
             targetRpe: e.targetRpe != null ? parseFloat(e.targetRpe) : null,
@@ -589,9 +610,11 @@ const sameExercise = (a, b) => canonicalName(a).toLowerCase() === canonicalName(
 function lastPerformance(name) {
   for (let i = sessions.length - 1; i >= 0; i--) {
     for (const e of sessions[i].exercises) {
-      if (sameExercise(e.name, name) && e.sets.length) {
+      if (!sameExercise(e.name, name)) continue;
+      const ws = workingSets(e.sets); // "Last:" is a comparison line — ramp-ups aren't
+      if (ws.length) {
         // Missing metric = pre-jump-feature record; treat as 'load' (backward compat).
-        return { date: sessions[i].date, sets: e.sets, jump: e.metric === 'height' };
+        return { date: sessions[i].date, sets: ws, jump: e.metric === 'height' };
       }
     }
   }
@@ -647,6 +670,44 @@ function groupNextSlot(list, group) {
   return null;
 }
 
+/* ================= warm-up set ramps ================= */
+/*
+ * Seeds for prescribed warm-up rows. Every value is a starting point to edit at
+ * the rack, not a prescription — but it has to be a weight that EXISTS, so each
+ * rung is rounded down onto the real loadable ladder. Rounding down, never up,
+ * so a warm-up can't accidentally come out heavier than intended.
+ */
+const WARMUP_RAMPS = { 1: [0.6], 2: [0.5, 0.75], 3: [0.4, 0.6, 0.8] };
+function warmupRamp(n) {
+  if (WARMUP_RAMPS[n]) return WARMUP_RAMPS[n];
+  return Array.from({ length: n }, (_, i) => 0.4 + 0.45 * (i / (n - 1)));
+}
+function roundDownToRung(equipment, barWeight, weight) {
+  if (equipment === 'bodyweight') return 0;
+  // isLoadable short-circuits true for 'other' (no ladder is enforced there),
+  // which would leave a ramp sitting at 33.6 kg. Round it to something human.
+  if (equipment === 'other') return Math.round(weight * 2) / 2;
+  if (isLoadable(equipment, barWeight, weight)) return ladderRound(weight);
+  return nextWeight(equipment, barWeight, weight, -1);
+}
+// The set rows a session starts with: warm-up rows first, then the working sets.
+function buildSetRows(e) {
+  const jump = e.metric === 'height';
+  const work = Array.from({ length: e.sets }, () => jump
+    ? ({ heightCm: null, done: false })
+    : ({ weight: e.weight, reps: parseRepsLow(e.reps), rpe: e.targetRpe, done: false }));
+  const n = Math.max(0, parseInt(e.warmupSets, 10) || 0);
+  // A jump attempt has no load to ramp — a warm-up jump is still markable by
+  // tapping its row number, it just isn't something a plan can prescribe.
+  if (!n || jump) return work;
+  const eq = e.equipment || 'barbell';
+  const warm = warmupRamp(n).map(f => ({
+    weight: roundDownToRung(eq, e.barWeight, e.weight * f),
+    reps: parseRepsLow(e.reps), rpe: null, warmup: true, done: false
+  }));
+  return warm.concat(work);
+}
+
 /* ================= session logic ================= */
 function startSession(dayId) {
   const day = plan.days.find(d => d.id === dayId);
@@ -655,6 +716,7 @@ function startSession(dayId) {
   active = {
     id: uid(), dayId: day.id, dayName: day.name, startedAt: Date.now(), notes: '',
     readiness: {},
+    warmup: (day.warmup || []).map(w => ({ name: w.name, detail: w.detail || '', done: false })),
     exercises: day.exercises.map(e => ({
       name: e.name, planId: e.id, swappedFrom: null,
       plannedSets: e.sets, plannedReps: e.reps, plannedWeight: e.weight,
@@ -662,12 +724,10 @@ function startSession(dayId) {
       equipment: e.equipment || 'barbell', barWeight: e.barWeight,
       metric: e.metric === 'height' ? 'height' : 'load', superset: e.superset || null,
       description: e.description, alternates: e.alternates, notes: '',
-      sets: e.metric === 'height'
-        ? Array.from({ length: e.sets }, () => ({ heightCm: null, done: false }))
-        : Array.from({ length: e.sets }, () => ({ weight: e.weight, reps: parseRepsLow(e.reps), rpe: e.targetRpe, done: false }))
+      sets: buildSetRows(e)
     }))
   };
-  exExpanded = new Set(); readinessOpen = null;
+  exExpanded = new Set(); readinessOpen = null; warmupOpen = null;
   saveActive(); syncWakeLock(); render();
   toast('Session started — go crush it 💪');
 }
@@ -683,7 +743,7 @@ function parseRepsLow(reps) {
 // and reset-all forgot syncWakeLock(). Callers still own closeModal()/render().
 function endSession() {
   active = null; saveActive(); stopRest(); syncWakeLock();
-  exExpanded = new Set(); readinessOpen = null;
+  exExpanded = new Set(); readinessOpen = null; warmupOpen = null;
 }
 function finishSession() {
   if (!active) return;
@@ -697,19 +757,28 @@ function finishSession() {
         equipment: e.equipment, barWeight: e.barWeight, metric: e.metric === 'height' ? 'height' : 'load',
         superset: e.superset || null,
         swappedFrom: e.swappedFrom, notes: e.notes,
-        sets: e.sets.filter(s => s.done).map(s => e.metric === 'height'
-          ? ({ heightCm: s.heightCm })
-          : ({ weight: s.weight, reps: s.reps, rpe: s.rpe })) }))
+        sets: e.sets.filter(s => s.done).map(s => {
+          const rec = e.metric === 'height'
+            ? { heightCm: s.heightCm }
+            : { weight: s.weight, reps: s.reps, rpe: s.rpe };
+          if (s.warmup) rec.warmup = true; // omitted when false — old records keep their exact shape
+          return rec;
+        }) }))
       .filter(e => e.sets.length)
   };
   const rd = active.readiness || {};
   if (rd.cmjCm != null || rd.broadJumpCm != null || rd.subjectiveEnergy != null) record.readiness = rd;
+  if (active.warmup && active.warmup.length) {
+    record.warmup = { total: active.warmup.length, done: active.warmup.filter(w => w.done).length };
+  }
   const prs = detectPRs(record);
   sessions.push(record); saveSessions();
   endSession();
   closeModal(); render();
-  const setCount = record.exercises.reduce((n, e) => n + e.sets.length, 0);
-  let html = `<p>Saved <b>${esc(record.dayName)}</b> — ${setCount} sets in ${fmtDur(durationMin)}.</p>`;
+  const setCount = record.exercises.reduce((n, e) => n + workingSets(e.sets).length, 0);
+  const warmCount = record.exercises.reduce((n, e) => n + (e.sets.length - workingSets(e.sets).length), 0);
+  let html = `<p>Saved <b>${esc(record.dayName)}</b> — ${setCount} working set${setCount === 1 ? '' : 's'}${
+    warmCount ? ` (+${warmCount} warm-up)` : ''} in ${fmtDur(durationMin)}.</p>`;
   if (prs.length) html += `<p class="mt8">🏆 New PRs: ${prs.map(p => `<span class="pr-badge">${esc(p)}</span>`).join(' ')}</p>`;
   const syncing = settings.autoSync;
   html += `<p class="muted small mt8">${syncing ? '☁️ Syncing to the cloud for your AI coach…' : 'Head to the AI Coach tab to export this for your next plan update.'}</p>`;
@@ -724,7 +793,13 @@ function detectPRs(record) {
   const prs = [];
   for (const e of record.exercises) {
     const jump = e.metric === 'height';
-    const score = ex => jump ? bestHeight(ex.sets) : Math.max(...ex.sets.map(s => est1RM(s.weight, s.reps)));
+    // Warm-ups are excluded on both sides — a ramp-up single can't be a PR, and
+    // an old record full of them must not lower the bar a new session clears.
+    const score = ex => {
+      if (jump) return bestHeight(ex.sets);
+      const ws = workingSets(ex.sets);
+      return ws.length ? Math.max(...ws.map(s => est1RM(s.weight, s.reps))) : 0;
+    };
     const newBest = score(e);
     let oldBest = 0;
     for (const s of sessions) for (const ex of s.exercises) {
@@ -751,7 +826,10 @@ function completeSet(ei, si) {
   if (exerciseDone && !group) exExpanded.delete(ei);
   saveActive(); render();
   const remaining = active.exercises.some(x => x.sets.some(y => !y.done));
-  if (remaining) {
+  // No rest after a warm-up set. A 2:30 countdown following an empty-bar single
+  // is how you train yourself to ignore the timer; the prescribed rest starts
+  // applying from the first working set.
+  if (remaining && !ex.sets[si].warmup) {
     if (group) {
       const nextEi = nextInRound(active.exercises, group, ei, si);
       if (nextEi != null) {
@@ -1156,6 +1234,7 @@ function viewActiveSession() {
         <span class="chev">${icon('chevRight', 16)}</span>
       </div>
     </div>`}
+    ${warmupCard()}
     ${supersetGroups(active.exercises).map(g => g.tag
       ? supersetCard(g)
       : exerciseCard(active.exercises[g.idx[0]], g.idx[0])).join('')}
@@ -1166,6 +1245,36 @@ function viewActiveSession() {
     </div>
     <button class="wide success mt12" data-action="confirm-finish">Finish workout</button>
     <button class="wide ghost danger mt8" data-action="confirm-discard">Discard session</button>`;
+}
+/*
+ * The day's general warm-up: a checklist, not logged sets. Sits below readiness
+ * because the CMJ readiness measurement is taken cold, before any of this.
+ * Auto-collapses once every item is ticked, same pattern as the readiness card.
+ */
+function warmupCard() {
+  const items = active.warmup || [];
+  if (!items.length) return '';
+  const done = items.filter(w => w.done).length;
+  const open = warmupOpen != null ? warmupOpen : done < items.length;
+  if (!open) return `
+    <div class="card collapsed-ex tappable" data-action="warmup-toggle">
+      <div class="row between">
+        <div class="grow"><span class="green bold">✓</span> <span class="bold small">Warm-up</span>
+          <span class="muted small">· ${done}/${items.length} done</span></div>
+        <span class="chev">${icon('chevRight', 16)}</span>
+      </div>
+    </div>`;
+  return `
+    <h2 class="section tappable" data-action="warmup-toggle">Warm-up
+      <span class="muted small">(${done}/${items.length})</span> <span class="chev">${icon('chevDown', 14)}</span></h2>
+    <div class="card">
+      ${items.map((w, i) => `
+        <label class="merge-row">
+          <input type="checkbox" data-action="warmup-check" data-i="${i}" ${w.done ? 'checked' : ''}>
+          <span class="grow ${w.done ? 'warmup-done' : ''}"><span class="bold small">${esc(w.name)}</span>${
+            w.detail ? `<div class="muted small">${esc(w.detail)}</div>` : ''}</span>
+        </label>`).join('')}
+    </div>`;
 }
 function supersetCard(group) {
   const list = active.exercises;
@@ -1195,6 +1304,13 @@ function supersetCard(group) {
     ${group.idx.map(j => `<div class="superset-member${slot && slot.ei === j ? ' ss-next' : ''}">${exerciseCard(list[j], j, { inGroup: true })}</div>`).join('')}
   </div>`;
 }
+// Row labels for a set grid: warm-ups count W1, W2… and the working sets number
+// from 1, so "set 3" always means the third working set no matter how long the
+// ramp was. Warm-ups need not be contiguous — the row number is a manual toggle.
+function setLabels(sets) {
+  let w = 0, k = 0;
+  return sets.map((s, si) => ({ s, si, label: s.warmup ? 'W' + (++w) : String(++k) }));
+}
 function exerciseCard(e, ei, opts) {
   const inGroup = !!(opts && opts.inGroup);
   const doneCount = e.sets.filter(s => s.done).length;
@@ -1202,12 +1318,19 @@ function exerciseCard(e, ei, opts) {
   // Inside a superset the whole group collapses as a unit, so a member never
   // collapses on its own — the athlete still needs its rows for the next round.
   if (allDone && !inGroup && !exExpanded.has(ei)) {
+    // The summary reports the working sets; warm-ups are acknowledged in the
+    // count but never chosen as the "best" set.
+    const ws = workingSets(e.sets);
+    const warmN = e.sets.length - ws.length;
+    const warmTag = warmN ? ` (+${warmN} warm-up)` : '';
     let summary;
     if (isJump(e)) {
-      summary = `${e.sets.length} attempt${e.sets.length === 1 ? '' : 's'} · best ${bestHeight(e.sets)} cm`;
+      summary = `${ws.length} attempt${ws.length === 1 ? '' : 's'}${warmTag} · best ${bestHeight(e.sets)} cm`;
+    } else if (ws.length) {
+      const best = ws.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
+      summary = `${ws.length} set${ws.length === 1 ? '' : 's'}${warmTag} · best ${best.weight}×${best.reps}`;
     } else {
-      const best = e.sets.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
-      summary = `${e.sets.length} sets · best ${best.weight}×${best.reps}`;
+      summary = `${warmN} warm-up set${warmN === 1 ? '' : 's'} only`;
     }
     // The note button carries its own data-action, and the delegated listener
     // resolves via closest('[data-action]'), so it wins over the row's expand
@@ -1244,17 +1367,17 @@ function exerciseCard(e, ei, opts) {
     ${isJump(e) ? `
     <div class="set-grid jump">
       <div class="head">#</div><div class="head">cm</div><div class="head">✓</div>
-      ${e.sets.map((s, si) => `
-        <div class="set-no">${si + 1}</div>
-        <input class="${s.done ? 'set-row-done-i' : ''}" type="number" inputmode="decimal" step="0.5" value="${s.heightCm != null ? s.heightCm : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="heightCm" ${s.done ? 'style="border-color:var(--green)"' : ''}>
+      ${setLabels(e.sets).map(({ s, si, label }) => `
+        <button class="set-no-btn${s.warmup ? ' warm' : ''}" data-action="set-warmup" data-ei="${ei}" data-si="${si}" title="Mark as warm-up">${label}</button>
+        <input class="${s.done ? 'set-row-done-i' : ''}${s.warmup ? ' warm-i' : ''}" type="number" inputmode="decimal" step="0.5" value="${s.heightCm != null ? s.heightCm : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="heightCm" ${s.done ? 'style="border-color:var(--green)"' : ''}>
         <button class="set-done-btn ${s.done ? 'success' : ''}" data-action="set-done" data-ei="${ei}" data-si="${si}">${s.done ? '✓' : '○'}</button>`).join('')}
     </div>` : `
     <div class="set-grid">
       <div class="head">#</div><div class="head">${unit()}</div><div class="head">Reps</div><div class="head">RPE</div><div class="head">✓</div>
-      ${e.sets.map((s, si) => `
-        <div class="set-no">${si + 1}</div>
-        <input class="${s.done ? 'set-row-done-i' : ''}${e.equipment === 'bodyweight' ? ' bw-weight-i' : ''}" type="number" inputmode="decimal" step="0.5" value="${s.weight != null ? s.weight : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="weight" ${s.done ? 'style="border-color:var(--green)"' : ''}>
-        <input type="number" inputmode="numeric" value="${s.reps != null ? s.reps : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="reps" ${s.done ? 'style="border-color:var(--green)"' : ''}>
+      ${setLabels(e.sets).map(({ s, si, label }) => `
+        <button class="set-no-btn${s.warmup ? ' warm' : ''}" data-action="set-warmup" data-ei="${ei}" data-si="${si}" title="Mark as warm-up">${label}</button>
+        <input class="${s.done ? 'set-row-done-i' : ''}${e.equipment === 'bodyweight' ? ' bw-weight-i' : ''}${s.warmup ? ' warm-i' : ''}" type="number" inputmode="decimal" step="0.5" value="${s.weight != null ? s.weight : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="weight" ${s.done ? 'style="border-color:var(--green)"' : ''}>
+        <input class="${s.warmup ? 'warm-i' : ''}" type="number" inputmode="numeric" value="${s.reps != null ? s.reps : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="reps" ${s.done ? 'style="border-color:var(--green)"' : ''}>
         <button class="rpe-btn ${s.rpe != null ? '' : 'muted'}" data-action="rpe-pick" data-ei="${ei}" data-si="${si}" ${s.done ? 'style="border-color:var(--green)"' : ''}>${s.rpe != null ? s.rpe : '—'}</button>
         <button class="set-done-btn ${s.done ? 'success' : ''}" data-action="set-done" data-ei="${ei}" data-si="${si}">${s.done ? '✓' : '○'}</button>`).join('')}
     </div>`}
@@ -1293,13 +1416,14 @@ function viewPlan() {
             <div class="row between" style="padding:9px 0">
               <div class="grow tappable" data-action="ex-menu" data-day="${d.id}" data-i="${i}">
                 <div class="bold">${esc(e.name)}${e.superset ? ` <span class="day-pill">SS ${esc(e.superset)}</span>` : ''}</div>
-                <div class="muted small">${e.sets}×${esc(e.reps)} @ ${e.weight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''} · rest ${fmtClock(e.restSeconds)}${e.alternates.length ? ' · ' + e.alternates.length + ' alt' : ''} ${equipChip(e)}</div>
+                <div class="muted small">${e.warmupSets ? `${e.warmupSets}w + ` : ''}${e.sets}×${esc(e.reps)} @ ${e.weight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''} · rest ${fmtClock(e.restSeconds)}${e.alternates.length ? ' · ' + e.alternates.length + ' alt' : ''} ${equipChip(e)}</div>
               </div>
               <button class="icon-btn" data-action="ex-move" data-day="${d.id}" data-i="${i}" data-dir="-1" ${i === 0 ? 'disabled' : ''}>↑</button>
               <button class="icon-btn" data-action="ex-move" data-day="${d.id}" data-i="${i}" data-dir="1" ${i === d.exercises.length - 1 ? 'disabled' : ''}>↓</button>
             </div>`).join('')}
           <div class="row mt8">
             <button class="ghost icon-btn" data-action="ex-add" data-day="${d.id}">+ Exercise</button>
+            <button class="ghost icon-btn" data-action="day-warmup" data-id="${d.id}">Warm-up${(d.warmup || []).length ? ` (${d.warmup.length})` : ''}</button>
             <button class="ghost icon-btn" data-action="day-rename" data-id="${d.id}">Rename</button>
             <button class="ghost icon-btn red" data-action="day-delete" data-id="${d.id}">Delete</button>
           </div>` : ''}
@@ -1313,13 +1437,16 @@ function viewPlan() {
 function exerciseHistory(name) {
   const rows = [];
   for (const s of sessions) for (const e of s.exercises) {
-    if (sameExercise(e.name, name) && e.sets.length) {
-      if (e.metric === 'height') {
-        rows.push({ date: s.date, jump: true, heightCm: bestHeight(e.sets), sets: e.sets });
-      } else {
-        const best = e.sets.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
-        rows.push({ date: s.date, jump: false, best, e1rm: est1RM(best.weight, best.reps), sets: e.sets });
-      }
+    if (!sameExercise(e.name, name)) continue;
+    // Progress is a working-set story throughout — a ramp-up set is neither a
+    // data point on the chart nor a candidate for the best set of the day.
+    const ws = workingSets(e.sets);
+    if (!ws.length) continue;
+    if (e.metric === 'height') {
+      rows.push({ date: s.date, jump: true, heightCm: bestHeight(e.sets), sets: ws });
+    } else {
+      const best = ws.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
+      rows.push({ date: s.date, jump: false, best, e1rm: est1RM(best.weight, best.reps), sets: ws });
     }
   }
   return rows;
@@ -1363,10 +1490,11 @@ function weeklyStats(weeks = 8) {
       if (t >= wk.start && t < new Date(wk.start.getTime() + 7 * 864e5)) {
         wk.sessions++;
         for (const e of s.exercises) {
-          wk.sets += e.sets.length;
+          const ws = workingSets(e.sets); // ramp-ups are neither volume nor a set here
+          wk.sets += ws.length;
           // Height sets have no kg × reps to contribute; they still count as sets.
           if (e.metric === 'height') continue;
-          for (const st of e.sets) wk.volume += (st.weight || 0) * (st.reps || 0);
+          for (const st of ws) wk.volume += (st.weight || 0) * (st.reps || 0);
         }
       }
     }
@@ -1448,7 +1576,7 @@ function viewHistory() {
     <h2 class="section">Sessions (${sessions.length})</h2>
     ${sessions.length ? sessions.slice().reverse().map(s => {
       const open = expandedSession === s.id;
-      const setCount = s.exercises.reduce((n, e) => n + e.sets.length, 0);
+      const setCount = s.exercises.reduce((n, e) => n + workingSets(e.sets).length, 0);
       return `
       <div class="card">
         <div class="row between tappable" data-action="session-toggle" data-id="${s.id}">
@@ -1463,9 +1591,14 @@ function viewHistory() {
           ${s.exercises.map(e => `
             <div style="padding:5px 0">
               <div class="bold small">${esc(e.name)}${e.swappedFrom ? ` <span class="swap-note">(was ${esc(e.swappedFrom)})</span>` : ''}</div>
-              <div class="muted small">${e.metric === 'height'
-                ? e.sets.map(x => `${x.heightCm} cm`).join(' · ')
-                : e.sets.map(x => `${x.weight}${unit()}×${x.reps}${x.rpe ? '@' + x.rpe : ''}`).join(' · ')}</div>
+              <div class="muted small">${e.sets.map(x => {
+                const txt = e.metric === 'height'
+                  ? `${x.heightCm} cm`
+                  : `${x.weight}${unit()}×${x.reps}${x.rpe ? '@' + x.rpe : ''}`;
+                // Warm-ups stay visible here — this is the raw log, not a stat —
+                // but dimmed and prefixed so they can't be misread as work sets.
+                return x.warmup ? `<span class="warmup-set">w ${txt}</span>` : txt;
+              }).join(' · ')}</div>
               ${e.notes ? `<div class="small amber">📝 ${esc(e.notes)}</div>` : ''}
             </div>`).join('')}
           ${s.notes ? `<div class="divider"></div><div class="small">📝 ${esc(s.notes)}</div>` : ''}
@@ -1646,13 +1779,15 @@ function weightValidationError({ equipment, barWeight, weight, metric }) {
 }
 function exEditModal(dayId, i) {
   const day = plan.days.find(d => d.id === dayId);
-  const e = i != null ? day.exercises[i] : { name: '', sets: 3, reps: '8-12', weight: 0, targetRpe: 8, restSeconds: 120, restSecondsNext: null, equipment: 'barbell', barWeight: null, metric: 'load', superset: null, description: '', alternates: [] };
+  const e = i != null ? day.exercises[i] : { name: '', sets: 3, warmupSets: 0, reps: '8-12', weight: 0, targetRpe: 8, restSeconds: 120, restSecondsNext: null, equipment: 'barbell', barWeight: null, metric: 'load', superset: null, description: '', alternates: [] };
   const equipment = e.equipment || 'barbell';
   showModal(i != null ? 'Edit exercise' : 'Add exercise', `
     <label class="field"><span>Name</span><input id="f-name" value="${esc(e.name)}"></label>
     <div class="row">
       <label class="field grow"><span>Sets</span><input id="f-sets" type="number" inputmode="numeric" value="${e.sets}"></label>
       <label class="field grow"><span>Reps</span><input id="f-reps" value="${esc(e.reps)}"></label>
+      <label class="field grow"><span>Warm-up sets</span><input id="f-warmupsets" type="number" inputmode="numeric" min="0" value="${e.warmupSets || 0}">
+        <span class="field-hint">extra ramp rows, seeded from the working weight</span></label>
     </div>
     <div class="row">
       <label class="field grow"><span>Weight (${unit()})</span><input id="f-weight" type="number" inputmode="decimal" step="0.5" value="${e.weight}">
@@ -1694,7 +1829,12 @@ function exEditModal(dayId, i) {
           const wVal = mnum('f-weight');
           const wErr = weightValidationError({ equipment: eqVal, barWeight: barVal, weight: wVal, metric: metricVal });
           if (wErr) { toast(wErr, 'err'); return; }
-          const upd = { name, sets: Math.max(1, mnum('f-sets', 3)), reps: mval('f-reps') || '8-12', weight: wVal,
+          const warmN = Math.max(0, mnum('f-warmupsets', 0));
+          if (metricVal === 'height' && warmN) {
+            toast('A jump exercise has no load to ramp — mark a warm-up attempt by tapping its row number during the session', 'err');
+            return;
+          }
+          const upd = { name, sets: Math.max(1, mnum('f-sets', 3)), warmupSets: warmN, reps: mval('f-reps') || '8-12', weight: wVal,
             targetRpe: rpeRaw ? parseFloat(rpeRaw) : null, restSeconds: Math.max(0, mnum('f-rest', 120)),
             restSecondsNext: restNextRaw ? Math.max(0, parseInt(restNextRaw, 10)) : null,
             equipment: eqVal,
@@ -1704,6 +1844,26 @@ function exEditModal(dayId, i) {
             description: mval('f-desc') };
           if (i != null) Object.assign(day.exercises[i], upd);
           else day.exercises.push(Object.assign({ id: uid(), notes: '', alternates: [] }, upd));
+          savePlan(); closeModal(); render();
+        } },
+      { label: 'Cancel' }
+    ]);
+}
+// Free-text editor for a day's warm-up checklist — one item per line, with an
+// optional note after a dash. A textarea beats a per-item row builder here: the
+// list is short, edited rarely, and usually pasted in whole from a plan.
+function dayWarmupModal(dayId) {
+  const day = plan.days.find(d => d.id === dayId); if (!day) return;
+  const text = (day.warmup || []).map(w => w.detail ? `${w.name} — ${w.detail}` : w.name).join('\n');
+  showModal('Warm-up — ' + day.name, `
+    <p class="muted small">One item per line. Anything after a dash becomes a note.</p>
+    <textarea id="f-warmup" style="min-height:150px" placeholder="Bike — 5 min easy&#10;Band pull-apart × 20&#10;Empty bar bench × 10">${esc(text)}</textarea>`,
+    [
+      { label: 'Save', cls: 'primary', fn: () => {
+          day.warmup = mval('f-warmup').split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+            const m = l.match(/^(.*?)\s+[—–-]\s+(.*)$/);
+            return m ? { name: m[1].trim(), detail: m[2].trim() } : { name: l, detail: '' };
+          });
           savePlan(); closeModal(); render();
         } },
       { label: 'Cancel' }
@@ -1904,7 +2064,8 @@ function showPlateCalculator(e) {
   const idx = nextIdx !== -1 ? nextIdx : e.sets.length - 1;
   const targetSet = e.sets[idx];
   const weight = targetSet && targetSet.weight != null ? targetSet.weight : (e.plannedWeight || 0);
-  const setLabel = targetSet ? `set ${idx + 1}` : '';
+  const lbl = setLabels(e.sets)[idx];
+  const setLabel = lbl ? (lbl.s.warmup ? `warm-up ${lbl.label.slice(1)}` : `set ${lbl.label}`) : '';
   // …and the useful answer is what CHANGES, so find the last set actually loaded.
   let prev = null;
   for (let i = idx - 1; i >= 0; i--) {
@@ -2646,6 +2807,18 @@ document.addEventListener('click', e => {
       render();
       break;
     }
+    case 'warmup-toggle': {
+      const items = active.warmup || [];
+      const shown = warmupOpen != null ? warmupOpen : items.filter(w => w.done).length < items.length;
+      warmupOpen = !shown;
+      render();
+      break;
+    }
+    case 'warmup-check': {
+      const w = (active.warmup || [])[+el.dataset.i];
+      if (w) { w.done = !w.done; saveActive(); render(); }
+      break;
+    }
     case 'readiness-toggle': {
       const r = active.readiness || {};
       const hasReadiness = r.cmjCm != null || r.broadJumpCm != null || r.subjectiveEnergy != null;
@@ -2674,9 +2847,19 @@ document.addEventListener('click', e => {
       if (cb) cb(v);
       break;
     }
+    case 'set-warmup': {
+      const s = active.exercises[+el.dataset.ei].sets[+el.dataset.si];
+      s.warmup = !s.warmup;
+      if (s.warmup) s.rpe = null; // an RPE on a ramp-up set is noise, not data
+      saveActive(); render();
+      break;
+    }
     case 'set-add': {
       const ex = active.exercises[+el.dataset.ei];
-      const lastSet = ex.sets[ex.sets.length - 1];
+      // Seed from the last WORKING set — an extra set follows the working weight,
+      // not whatever a warm-up row happens to be sitting at.
+      const ws = workingSets(ex.sets);
+      const lastSet = ws[ws.length - 1] || ex.sets[ex.sets.length - 1];
       ex.sets.push(isJump(ex)
         ? { heightCm: null, done: false }
         : { weight: lastSet ? lastSet.weight : ex.plannedWeight, reps: lastSet ? lastSet.reps : parseRepsLow(ex.plannedReps), rpe: ex.targetRpe, done: false });
@@ -2703,6 +2886,7 @@ document.addEventListener('click', e => {
     case 'day-toggle': expandedDay = expandedDay === el.dataset.id ? null : el.dataset.id; render(); break;
     case 'ex-menu': exMenuModal(el.dataset.day, +el.dataset.i); break;
     case 'ex-add': exEditModal(el.dataset.day, null); break;
+    case 'day-warmup': dayWarmupModal(el.dataset.id); break;
     case 'ex-move': {
       const day = plan.days.find(d => d.id === el.dataset.day);
       if (!day) break;
@@ -2722,7 +2906,7 @@ document.addEventListener('click', e => {
       showModal('Add day', `<label class="field"><span>Day name</span><input id="f-day-name" placeholder="Day D — Upper"></label>`,
         [{ label: 'Add', cls: 'primary', fn: () => {
             const name = mval('f-day-name'); if (!name) return;
-            plan.days.push({ id: uid(), name, exercises: [] });
+            plan.days.push({ id: uid(), name, warmup: [], exercises: [] });
             expandedDay = plan.days[plan.days.length - 1].id;
             savePlan(); closeModal(); render();
           } }, { label: 'Cancel' }]);

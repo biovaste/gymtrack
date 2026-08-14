@@ -20,6 +20,7 @@ Computed from a `workout-log` (or `gymtrack-backup`) over the trailing 7 days. N
 
 ### Edge Cases
 
+- **Warm-up sets:** filter `sets` to `!s.warmup` **before** computing any aggregate in this table. A `warmup: true` set is a ramp-up on the way to the working weight — counting it deflates `avgRpePerLift` (warm-up rows usually carry `rpe: null`), inflates weekly tonnage and set counts, and breaks `sessionVlaMap`, whose first-vs-last comparison would otherwise start from the ramp and read the whole exercise as getting *stronger* across the session. See the warm-up section in `../shared/schema-reference.md`.
 - **Missing readiness fields:** Skip that session's contribution to the trend — do not impute.
 - **Partial sessions** (`completionRate < 60%`): Include in adherence count as "done"; note the partial completion in the LAST WEEK block; exclude from RPE and VLA calculations for affected exercises.
 - **Swapped exercises:** Use the swapped-to name for VLA and RPE computation; note the swap in PROGRESSION NOTES if the swap affected load selection.

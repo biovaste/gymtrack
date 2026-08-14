@@ -77,6 +77,8 @@ For field names and derived metric formulas, see `../shared/schema-reference.md`
 
 **Supersets inflate the second movement's RPE.** When exercises share a `superset` tag, the later member's RPE reflects accumulated fatigue from the earlier one. Do not read it as a load problem, and do not compare it against the same exercise's RPE from a block where it stood alone.
 
+**Warm-up sets are not data points.** Filter `sets` to `!s.warmup` before computing anything — tonnage, e1RM, average RPE, VLA. A `warmup: true` row is a ramp-up on the way to the working weight; it carries a light load and usually no RPE at all. Leaving them in makes VLA read backwards (the first set is the lightest, so every exercise looks like it accelerated) and makes an athlete who warms up properly look like they trained lighter. Never tell someone their top set dropped when what actually happened is that they added a warm-up. See "Warm-up sets" in `../shared/schema-reference.md`.
+
 ---
 
 ## Special Cases

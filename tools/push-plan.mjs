@@ -220,7 +220,34 @@ function validatePlan(plan, { unit = 'kg' } = {}) {
       if (e.metric === 'height' && e.weight) {
         errors.push(`${day.name} → ${e.name}: a height-metric exercise must have weight 0 — box height goes in "description".`);
       }
+      if (e.warmupSets != null) {
+        const n = Number(e.warmupSets);
+        if (!Number.isInteger(n) || n < 0) {
+          errors.push(`${day.name} → ${e.name}: warmupSets must be a non-negative integer, got ${JSON.stringify(e.warmupSets)}.`);
+        } else if (n && e.metric === 'height') {
+          errors.push(
+            `${day.name} → ${e.name}: a height-metric exercise can't prescribe warmupSets — ` +
+            'there is no load to ramp. A warm-up attempt is marked in-session by tapping its row number.'
+          );
+        } else if (n > 6) {
+          warnings.push(`${day.name} → ${e.name}: ${n} warm-up sets is a lot — is that deliberate?`);
+        }
+      }
     }
+  }
+
+  // Day-level warm-up block: a checklist of general prep, not logged sets.
+  // Bare strings are valid; objects need a name.
+  for (const day of plan.days) {
+    if (day.warmup == null) continue;
+    if (!Array.isArray(day.warmup)) {
+      errors.push(`${day.name}: "warmup" must be an array of strings or { name, detail } objects.`);
+      continue;
+    }
+    day.warmup.forEach((w, i) => {
+      const named = typeof w === 'string' ? w.trim() : (w && typeof w === 'object' ? String(w.name || '').trim() : '');
+      if (!named) errors.push(`${day.name}: warmup[${i}] has no name — it would be silently dropped on import.`);
+    });
   }
 
   if (unit !== 'kg') {

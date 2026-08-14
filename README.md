@@ -118,10 +118,15 @@ Alternate-exercise weights and non-kg units warn but don't block. `--force` push
   "days": [
     {
       "name": "Day A — Push",
+      "warmup": [
+        { "name": "Bike", "detail": "5 min easy" },
+        "Band pull-apart × 20"
+      ],
       "exercises": [
         {
           "name": "Bench Press",
           "sets": 4,
+          "warmupSets": 2,
           "reps": "6-8",
           "weight": 60,
           "targetRpe": 8,
@@ -138,6 +143,18 @@ Alternate-exercise weights and non-kg units warn but don't block. `--force` push
   ]
 }
 ```
+
+**Warm-ups.** `warmupSets` (optional, default 0) adds that many ramp rows ahead of
+the working sets — `sets` still means *working* sets, so adding warm-ups never
+changes the prescription. Each rung is seeded from the working weight and rounded
+down onto a weight the gym can actually load; all of it stays editable, and any
+row can be flipped between warm-up and working by tapping its number during the
+session. Completing a warm-up set starts no rest timer, and warm-up sets are
+excluded from volume, PRs and every progress chart.
+
+`days[].warmup` (optional) is the day's general prep — a checklist shown at the
+top of the session, not logged sets. Bare strings work; `{ name, detail }` gives
+you a note underneath.
 
 ## iOS limitations worth knowing
 
