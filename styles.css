@@ -161,6 +161,14 @@ label.field > span { display: block; margin-bottom: 5px; }
 .settings-head { margin: 2px 0 4px; gap: 6px; }
 .settings-title { font-size: 20px; font-weight: 700; }
 
+/* ----- plate calculator ----- */
+.plate-target { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.plate-delta {
+  margin-top: 8px; padding: 10px 12px; border-radius: 10px;
+  background: rgba(79,140,255,.10); border: 1px solid var(--accent2);
+  font-size: 14px; line-height: 1.45;
+}
+
 /* ----- charts ----- */
 .chart-label { fill: var(--muted); font-size: 10px; font-family: inherit; }
 

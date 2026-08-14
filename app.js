@@ -1764,29 +1764,83 @@ function exInfoModal(ei) {
   showModal(e.name, `<p>${esc(desc)}</p>
     <p class="muted small mt12">Target: ${target}</p>`);
 }
-function showPlateCalculator(e) {
-  const isLb = unit() === 'lb';
-  const plates = isLb ? [45, 35, 25, 10, 5, 2.5] : [25, 20, 15, 10, 5, 2.5, 1.25];
-  const weight = e.plannedWeight || 0;
-  const equipment = e.equipment || 'barbell';
-  const isLandmine = equipment === 'landmine';
-  const barWeight = isLandmine ? 0 : resolvedBarWeight(e);
-  const sides = isLandmine ? 1 : 2;
-  if (!isLandmine && weight <= barWeight) {
-    showModal('Plate calculator', `<p class="muted">Target ${weight}${unit()} is at or below the bar (${barWeight}${unit()}) — no plates needed.</p>`);
-    return;
-  }
-  let remain = (weight - barWeight) / sides;
+// Greedy largest-first breakdown of one side's load. `remain` is whatever the
+// plate set can't express — surfaced rather than silently dropped.
+function platesPerSide(load, plates) {
   const rows = [];
+  let remain = Math.max(0, load);
   for (const p of plates) {
     const count = Math.floor(remain / p + 1e-9);
     if (count > 0) { rows.push({ p, count }); remain -= count * p; }
   }
+  return { rows, remain };
+}
+// What to physically change between two loadouts, as add/strip lists. Diffing the
+// breakdowns rather than the arithmetic difference is the point: 120 → 125 kg has
+// to read "add one 2.5 per side", not "+5 kg, work it out yourself".
+function plateDiff(fromRows, toRows) {
+  const net = new Map();
+  for (const r of fromRows) net.set(r.p, (net.get(r.p) || 0) - r.count);
+  for (const r of toRows) net.set(r.p, (net.get(r.p) || 0) + r.count);
+  const add = [], strip = [];
+  for (const [p, n] of [...net].sort((a, b) => b[0] - a[0])) {
+    if (n > 0) add.push({ p, count: n });
+    else if (n < 0) strip.push({ p, count: -n });
+  }
+  return { add, strip };
+}
+function showPlateCalculator(e) {
+  const isLb = unit() === 'lb';
+  const plates = isLb ? [45, 35, 25, 10, 5, 2.5] : [25, 20, 15, 10, 5, 2.5, 1.25];
+  const equipment = e.equipment || 'barbell';
+  const isLandmine = equipment === 'landmine';
+  const barWeight = isLandmine ? 0 : resolvedBarWeight(e);
+  const sides = isLandmine ? 1 : 2;
+
+  // The rack question is always about the set you are ABOUT to do, never the one
+  // the plan prescribed — the moment a set deviates, plannedWeight is the wrong
+  // number to be standing in front of a loaded bar with.
+  const nextIdx = e.sets.findIndex(s => !s.done);
+  const idx = nextIdx !== -1 ? nextIdx : e.sets.length - 1;
+  const targetSet = e.sets[idx];
+  const weight = targetSet && targetSet.weight != null ? targetSet.weight : (e.plannedWeight || 0);
+  const setLabel = targetSet ? `set ${idx + 1}` : '';
+  // …and the useful answer is what CHANGES, so find the last set actually loaded.
+  let prev = null;
+  for (let i = idx - 1; i >= 0; i--) {
+    if (e.sets[i].done && e.sets[i].weight != null) { prev = e.sets[i].weight; break; }
+  }
+
   const sideLabel = isLandmine ? 'on the end' : 'per side';
+  const fmtPlates = rs => rs.map(r => `${r.count} × ${r.p}${unit()}`).join(' + ');
+  const head = `<p class="plate-target"><b>${weight}${unit()}</b>${setLabel ? ` <span class="muted small">· ${setLabel}</span>` : ''}</p>`;
+
+  if (!isLandmine && weight <= barWeight) {
+    const strip = prev != null && prev > barWeight
+      ? `<p class="plate-delta">Strip everything — down from ${prev}${unit()}.</p>` : '';
+    showModal('Plate calculator', `${head}${strip}
+      <p class="muted small">${weight}${unit()} is at or below the bar (${barWeight}${unit()}) — no plates needed.</p>`);
+    return;
+  }
+
+  const { rows, remain } = platesPerSide((weight - barWeight) / sides, plates);
+  let deltaHtml = '';
+  if (prev != null && prev !== weight) {
+    const { rows: prevRows } = platesPerSide((prev - barWeight) / sides, plates);
+    const { add, strip } = plateDiff(prevRows, rows);
+    const parts = [];
+    if (strip.length) parts.push(`strip <b>${fmtPlates(strip)}</b>`);
+    if (add.length) parts.push(`add <b>${fmtPlates(add)}</b>`);
+    const diff = Math.round((weight - prev) * 100) / 100;
+    deltaHtml = `<p class="plate-delta">${diff > 0 ? '+' : '−'}${Math.abs(diff)}${unit()} from ${prev}${unit()} — ${
+      parts.length ? parts.join(', then ') + ' ' + sideLabel : 'no plate change possible with these plates'}</p>`;
+  }
   const summary = isLandmine
-    ? `Target ${weight}${unit()} to load on the landmine end`
-    : `Target ${weight}${unit()} · bar ${barWeight}${unit()} · ${((weight - barWeight) / sides).toFixed(2)}${unit()} per side`;
+    ? `Load on the landmine end`
+    : `Bar ${barWeight}${unit()} · ${((weight - barWeight) / sides).toFixed(2)}${unit()} per side`;
   showModal('Plate calculator', `
+    ${head}
+    ${deltaHtml}
     <p class="muted small">${summary}</p>
     <div class="divider"></div>
     ${rows.length ? rows.map(r => `<div class="row between mt8"><span class="bold">${r.p}${unit()}</span><span>× ${r.count} ${sideLabel}</span></div>`).join('') : '<p class="muted small">Just the bar.</p>'}
@@ -1813,7 +1867,9 @@ const RPE_SCALE = [
   [7.5, '2–3 reps left'],
   [7, '3 reps left — bar still fast'],
   [6.5, '3–4 reps left'],
-  [6, '4+ reps left / warm-up']
+  [6, '4 reps left'],
+  [5.5, '4–5 reps left'],
+  [5, '5+ reps left — easy']
 ];
 let rpePickCb = null;
 function showRpePicker(current, onPick, title = 'How hard was that set?') {
