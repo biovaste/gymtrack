@@ -263,3 +263,76 @@ test('the plan route writes with a valid token and stamps updatedAt', async () =
   assert.equal(stored.plan.name, 'Block C');
   assert.ok(stored.updatedAt > 5);
 });
+
+/* ---------- sessionLoad ---------- */
+const sessionLoad = evaluate(
+  slice('const workingSets = sets =>', ';') + '\n' +
+  slice('const RPE_COVERAGE_MIN', ';') + '\n' +
+  slice('function sessionLoad(record) {', '\n}'),
+  '(sessionLoad)'
+);
+
+/** Build a record with one load exercise from [reps, rpe] pairs. */
+const rec = (sets, durationMin = 60, extra = {}) => ({
+  durationMin,
+  exercises: [{ name: 'Bench Press', metric: 'load',
+    sets: sets.map(([reps, rpe, warmup]) => ({ weight: 60, reps, rpe: rpe ?? null, ...(warmup ? { warmup: true } : {}) })) }],
+  ...extra,
+});
+
+test('sessionLoad weights each set RPE by its reps', () => {
+  // 10 reps @ 8 and 2 reps @ 8 both sit at 8; mixing 10@6 with 10@8 gives 7,
+  // but 2@6 with 10@8 leans to the longer set: (12 + 80) / 12 = 7.7.
+  assert.equal(sessionLoad(rec([[10, 6], [10, 8]])).rpe, 7);
+  assert.equal(sessionLoad(rec([[2, 6], [10, 8]])).rpe, 7.7);
+});
+
+test('sessionLoad multiplies session RPE by duration for the AU load', () => {
+  const out = sessionLoad(rec([[5, 7.5]], 62));
+  assert.equal(out.rpe, 7.5);
+  assert.equal(out.load, 465); // 7.5 * 62
+});
+
+test('sessionLoad ignores warm-up sets on both the mean and coverage', () => {
+  // The ramp-up carries a deliberately low RPE; counting it would drag the
+  // session down and make a hard day read as moderate.
+  const out = sessionLoad(rec([[5, 3, true], [5, 9]]));
+  assert.equal(out.rpe, 9);
+  assert.equal(out.coverage, 1);
+});
+
+test('sessionLoad ignores height-metric exercises entirely', () => {
+  const out = sessionLoad({ durationMin: 30, exercises: [
+    { name: 'CMJ', metric: 'height', sets: [{ heightCm: 34 }, { heightCm: 36 }] },
+    { name: 'Squat', metric: 'load', sets: [{ weight: 100, reps: 5, rpe: 8 }] },
+  ] });
+  assert.equal(out.rpe, 8);
+  assert.equal(out.coverage, 1); // the two jumps are not "missing RPE"
+});
+
+test('sessionLoad reports coverage as the share of working sets carrying an RPE', () => {
+  const out = sessionLoad(rec([[5, 8], [5, null], [5, null], [5, 8]]));
+  assert.equal(out.rpe, 8);
+  assert.equal(out.coverage, 0.5);
+  assert.equal(out.partial, true); // below the 0.6 threshold
+});
+
+test('sessionLoad does not flag a session as partial at high coverage', () => {
+  const out = sessionLoad(rec([[5, 8], [5, 8], [5, 8], [5, null]]));
+  assert.equal(out.coverage, 0.75);
+  assert.equal(out.partial, false);
+});
+
+test('sessionLoad returns null when no working set carries an RPE', () => {
+  assert.equal(sessionLoad(rec([[5, null], [5, null]])), null);
+  assert.equal(sessionLoad(rec([[5, 8, true]])), null); // warm-up RPE only
+  assert.equal(sessionLoad({ durationMin: 40, exercises: [] }), null);
+});
+
+test('sessionLoad falls back to counting sets when reps are missing', () => {
+  // A rep-less set must not silently weigh zero and vanish from the mean.
+  const out = sessionLoad({ durationMin: 60, exercises: [
+    { name: 'Plank', metric: 'load', sets: [{ weight: 0, reps: 0, rpe: 6 }, { weight: 0, reps: 0, rpe: 8 }] },
+  ] });
+  assert.equal(out.rpe, 7);
+});

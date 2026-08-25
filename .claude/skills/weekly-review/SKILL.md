@@ -74,8 +74,12 @@ Compute only from signals that were actually logged. **Never infer a missing sig
 | Readiness trend | any available signal — CMJ delta, HRV trend, RHR elevation, subjective energy avg | ≥ 2 negative signals |
 | Physical constraint notes | scan all session notes for injury/pain keywords from user context (STaR Tier 1+2) | Always surface |
 | BW trend | avg last 3 days − avg first 3 days of week | Context only |
+| Weekly load | Σ `sessionLoad` across the week's sessions (see `../shared/schema-reference.md`) | > +30% or < −30% vs the previous week |
+| Load coverage | share of the week's sessions with `rpeCoverage` ≥ 0.60 | < half → report weekly load as indicative only, and never trigger a deload on it alone |
 
 **Output: compact LAST WEEK block** — ≤ 5 bullets covering: adherence, one positive, one limiter, one watch item, readiness verdict.
+
+Weekly load belongs in the watch-item bullet when it moved sharply, not as a bullet of its own — the block stays at five.
 
 ---
 

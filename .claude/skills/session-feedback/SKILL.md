@@ -98,12 +98,16 @@ KEY POSITIVE: [Single highest-ranking positive signal]
 
 KEY LIMITER: [Single highest-ranking limiting signal — or "None detected" if none]
 
+SESSION LOAD: RPE [sessionRpe] · [sessionLoad] AU [— vs the athlete's last 3 sessions, one clause. Append "(partial — only N% of sets had an RPE)" when rpeCoverage < 0.60. Omit this whole line when rpeCoverage is 0.]
+
 NEXT ACTION: [One actionable recommendation, external focus language only]
 
 CONFIDENCE: High / Medium / Low
 ```
 
 **Length:** 50–100 words. Absolute maximum: 120 words.
+
+SESSION LOAD is a reported number, not an interpretation: it never becomes the KEY LIMITER on its own, and a partial-coverage figure must not be used to justify one.
 
 **External focus rule (mandatory):** All NEXT ACTION language must target the implement or environment — never internal anatomy. "Push the floor away" not "contract your quads." See `../shared/science-reference.md §C` for the full constraint and examples.
 
@@ -113,7 +117,7 @@ CONFIDENCE: High / Medium / Low
 - Create programs or prescribe future sessions
 - Invent metrics that are not in the data
 - Assert that logged data is a mistake. When a value looks anomalous — identical loads on adjacent exercises, a load far above plan — the boring physical explanation is usually right (a shared machine or station, an in-session ramp). Report it as an observation or ask; never as "likely a duplicated entry"
-- Output anything beyond the five-field structure above
+- Output anything beyond the six-field structure above
 
 ---
 

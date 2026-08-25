@@ -807,6 +807,9 @@ function finishSession() {
   const warmCount = record.exercises.reduce((n, e) => n + (e.sets.length - workingSets(e.sets).length), 0);
   let html = `<p>Saved <b>${esc(record.dayName)}</b> — ${setCount} working set${setCount === 1 ? '' : 's'}${
     warmCount ? ` (+${warmCount} warm-up)` : ''} in ${fmtDur(durationMin)}.</p>`;
+  const sl = sessionLoad(record);
+  if (sl) html += `<p class="mt8">Session RPE <b>${sl.rpe}</b> · <b>${sl.load}</b> AU${
+    sl.partial ? ` <span class="muted small">(only ${Math.round(sl.coverage * 100)}% of sets had an RPE)</span>` : ''}</p>`;
   if (prs.length) html += `<p class="mt8">🏆 New PRs: ${prs.map(p => `<span class="pr-badge">${esc(p)}</span>`).join(' ')}</p>`;
   const syncing = settings.autoSync;
   html += `<p class="muted small mt8">${syncing ? '☁️ Syncing to the cloud for your AI coach…' : 'Head to the AI Coach tab to export this for your next plan update.'}</p>`;
@@ -816,6 +819,39 @@ function finishSession() {
     fn: () => { closeModal(); tab = 'workout'; render(); window.scrollTo(0, 0); } }]);
   beep(2, 1100);
   if (syncing) workerPush({ silent: true }); // push the finished session right away
+}
+/*
+ * Session load (Foster's sRPE method), derived on read and never stored.
+ * Keeping it out of the session record means old sessions and the sync payload
+ * stay byte-identical, and a fix to this formula retroactively fixes history.
+ *
+ * The mean is weighted by reps rather than by set, so ten reps at 8 count for
+ * more effort than a heavy double at 8. Warm-ups are excluded (a ramp-up is not
+ * effort you accumulate) and height-metric exercises are skipped entirely --
+ * their sets carry no RPE at all, so counting them would look like missing data.
+ *
+ * Returns null when nothing was logged with an RPE; `partial` marks a session
+ * whose coverage is thin enough that the number should be shown with a caveat
+ * rather than trusted, so a half-logged hard day cannot read as a light one.
+ */
+const RPE_COVERAGE_MIN = 0.6;
+function sessionLoad(record) {
+  let weighted = 0, weight = 0, withRpe = 0, total = 0;
+  for (const e of record.exercises || []) {
+    if (e.metric === 'height') continue;
+    for (const s of workingSets(e.sets || [])) {
+      total++;
+      if (s.rpe == null) continue;
+      withRpe++;
+      const w = s.reps > 0 ? s.reps : 1; // a rep-less set still counts once
+      weighted += s.rpe * w; weight += w;
+    }
+  }
+  if (!weight) return null;
+  const rpe = Math.round((weighted / weight) * 10) / 10;
+  const coverage = Math.round((withRpe / total) * 100) / 100;
+  return { rpe, load: Math.round(rpe * (record.durationMin || 0)), coverage,
+    partial: coverage < RPE_COVERAGE_MIN };
 }
 function detectPRs(record) {
   const prs = [];
@@ -1637,17 +1673,21 @@ function viewHistory() {
     ${sessions.length ? sessions.slice().reverse().map(s => {
       const open = expandedSession === s.id;
       const setCount = s.exercises.reduce((n, e) => n + workingSets(e.sets).length, 0);
+      const sl = sessionLoad(s);
       return `
       <div class="card">
         <div class="row between tappable" data-action="session-toggle" data-id="${s.id}">
           <div class="grow">
             <div class="bold">${esc(s.dayName)}</div>
-            <div class="muted small">${fmtDate(s.date)} · ${fmtDur(s.durationMin)} · ${setCount} sets</div>
+            <div class="muted small">${fmtDate(s.date)} · ${fmtDur(s.durationMin)} · ${setCount} sets${
+              sl ? ` · RPE ${sl.rpe} · ${sl.load} AU${sl.partial ? '*' : ''}` : ''}</div>
           </div>
           <span class="chev">${icon(open ? 'chevDown' : 'chevRight', 16)}</span>
         </div>
         ${open ? `
           <div class="divider"></div>
+          ${sl && sl.partial ? `<div class="muted small">* session RPE from only ${
+            Math.round(sl.coverage * 100)}% of sets — the rest were logged without one.</div>` : ''}
           ${s.exercises.map(e => `
             <div style="padding:5px 0">
               <div class="bold small">${esc(e.name)}${e.swappedFrom ? ` <span class="swap-note">(was ${esc(e.swappedFrom)})</span>` : ''}</div>

@@ -248,6 +248,9 @@ Computed at analysis time — not stored in the JSON.
 | `neuromuscularFatigueIndex` | VLA > 0.20 OR rpeEscalation ≥ 1.5 → High; else derived from magnitude | |
 | `cmjDelta` | `current_cmjCm − previous_session_cmjCm` | Requires readiness block in both sessions |
 | `bwTrend` | `(latest_bw − mean_of_7d_bw) / mean_of_7d_bw` | Context modifier only |
+| `sessionRpe` | Rep-weighted mean of working-set `rpe`: `Σ(rpe × reps) / Σreps`, rounded to 1dp | Foster's sRPE. Exclude warm-ups and height-metric exercises entirely. A rep-less set weighs 1, not 0 |
+| `sessionLoad` | `sessionRpe × durationMin`, rounded to an integer (AU) | The comparable unit across sessions and the one to sum for weekly load |
+| `rpeCoverage` | `working_sets_with_rpe / working_sets` (height exercises excluded from both) | **< 0.60 → report the number as partial and do not draw fatigue conclusions from it.** 0 → no session RPE exists; say so rather than substituting a guess |
 | `jumpBest` | `max(sets[].heightCm)` per `"height"` exercise per session | Training output, **not** a readiness signal — see `periodization.md §D` |
 
 ---
