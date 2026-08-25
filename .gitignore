@@ -13,6 +13,10 @@ desktop.ini
 # Cloudflare Worker build cache (contains account token) — any depth, not just worker/
 .wrangler/
 
+# Sync credentials — the UUID grants read, the token grants write. Never commit either.
+.gymtrack-uuid
+.gymtrack-write-token
+
 # Logs / temp
 *.log
 tmp/

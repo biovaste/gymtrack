@@ -16,10 +16,15 @@
  *   2. --uuid <value> CLI argument
  *   3. .gymtrack-uuid file in the project root
  *
+ * The UUID alone grants READ access. Pushing also needs the write token
+ * (GYMTRACK_WRITE_TOKEN, --token <hex>, or .gymtrack-write-token), which is
+ * derived from the Worker's GYMTRACK_WRITE_SECRET. Same resolution order.
+ *
  * Usage:
  *   node tools/push-plan.mjs path/to/plan.json          # plan from a file
  *   node tools/push-plan.mjs --uuid <uuid> plan.json    # explicit UUID
  *   node tools/push-plan.mjs --check plan.json          # validate only — no UUID, no network
+ *   node tools/push-plan.mjs --token <hex> plan.json    # explicit write token
  *   echo '<workout-plan json>' | node tools/push-plan.mjs   # or via stdin
  */
 import { readFileSync } from 'node:fs';
@@ -38,6 +43,18 @@ function resolveUUID() {
     '  Then: set GYMTRACK_UUID=<uuid>, pass --uuid <uuid>, or save it in .gymtrack-uuid'
   );
   process.exit(1);
+}
+
+// The write token is optional here on purpose: the Worker allows unauthenticated
+// writes while its GYMTRACK_WRITE_SECRET is unset, so a hard failure would break
+// pushing during the rollout window. A missing token surfaces as a 401 below,
+// with the same actionable message.
+function resolveWriteToken() {
+  if (process.env.GYMTRACK_WRITE_TOKEN) return process.env.GYMTRACK_WRITE_TOKEN.trim();
+  const arg = process.argv.indexOf('--token');
+  if (arg !== -1 && process.argv[arg + 1]) return process.argv[arg + 1].trim();
+  try { return readFileSync('.gymtrack-write-token', 'utf8').trim(); } catch {}
+  return '';
 }
 
 /*
@@ -387,11 +404,22 @@ async function main() {
   backup.updatedAt = Date.now();
   backup.exportedAt = new Date().toISOString();
 
+  const headers = { 'Content-Type': 'application/json' };
+  const token = resolveWriteToken();
+  if (token) headers['X-GymTrack-Write'] = token;
+
   const postRes = await fetch(`${WORKER_URL}/data/${uuid}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(backup, null, 2),
   });
+  if (postRes.status === 401) {
+    throw new Error(
+      'Write token missing or invalid.\n' +
+      '  Derive it with: node tools/write-token.mjs <uuid>  (needs the Worker secret)\n' +
+      '  Then: set GYMTRACK_WRITE_TOKEN=<hex>, pass --token <hex>, or save it in .gymtrack-write-token'
+    );
+  }
   if (!postRes.ok) throw new Error(`Failed to push: HTTP ${postRes.status}`);
 
   console.log(`✓ Pushed plan "${newPlan.name || '(unnamed)'}" — ${newPlan.days.length} day(s).`);

@@ -288,6 +288,12 @@ let gymUUID = (() => {
   if (!id) { id = crypto.randomUUID(); localStorage.setItem('gymtrack_uuid', id); }
   return id;
 })();
+// Write token for the sync API. Reads (and the "Share with AI" URL) need only the
+// UUID; writes need this. It is derived server-side from a Worker secret and can't
+// be computed here, so it is pasted in once via Settings. Empty until then — the
+// Worker allows unauthenticated writes while its secret is unset, which is the
+// deploy window that lets the API ship ahead of the phone.
+let writeToken = localStorage.getItem('gymtrack_write_token') || '';
 let aliases = store.get('aliases', {}); // { aliasLowercase: 'Canonical Name' } — display-time merge of exercise names
 let tab = 'workout';
 let prevTab = 'workout';      // where the settings view returns to
@@ -995,11 +1001,21 @@ async function workerPush(opts = {}) {
   clearTimeout(syncTimer);
   setSyncState('syncing');
   try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (writeToken) headers['X-GymTrack-Write'] = writeToken;
     const res = await fetch(`${WORKER_URL}/data/${gymUUID}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: buildBackup()
+      method: 'POST', headers, body: buildBackup()
     });
+    // 409 = the cloud copy is newer than ours, so this push would clobber it.
+    // Reconcile (merges by key) and retry once; a second 409 is a real error
+    // rather than something to keep bouncing off.
+    if (res.status === 409 && !opts.retried) {
+      await workerReconcile({ retried: true });
+      // Report what the reconcile's own push actually achieved — returning a
+      // bare true here would claim success while the status line said error.
+      return syncState === 'ok';
+    }
+    if (res.status === 401) throw new Error('Write token missing or invalid — re-enter it in Settings');
     if (!res.ok) throw new Error('Sync error ' + res.status);
     setSyncState('ok');
     if (!opts.silent) toast('Synced to cloud ✓');
@@ -1026,9 +1042,9 @@ function mergeByKey(remoteArr, localArr, keyFn) {
 // Pull-or-push depending on which side is newer / non-empty (last-write-wins),
 // merging sessions/bodyWeight by id/date so a pull can't silently drop
 // local-only records that hadn't synced yet.
-async function workerReconcile() {
+async function workerReconcile(opts = {}) {
   const r = await workerFetch();
-  if (!r) { await workerPush({ silent: true }); return 'pushed'; }
+  if (!r) { await workerPush({ silent: true, retried: opts.retried }); return 'pushed'; }
   const localEmpty = sessions.length === 0 && bodyWeight.length === 0;
   const remoteHasData = r.parsed && (((r.parsed.sessions || []).length) || ((r.parsed.bodyWeight || []).length) || r.parsed.plan);
   if (remoteHasData && (r.updatedAt > dataUpdatedAt || localEmpty)) {
@@ -1040,10 +1056,10 @@ async function workerReconcile() {
     sessions = mergedSessions; bodyWeight = mergedBW;
     store.set('sessions', sessions); store.set('bw', bodyWeight);
     render(); setSyncState('ok');
-    if (hadLocalOnly) { touch(); await workerPush({ silent: true }); }
+    if (hadLocalOnly) { touch(); await workerPush({ silent: true, retried: opts.retried }); }
     return 'pulled';
   }
-  await workerPush({ silent: true });
+  await workerPush({ silent: true, retried: opts.retried });
   return 'pushed';
 }
 async function autoSyncOnLoad() {
@@ -1070,6 +1086,20 @@ function restoreFromCode(raw) {
       restoreBackup(r.raw); closeModal(); render(); setSyncState('ok'); toast('Restored ✓');
     } catch (e) { setSyncState('error', e.message); toast('Restore failed: ' + e.message, 'err'); }
   })();
+}
+
+// The token is HMAC-SHA256 hex, so 64 hex chars — anything else is a paste
+// accident (a backup code, a truncated copy) and is worth catching here rather
+// than as a 401 mid-workout.
+function saveWriteToken(raw) {
+  const t = (raw || '').trim().toLowerCase();
+  if (!t) { toast('Paste your write token first', 'err'); return; }
+  if (!/^[0-9a-f]{64}$/.test(t)) { toast('That does not look like a write token (64 hex characters)', 'err'); return; }
+  localStorage.setItem('gymtrack_write_token', t);
+  writeToken = t;
+  render();
+  toast('Write token saved ✓');
+  if (settings.autoSync) workerPush({ silent: true });
 }
 
 /* ================= first-run onboarding ================= */
@@ -1736,6 +1766,11 @@ function viewSettings() {
       <p class="small muted"><b>Restore from backup code</b></p>
       <input id="restore-uuid-input" class="mt8" placeholder="Paste your backup code or full share URL" style="width:100%;box-sizing:border-box">
       <button class="ghost wide mt8" data-action="restore-uuid">Restore</button>
+      <div class="divider"></div>
+      <p class="small muted"><b>Write token</b> ${writeToken ? '<span class="green">· set</span>' : '<span class="red">· not set</span>'}</p>
+      <input id="write-token-input" class="mt8" placeholder="Paste your write token" style="width:100%;box-sizing:border-box">
+      <button class="ghost wide mt8" data-action="save-write-token">Save write token</button>
+      <p class="small muted mt8">Your backup code is shareable and read-only. This token is what lets this device <b>write</b> to the cloud — keep it off any share link. Set it once per device.</p>
     </div>
 
     <h2 class="section">Backup</h2>
@@ -3042,6 +3077,7 @@ document.addEventListener('click', e => {
     case 'share-ai': copyText(workerShareUrl()).then(ok => toast(ok ? 'Link copied — paste into any AI chat' : 'Copy failed', ok ? 'ok' : 'err')); break;
     case 'copy-uuid': copyText(gymUUID).then(ok => toast(ok ? 'Backup code copied' : 'Copy failed', ok ? 'ok' : 'err')); break;
     case 'restore-uuid': restoreFromCode(mval('restore-uuid-input')); break;
+    case 'save-write-token': saveWriteToken(mval('write-token-input')); break;
     case 'toggle-sound': settings.sound = !settings.sound; saveSettings(); render(); break;
     case 'toggle-vibrate': settings.vibrate = !settings.vibrate; saveSettings(); render(); break;
     case 'test-sound': {

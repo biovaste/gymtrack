@@ -74,11 +74,42 @@ Sync starts automatically on first launch. The app:
 AI Coach tab → **Share with AI** → copies a URL you paste into any AI chat. Claude,
 ChatGPT, and Gemini can all fetch the JSON from that link and reply with a new plan.
 
+The share link is **read-only**. Anyone holding it can read your training data — that is
+the point, and the UUID's unguessability is the only thing protecting it — but they
+cannot write. Writing needs the separate write token below, which never appears in a
+share link.
+
 ### Data recovery
 
 Settings (gear icon, top right) → **Your backup code** shows your unique UUID. Save it
 somewhere safe (notes app, password manager). On a new device, open the app → Settings →
 **Restore from backup code** → paste your UUID — your full history is restored.
+
+### The write token
+
+Every write to the sync API needs a token derived from a secret held by the Worker. Set
+the secret once:
+
+```bash
+cd worker
+wrangler secret put GYMTRACK_WRITE_SECRET
+```
+
+Then derive the token for your UUID and move it out-of-band to each device — it is
+deliberately not fetchable over the API, since an endpoint that handed it out would make
+it exactly as guessable as the UUID it protects:
+
+```bash
+set GYMTRACK_WRITE_SECRET=<the same secret>
+node tools/write-token.mjs <your-uuid>
+```
+
+Paste the 64-character result into Settings → **Write token** on each device that logs
+workouts, and set it as `GYMTRACK_WRITE_TOKEN` on any desktop that pushes plans.
+
+While `GYMTRACK_WRITE_SECRET` is unset the Worker accepts unauthenticated writes — that
+is the rollout window that lets the API deploy before the phone holds a token. Set it
+once the app side is live.
 
 ### Desktop → phone: push a plan with no copy-paste
 
@@ -88,6 +119,8 @@ up automatically on next launch.
 ```bash
 # set your UUID once (copy it from Settings → "Your backup code"):
 set GYMTRACK_UUID=<your-uuid>
+# and the write token (see "The write token" above):
+set GYMTRACK_WRITE_TOKEN=<your-token>
 
 # then push a plan:
 node tools/push-plan.mjs path/to/plan.json      # or pipe the JSON via stdin
