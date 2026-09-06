@@ -7,11 +7,13 @@ import { scan } from './scan.mjs';
 export const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 export async function releaseCache(root,check=false) {
   const file=path.join(root,'sw.js');const sw=await readFile(file,'utf8').catch(()=>null);if(!sw)return;
-  const normalized=sw.replace(/const CACHE = '[^']+';/,"const CACHE = 'gymtrack-i18n-development';");
-  const contents=await Promise.all(['index.html','styles.css','app.js','i18n.js','exercises.js','locales/catalog.js','manifest.webmanifest'].map(f=>readFile(path.join(root,f),'utf8').catch(e=>{if(e.code==='ENOENT')return '';throw e;})));
+  const canonical=text=>text.replace(/\r\n?/g,'\n');
+  const current=canonical(sw);
+  const normalized=current.replace(/const CACHE = '[^']+';/,"const CACHE = 'gymtrack-i18n-development';");
+  const contents=await Promise.all(['index.html','styles.css','app.js','i18n.js','exercises.js','locales/catalog.js','manifest.webmanifest'].map(async f=>canonical(await readFile(path.join(root,f),'utf8').catch(e=>{if(e.code==='ENOENT')return '';throw e;}))));
   const expected=normalized.replace("const CACHE = 'gymtrack-i18n-development';",`const CACHE = 'gymtrack-i18n-${hash([normalized,...contents])}';`);
-  if(check && sw!==expected)throw Error('Offline app version is stale: run node tools/i18n/cli.mjs build');
-  if(!check && sw!==expected)await atomic(file,expected);
+  if(check && current!==expected)throw Error('Offline app version is stale: run node tools/i18n/cli.mjs build');
+  if(!check && current!==expected)await atomic(file,expected);
 }
 export async function pending(root) {
   const {source,review:old}=await load(root);const review=reconcile(source,old);
