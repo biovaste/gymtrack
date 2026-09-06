@@ -2,12 +2,15 @@
 // Bump on EVERY release. The browser only installs a new worker when sw.js itself
 // changes byte-for-byte, so shipping app.js/styles.css without touching this file
 // means no 'updatefound', no update banner, and users sit on the old cache.
-const CACHE = 'gymtrack-v25';
+const CACHE = 'gymtrack-i18n-900d82f0fbaa1f106add';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
+  './i18n.js',
+  './exercises.js',
+  './locales/catalog.js',
   './manifest.webmanifest',
   './icon-180.png',
   './icon-512.png'
@@ -27,7 +30,7 @@ self.addEventListener('message', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k.startsWith('gymtrack-') && k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -35,22 +38,16 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
-  if (url.origin !== location.origin) return; // let API calls (GitHub) hit the network directly
+  if (url.origin !== location.origin) return; // sync API calls go directly to the network
   // The Settings "Check for updates" probe compares the live file against the cached
   // one, so it must reach the network and must not leave a ?fresh= entry behind.
   if (url.searchParams.has('fresh')) return;
-  // Stale-while-revalidate: serve from cache instantly, refresh the cache in
-  // the background so app updates arrive on the next launch.
-  e.respondWith(
-    caches.match(e.request).then(hit => {
-      const refresh = fetch(e.request).then(res => {
-        if (res.ok) {
-          const copy = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, copy));
-        }
-        return res;
-      }).catch(() => hit);
-      return hit || refresh;
-    })
-  );
+  // Installed shell assets are immutable until the user activates the next
+  // worker. Revalidating individual files can mix old code with new keys.
+  const asset = ASSETS.find(path => new URL(path, self.registration.scope).pathname === url.pathname);
+  if (!asset) return;
+  e.respondWith(caches.open(CACHE).then(async cache => {
+    const hit = await cache.match(new URL(asset, self.registration.scope).href);
+    return hit || fetch(e.request);
+  }));
 });

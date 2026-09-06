@@ -1,0 +1,72 @@
+name: Finnish translations
+on:
+  pull_request:
+    paths: ['app.js', 'index.html', 'i18n.js', 'exercises.js', 'styles.css', 'sw.js', 'manifest.webmanifest', 'locales/**', 'tools/i18n/**', '.github/workflows/localization.yml']
+  push:
+    branches: [master, main]
+    paths: ['app.js', 'index.html', 'i18n.js', 'exercises.js', 'styles.css', 'sw.js', 'manifest.webmanifest', 'locales/**', 'tools/i18n/**', '.github/workflows/localization.yml']
+  schedule:
+    - cron: '20 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: finnish-${{ github.event.pull_request.number || 'reconcile' }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test --test-isolation=none tools/i18n/*.test.mjs tools/i18n-exercises.test.mjs tools/i18n-offline.test.mjs tools/i18n-runtime.test.mjs
+      - run: node tools/i18n/cli.mjs check
+
+  reconcile:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Generate missing or changed Finnish drafts
+        env:
+          I18N_API_KEY: ${{ secrets.I18N_API_KEY }}
+          I18N_MODEL: ${{ vars.I18N_MODEL }}
+          I18N_API_URL: ${{ vars.I18N_API_URL }}
+          I18N_INPUT_USD_PER_MILLION: ${{ vars.I18N_INPUT_USD_PER_MILLION }}
+          I18N_OUTPUT_USD_PER_MILLION: ${{ vars.I18N_OUTPUT_USD_PER_MILLION }}
+          I18N_MAX_USD: '1'
+          I18N_MAX_ENTRIES: '100'
+          I18N_MAX_REQUESTS: '10'
+        run: |
+          if [ -z "$I18N_API_KEY" ] || [ -z "$I18N_MODEL" ]; then
+            echo 'I18N_API_KEY or I18N_MODEL is not configured; the following check will fail visibly if Finnish drafts are missing.'
+          else
+            node tools/i18n/cli.mjs generate
+          fi
+      - run: node tools/i18n/cli.mjs check
+      - name: Create or update the translation review proposal
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: codex/finnish-translations
+          commit-message: Update Finnish translation drafts
+          title: Update Finnish translation drafts
+          body: |
+            New or changed app text now has Finnish drafts. Drafts are usable immediately when this change is released.
+
+            Run `node tools/i18n/cli.mjs review` locally to edit and approve individual contexts. Existing manual edits and approval history are preserved.
+          add-paths: |
+            locales/fi.review.json
+            locales/catalog.js
+            sw.js

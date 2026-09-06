@@ -1,6 +1,7 @@
 /* GymTrack — offline-first gym workout tracker designed to exchange
    plans and logs with Claude via JSON. No dependencies. */
 'use strict';
+const tr = (key, params) => I18n.t(key, params);
 
 /* ================= storage ================= */
 const store = {
@@ -13,7 +14,7 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmtClock = sec => { sec = Math.max(0, Math.round(sec)); const m = Math.floor(sec / 60), s = sec % 60; return m + ':' + String(s).padStart(2, '0'); };
 const fmtDur = min => min >= 60 ? Math.floor(min / 60) + 'h ' + (min % 60) + 'm' : min + ' min';
-const fmtDate = iso => new Date(iso).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+const fmtDate = iso => I18n.date(iso, { weekday: 'short', month: 'short', day: 'numeric' });
 const today = () => new Date().toISOString().slice(0, 10);
 const est1RM = (w, reps) => reps > 0 ? Math.round(w * (1 + reps / 30) * 10) / 10 : w;
 
@@ -102,16 +103,16 @@ const EX_LIBRARY = {
 };
 function lookupExplanation(name) {
   const n = String(name || '').toLowerCase();
-  if (EX_LIBRARY[n]) return EX_LIBRARY[n];
+  if (EX_LIBRARY[n]) return I18n.explanation(name, EX_LIBRARY[n]);
   for (const key of Object.keys(EX_LIBRARY)) {
-    if (n.includes(key) || key.includes(n)) return EX_LIBRARY[key];
+    if (n.includes(key) || key.includes(n)) return I18n.explanation(name, EX_LIBRARY[key]);
   }
   return null;
 }
 
 /* ================= equipment / plate calculator config ================= */
 const EQUIPMENT_TYPES = ['barbell', 'trap-bar', 'landmine', 'training-bar', 'dumbbell', 'machine', 'cable', 'bodyweight', 'other'];
-const EQUIPMENT_LABELS = { barbell: 'Barbell', 'trap-bar': 'Trap bar', landmine: 'Landmine', 'training-bar': 'Training bar', dumbbell: 'Dumbbell', machine: 'Machine', cable: 'Cable', bodyweight: 'Bodyweight', other: 'Other' };
+const equipmentLabel = id => EQUIPMENT_TYPES.includes(id) ? tr('equipment.name.' + id) : id;
 const PLATE_EQUIPMENT = new Set(['barbell', 'trap-bar', 'landmine', 'training-bar']); // shows the plate calculator
 const BAR_WEIGHT_EQUIPMENT = new Set(['barbell', 'trap-bar', 'training-bar']); // landmine ignores bar weight entirely
 const BAR_WEIGHT_DEFAULTS = { barbell: { kg: 20, lb: 45 }, 'trap-bar': { kg: 23, lb: 50 }, 'training-bar': { kg: 10, lb: 15 } };
@@ -124,7 +125,7 @@ function resolvedBarWeight(e) {
 function equipChip(e) {
   const eq = e.equipment;
   if (!eq) return '';
-  let label = EQUIPMENT_LABELS[eq] || eq;
+  let label = equipmentLabel(eq) || eq;
   if (BAR_WEIGHT_EQUIPMENT.has(eq) && e.barWeight != null) label += ` · ${e.barWeight}${unit()}`;
   return `<span class="equip-chip">${esc(label)}</span>`;
 }
@@ -452,7 +453,7 @@ function startRest(seconds, label) {
   if (!seconds || seconds <= 0) return;
   unlockAudio();
   cancelCue(); // cancel the outgoing rest's scheduled oscillators while `rest` still points at it
-  rest = { endsAt: Date.now() + seconds * 1000, total: seconds, label: label || 'Rest', fired: false, cueFired: false, cueNodes: null };
+  rest = { endsAt: Date.now() + seconds * 1000, total: seconds, label: label || tr("start_rest.message.rest"), fired: false, cueFired: false, cueNodes: null };
   scheduleCue(seconds);
   saveRest(); renderRest();
 }
@@ -482,12 +483,12 @@ function renderRest() {
   el.innerHTML = `
     <div class="row between">
       <div class="grow">
-        <div class="muted small">${over ? 'Rest over — GO! 🔥' : esc(rest.label)}</div>
+        <div class="muted small">${over ? tr("render_rest.message.rest_over_go") : esc(rest.label)}</div>
         <div class="rest-time ${over ? 'green' : ''}">${over ? '0:00' : fmtClock(remain)}</div>
       </div>
-      ${over ? '' : '<button class="icon-btn" data-action="rest-sub">−15s</button>'}
-      <button class="icon-btn" data-action="rest-add">+15s</button>
-      <button class="icon-btn ${over ? 'success' : ''}" data-action="rest-skip">${over ? 'OK' : 'Skip'}</button>
+      ${over ? '' : `<button class="icon-btn" data-action="rest-sub">${esc(tr("render_rest.text.15s"))}</button>`}
+      <button class="icon-btn" data-action="rest-add">${esc(tr("render_rest.text.15s_2"))}</button>
+      <button class="icon-btn ${over ? 'success' : ''}" data-action="rest-skip">${over ? tr("render_rest.message.ok") : tr("render_rest.message.skip")}</button>
     </div>
     <div class="rest-bar"><div style="width:${pct}%"></div></div>`;
 }
@@ -527,7 +528,7 @@ function toast(msg, kind = 'ok') {
 let modalActions = {};
 function showModal(title, bodyHtml, actions) {
   modalActions = {};
-  const btns = (actions || [{ label: 'Close' }]).map((a, i) => {
+  const btns = (actions || [{ label: tr("common.action.close") }]).map((a, i) => {
     modalActions['m' + i] = a.fn || null;
     return `<button class="${a.cls || ''}" data-action="modal-btn" data-idx="m${i}">${esc(a.label)}</button>`;
   }).join('');
@@ -546,17 +547,17 @@ const mnum = (id, d = 0) => { const v = parseFloat(mval(id)); return isNaN(v) ? 
 
 /* ================= plan normalization (for imports) ================= */
 function normalizePlan(raw) {
-  if (!raw || typeof raw !== 'object') throw new Error('Not a JSON object.');
-  if (raw.type && raw.type !== 'workout-plan') throw new Error('JSON "type" should be "workout-plan".');
-  if (!Array.isArray(raw.days) || !raw.days.length) throw new Error('Plan needs a non-empty "days" array.');
+  if (!raw || typeof raw !== 'object') throw new Error(tr("normalize_plan.message.not_a_json_object"));
+  if (raw.type && raw.type !== 'workout-plan') throw new Error(tr("normalize_plan.message.json_type_should_be_workout_plan"));
+  if (!Array.isArray(raw.days) || !raw.days.length) throw new Error(tr("normalize_plan.message.plan_needs_a_non_empty_days_array"));
   const p = {
     type: 'workout-plan', version: 1,
-    name: String(raw.name || 'Imported plan'),
+    name: String(raw.name || tr("normalize_plan.message.imported_plan")),
     createdAt: raw.createdAt || today(),
     days: raw.days.map(d => {
-      if (!Array.isArray(d.exercises)) throw new Error(`Day "${d.name || '?'}" needs an "exercises" array.`);
+      if (!Array.isArray(d.exercises)) throw new Error(tr("normalize_plan.message.day_needs_an_exercises_array", { d_name: d.name || '?' }));
       return {
-        id: d.id || uid(), name: String(d.name || 'Day'),
+        id: d.id || uid(), name: String(d.name || tr("normalize_plan.message.day")),
         // Day-level warm-up: a checklist of general prep (bike, band work,
         // mobility), not logged sets. Bare strings are accepted so a plan can
         // write ["Bike 5 min", "Band pull-apart x20"] without ceremony.
@@ -564,7 +565,7 @@ function normalizePlan(raw) {
           ? { name: w.trim(), detail: '' }
           : { name: String(w && w.name || '').trim(), detail: String(w && w.detail || '') })).filter(w => w.name) : [],
         exercises: d.exercises.map(e => {
-          if (!e.name) throw new Error('Every exercise needs a "name".');
+          if (!e.name) throw new Error(tr("normalize_plan.message.every_exercise_needs_a_name"));
           return {
             id: e.id || uid(), name: String(e.name),
             sets: Math.max(1, parseInt(e.sets, 10) || 3),
@@ -757,7 +758,7 @@ function startSession(dayId) {
   };
   exExpanded = new Set(); readinessOpen = null; warmupOpen = null;
   saveActive(); syncWakeLock(); render();
-  toast('Session started — go crush it 💪');
+  toast(tr("start_session.message.session_started_go_crush_it"));
 }
 function parseRepsLow(reps) {
   const m = String(reps).match(/\d+/);
@@ -805,17 +806,15 @@ function finishSession() {
   closeModal(); render();
   const setCount = record.exercises.reduce((n, e) => n + workingSets(e.sets).length, 0);
   const warmCount = record.exercises.reduce((n, e) => n + (e.sets.length - workingSets(e.sets).length), 0);
-  let html = `<p>Saved <b>${esc(record.dayName)}</b> — ${setCount} working set${setCount === 1 ? '' : 's'}${
-    warmCount ? ` (+${warmCount} warm-up)` : ''} in ${fmtDur(durationMin)}.</p>`;
+  let html = `<p>${esc(tr("finish_session.text.saved"))} <b>${esc(record.dayName)}</b> ${esc(tr("finish_session.text.working_set_in", { setCount: setCount, setCount_1_s: setCount === 1 ? '' : 's', warmCount_tr_finish_session_: warmCount ? ` ${tr("finish_session.message.warm_up", { warmCount: warmCount })}` : '', fmtDur_durationMin: fmtDur(durationMin) }))}</p>`;
   const sl = sessionLoad(record);
-  if (sl) html += `<p class="mt8">Session RPE <b>${sl.rpe}</b> · <b>${sl.load}</b> AU${
-    sl.partial ? ` <span class="muted small">(only ${Math.round(sl.coverage * 100)}% of sets had an RPE)</span>` : ''}</p>`;
-  if (prs.length) html += `<p class="mt8">🏆 New PRs: ${prs.map(p => `<span class="pr-badge">${esc(p)}</span>`).join(' ')}</p>`;
+  if (sl) html += `<p class="mt8">${esc(tr("finish_session.text.session_rpe"))} <b>${sl.rpe}</b> · <b>${sl.load}</b> AU${sl.partial ? ` <span class="muted small">${esc(tr("finish_session.text.only_of_sets_had_an_rpe", { Math_round_sl_coverage_100: Math.round(sl.coverage * 100) }))}</span>` : ''}</p>`;
+  if (prs.length) html += `<p class="mt8">${esc(tr("finish_session.text.new_prs"))} ${prs.map(p => `<span class="pr-badge">${esc(I18n.exercise(p))}</span>`).join(' ')}</p>`;
   const syncing = settings.autoSync;
-  html += `<p class="muted small mt8">${syncing ? '☁️ Syncing to the cloud for your AI coach…' : 'Head to the AI Coach tab to export this for your next plan update.'}</p>`;
+  html += `<p class="muted small mt8">${syncing ? tr("finish_session.message.syncing_to_the_cloud_for_your_ai_coach") : tr("finish_session.message.head_to_the_ai_coach_tab_to_export_this_for_your")}</p>`;
   // Explicit action rather than the implicit "Close" default: the way out of this
   // sheet should be obvious, and it lands you back on the day list.
-  showModal('Workout complete 🎉', html, [{ label: 'Done', cls: 'primary',
+  showModal(tr("finish_session.message.workout_complete"), html, [{ label: tr("finish_session.button.done"), cls: 'primary',
     fn: () => { closeModal(); tab = 'workout'; render(); window.scrollTo(0, 0); } }]);
   beep(2, 1100);
   if (syncing) workerPush({ silent: true }); // push the finished session right away
@@ -898,21 +897,21 @@ function completeSet(ei, si) {
       const nextEi = nextInRound(active.exercises, group, ei, si);
       if (nextEi != null) {
         // Mid-round: this exercise's own restSeconds is the short transition.
-        startRest(ex.restSeconds, '→ ' + active.exercises[nextEi].name);
+        startRest(ex.restSeconds, '→ ' + I18n.exercise(active.exercises[nextEi].name));
       } else if (!groupComplete(active.exercises, group)) {
         const rounds = Math.max(...group.idx.map(j => active.exercises[j].sets.length));
-        startRest(ex.restSeconds, `Round ${Math.min(si + 2, rounds)} of ${rounds}`);
+        startRest(ex.restSeconds, tr("complete_set.message.round_of", { Math_min_si_2_rounds: Math.min(si + 2, rounds), rounds: rounds }));
       } else {
         // Group finished. The next-movement rest is authored on the group's LAST
         // member in plan order — with unequal set counts the last member to
         // finish need not be that one, so don't read it off `ex`.
         const lastEx = active.exercises[group.idx[group.idx.length - 1]];
         startRest(lastEx.restSecondsNext != null ? lastEx.restSecondsNext : lastEx.restSeconds,
-          'Rest — next movement');
+          tr("complete_set.message.rest_next_movement"));
       }
     } else {
       const seconds = exerciseDone && ex.restSecondsNext != null ? ex.restSecondsNext : ex.restSeconds;
-      startRest(seconds, 'Rest — ' + ex.name);
+      startRest(seconds, tr("workout.rest.for_exercise", { exercise: I18n.exercise(ex.name) }));
     }
   }
   buzz([60]);
@@ -936,7 +935,7 @@ function buildBackup() {
 }
 function restoreBackup(raw) {
   const b = JSON.parse(raw);
-  if (b.type !== 'gymtrack-backup') throw new Error('Not a GymTrack backup (expected type "gymtrack-backup").');
+  if (b.type !== 'gymtrack-backup') throw new Error(tr("restore_backup.message.not_a_gymtrack_backup_expected_type_gymtrack_bac"));
   plan = normalizePlan(b.plan); sessions = Array.isArray(b.sessions) ? b.sessions : [];
   bodyWeight = Array.isArray(b.bodyWeight) ? b.bodyWeight : [];
   aliases = b.aliases && typeof b.aliases === 'object' ? b.aliases : {};
@@ -946,11 +945,7 @@ function restoreBackup(raw) {
   store.set('plan', plan); store.set('sessions', sessions); store.set('bw', bodyWeight); store.set('aliases', aliases);
   store.set('updatedAt', dataUpdatedAt); saveSettings();
 }
-const CLAUDE_PROMPT = () => `You are my strength coach. Below is my recent training data exported from my GymTrack app (JSON). Review my actual sets, reps, weights, RPE, notes and body weight, then write my next workout plan.
-
-Rules for the plan you produce:
-- Output ONLY a JSON code block matching this exact schema (weights in ${unit()}):
-{
+const coachPlanSchema = () => `{
   "type": "workout-plan",
   "version": 1,
   "name": "<plan name>",
@@ -976,22 +971,9 @@ Rules for the plan you produce:
       ]
     }
   ]
-}
-- Progress weights based on my logged RPE: if RPE was at or below target, increase; if above, hold or reduce.
-- Always include 1-2 "alternates" per exercise (for busy equipment) and a short "description" for each.
-- Keep rest times realistic per lift type. Set "restSecondsNext" only when the rest before switching movements should genuinely differ from the between-set rest (e.g. longer before a heavy compound, shorter before a superset).
-- Set "equipment" accurately per exercise — this drives whether the plate calculator shows up and whether the weight field is grayed out for bodyweight moves.
-- Set "metric" to "height" only for jump-height tests (e.g. box jumps, CMJ-style training sets) logged in cm; leave it out for ordinary weight × reps exercises.
-- Set "superset" to the same tag on exercises meant to be logged as one alternating superset — they must be adjacent in the "exercises" array; leave it out otherwise.
-
-My data:
-`;
-const CLAUDE_URL_PROMPT = url => `You are my strength coach. Fetch my latest GymTrack training data from this URL (JSON):
-${url}
-
-It contains my recent sessions (actual weights, reps, RPE), notes, body weight and current plan. Review it, then write my next workout plan.
-
-Reply with ONLY a JSON code block of type "workout-plan" (weights in ${unit()}) using the same field structure as the "plan" object in that data: days[] → exercises[] with name, sets, reps (string), weight, targetRpe, restSeconds, restSecondsNext (optional, only if it should differ from restSeconds), equipment (one of: barbell, trap-bar, landmine, training-bar, dumbbell, machine, cable, bodyweight, other), barWeight (optional, only if the bar isn't a standard 20kg/45lb bar), metric (optional, "load" default or "height" for a jump exercise logged in cm — use equipment "bodyweight" and weight 0 with it), superset (optional, a short tag shared by adjacent exercises to log as one alternating superset), description, and 1-2 alternates each. Progress weights from my logged RPE vs target (at/under target → increase; over → hold or reduce). I'll paste your JSON back into the app to load it.`;
+}`;
+const CLAUDE_PROMPT = () => tr('coach_prompt.copy_data', { unit: unit(), schema: coachPlanSchema() });
+const CLAUDE_URL_PROMPT = url => tr('coach_prompt.share_url', { url, unit: unit() });
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); return true; }
   catch (e) {
@@ -1007,18 +989,18 @@ const workerShareUrl = () => `${WORKER_URL}/data/${gymUUID}`;
 function relTime(ts) {
   if (!ts) return '';
   const s = Math.round((Date.now() - ts) / 1000);
-  if (s < 10) return 'just now';
-  if (s < 60) return s + 's ago';
-  const m = Math.round(s / 60); if (m < 60) return m + ' min ago';
-  const h = Math.round(m / 60); if (h < 24) return h + 'h ago';
-  return Math.round(h / 24) + 'd ago';
+  if (s < 10) return tr("sync.time.now");
+  if (s < 60) return tr("sync.time.seconds", { count: s });
+  const m = Math.round(s / 60); if (m < 60) return tr("sync.time.minutes", { count: m });
+  const h = Math.round(m / 60); if (h < 24) return tr("sync.time.hours", { count: h });
+  return tr("sync.time.days", { count: Math.round(h / 24) });
 }
 function syncStatusHtml() {
-  if (!settings.autoSync) return '<span class="muted small">⏸ Auto-sync off</span>';
-  if (syncState === 'syncing') return '<span class="small amber">⟳ Syncing…</span>';
-  if (syncState === 'error') return '<span class="small red">⚠ ' + esc(lastSyncMsg || 'Sync error') + '</span>';
-  if (lastSyncedAt) return '<span class="small green">✓ Synced ' + relTime(lastSyncedAt) + '</span>';
-  return '<span class="muted small">🔗 Connected — syncing on launch</span>';
+  if (!settings.autoSync) return `<span class="muted small">${esc(tr("sync_status_html.text.auto_sync_off"))}</span>`;
+  if (syncState === 'syncing') return `<span class="small amber">${esc(tr("sync_status_html.text.syncing"))}</span>`;
+  if (syncState === 'error') return `<span class="small red">⚠ ` + esc(lastSyncMsg || tr("sync_status_html.message.sync_error")) + `</span>`;
+  if (lastSyncedAt) return `<span class="small green">${esc(tr("sync.status.synced_at", { time: relTime(lastSyncedAt) }))}</span>`;
+  return `<span class="muted small">${esc(tr("sync_status_html.text.connected_syncing_on_launch"))}</span>`;
 }
 function setSyncState(state, msg) {
   syncState = state;
@@ -1051,17 +1033,17 @@ async function workerPush(opts = {}) {
       // bare true here would claim success while the status line said error.
       return syncState === 'ok';
     }
-    if (res.status === 401) throw new Error('Write token missing or invalid — re-enter it in Settings');
-    if (!res.ok) throw new Error('Sync error ' + res.status);
+    if (res.status === 401) throw new Error(tr("worker_push.message.write_token_missing_or_invalid_re_enter_it_in_se"));
+    if (!res.ok) throw new Error(tr("cloud_sync.error.status", { status: res.status }));
     setSyncState('ok');
-    if (!opts.silent) toast('Synced to cloud ✓');
+    if (!opts.silent) toast(tr("worker_push.message.synced_to_cloud"));
     return true;
-  } catch (e) { setSyncState('error', e.message); if (!opts.silent) toast('Sync failed: ' + e.message, 'err'); return false; }
+  } catch (e) { setSyncState('error', e.message); if (!opts.silent) toast(tr("cloud_sync.error.push", { error: e.message }), 'err'); return false; }
 }
 async function workerFetch() {
   const res = await fetch(`${WORKER_URL}/data/${gymUUID}`);
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error('Fetch error ' + res.status);
+  if (!res.ok) throw new Error(tr("cloud_fetch.error.status", { status: res.status }));
   const text = await res.text();
   let parsed = {}; try { parsed = JSON.parse(text); } catch (e) {}
   return { raw: text, updatedAt: parsed.updatedAt || 0, parsed };
@@ -1108,9 +1090,9 @@ async function autoSyncOnLoad() {
 /* ================= restore from backup code ================= */
 // Shared by the settings view and the onboarding "I have a backup code" flow.
 function restoreFromCode(raw) {
-  if (!raw) { toast('Paste your backup code first', 'err'); return; }
+  if (!raw) { toast(tr("restore_from_code.message.paste_your_backup_code_first"), 'err'); return; }
   const match = raw.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
-  if (!match) { toast('Invalid backup code', 'err'); return; }
+  if (!match) { toast(tr("restore_from_code.message.invalid_backup_code"), 'err'); return; }
   const newUUID = match[1].toLowerCase();
   localStorage.setItem('gymtrack_uuid', newUUID);
   gymUUID = newUUID;
@@ -1118,9 +1100,9 @@ function restoreFromCode(raw) {
   (async () => {
     try {
       const r = await workerFetch();
-      if (!r) { toast('No data found for this backup code', 'err'); setSyncState('error', 'Not found'); return; }
-      restoreBackup(r.raw); closeModal(); render(); setSyncState('ok'); toast('Restored ✓');
-    } catch (e) { setSyncState('error', e.message); toast('Restore failed: ' + e.message, 'err'); }
+      if (!r) { toast(tr("restore_from_code.message.no_data_found_for_this_backup_code"), 'err'); setSyncState('error', tr("restore_from_code.message.not_found")); return; }
+      restoreBackup(r.raw); closeModal(); render(); setSyncState('ok'); toast(tr("restore_from_code.message.restored"));
+    } catch (e) { setSyncState('error', e.message); toast(tr("backup.error.restore", { error: e.message }), 'err'); }
   })();
 }
 
@@ -1129,32 +1111,32 @@ function restoreFromCode(raw) {
 // than as a 401 mid-workout.
 function saveWriteToken(raw) {
   const t = (raw || '').trim().toLowerCase();
-  if (!t) { toast('Paste your write token first', 'err'); return; }
-  if (!/^[0-9a-f]{64}$/.test(t)) { toast('That does not look like a write token (64 hex characters)', 'err'); return; }
+  if (!t) { toast(tr("save_write_token.message.paste_your_write_token_first"), 'err'); return; }
+  if (!/^[0-9a-f]{64}$/.test(t)) { toast(tr("save_write_token.message.that_does_not_look_like_a_write_token_64_hex_cha"), 'err'); return; }
   localStorage.setItem('gymtrack_write_token', t);
   writeToken = t;
   render();
-  toast('Write token saved ✓');
+  toast(tr("save_write_token.message.write_token_saved"));
   if (settings.autoSync) workerPush({ silent: true });
 }
 
 /* ================= first-run onboarding ================= */
 function showOnboarding() {
-  showModal('Welcome to GymTrack', `
-    <div class="onboard-row">${icon('dumbbell', 22)}<div><b>Log your workouts</b><div class="muted small">Sets, reps, RPE — with a rest timer that runs itself.</div></div></div>
-    <div class="onboard-row">${icon('sparkle', 22)}<div><b>Your AI coach writes the next plan</b><div class="muted small">Share your training data with Claude, ChatGPT or Gemini in one tap.</div></div></div>
-    <div class="onboard-row">${icon('link', 22)}<div><b>Everything syncs automatically</b><div class="muted small">Your backup code (in Settings) restores it all on any device.</div></div></div>
-    <p class="small muted mt12">A starter Push / Pull / Legs plan is loaded — edit it in the Plan tab or import your own.</p>`,
+  showModal(tr("show_onboarding.message.welcome_to_gymtrack"), `
+    <div class="onboard-row">${icon('dumbbell', 22)}<div><b>${esc(tr("show_onboarding.text.log_your_workouts"))}</b><div class="muted small">${esc(tr("show_onboarding.text.sets_reps_rpe_with_a_rest_timer_that_runs_itself"))}</div></div></div>
+    <div class="onboard-row">${icon('sparkle', 22)}<div><b>${esc(tr("show_onboarding.text.your_ai_coach_writes_the_next_plan"))}</b><div class="muted small">${esc(tr("show_onboarding.text.share_your_training_data_with_claude_chatgpt_or_"))}</div></div></div>
+    <div class="onboard-row">${icon('link', 22)}<div><b>${esc(tr("show_onboarding.text.everything_syncs_automatically"))}</b><div class="muted small">${esc(tr("show_onboarding.text.your_backup_code_in_settings_restores_it_all_on_"))}</div></div></div>
+    <p class="small muted mt12">${esc(tr("show_onboarding.text.a_starter_push_pull_legs_plan_is_loaded_edit_it_"))}</p>`,
     [
-      { label: 'Get started', cls: 'primary', fn: () => { store.set('onboarded', 1); closeModal(); } },
-      { label: 'I have a backup code', fn: () => {
+      { label: tr("show_onboarding.button.get_started"), cls: 'primary', fn: () => { store.set('onboarded', 1); closeModal(); } },
+      { label: tr("show_onboarding.button.i_have_a_backup_code"), fn: () => {
           store.set('onboarded', 1);
-          showModal('Restore your data', `
-            <p class="small muted">Paste the backup code (or share URL) from your old device.</p>
-            <input id="restore-uuid-input" class="mt8" placeholder="Paste your backup code" style="width:100%;box-sizing:border-box">`,
+          showModal(tr("show_onboarding.message.restore_your_data"), `
+            <p class="small muted">${esc(tr("show_onboarding.text.paste_the_backup_code_or_share_url_from_your_old"))}</p>
+            <input id="restore-uuid-input" class="mt8" placeholder="${esc(tr("show_onboarding.placeholder.paste_your_backup_code"))}" style="width:100%;box-sizing:border-box">`,
             [
-              { label: 'Restore', cls: 'primary', fn: () => restoreFromCode(mval('restore-uuid-input')) },
-              { label: 'Cancel' }
+              { label: tr("common.action.restore"), cls: 'primary', fn: () => restoreFromCode(mval('restore-uuid-input')) },
+              { label: tr("common.action.cancel") }
             ]);
         } }
     ]);
@@ -1169,7 +1151,7 @@ function showUpdateBanner() {
   if (document.getElementById('update-banner')) return;
   const el = document.createElement('div');
   el.id = 'update-banner'; el.className = 'update-banner';
-  el.innerHTML = `<span>New version available</span><button data-action="update-app">Update</button>`;
+  el.innerHTML = `<span>${esc(tr("show_update_banner.text.new_version_available"))}</span><button data-action="update-app">${esc(tr("show_update_banner.text.update"))}</button>`;
   document.body.prepend(el);
 }
 // Manual "Check for updates". Covers two distinct failure modes:
@@ -1180,33 +1162,33 @@ function showUpdateBanner() {
 //     live app.js against the cached copy and offer a cache purge.
 async function checkForUpdates() {
   const btn = document.querySelector('[data-action="check-updates"]');
-  if (btn) { btn.disabled = true; btn.textContent = 'Checking…'; }
-  const reset = () => { if (btn) { btn.disabled = false; btn.textContent = 'Check for updates'; } };
+  if (btn) { btn.disabled = true; btn.textContent = tr("check_for_updates.message.checking"); }
+  const reset = () => { if (btn) { btn.disabled = false; btn.textContent = tr("updates.action.check"); } };
   try {
-    if (!('serviceWorker' in navigator)) { toast('Updates need a browser with service workers', 'err'); return reset(); }
+    if (!('serviceWorker' in navigator)) { toast(tr("check_for_updates.message.updates_need_a_browser_with_service_workers"), 'err'); return reset(); }
     const reg = await navigator.serviceWorker.getRegistration();
-    if (!reg) { toast('App not installed as a PWA — just reload the page'); return reset(); }
+    if (!reg) { toast(tr("check_for_updates.message.app_not_installed_as_a_pwa_just_reload_the_page")); return reset(); }
 
     await reg.update(); // re-fetches sw.js; installs a new worker if it differs
-    if (reg.waiting) { swWaiting = reg.waiting; showUpdateBanner(); toast('Update ready — tap Update'); return reset(); }
+    if (reg.waiting) { swWaiting = reg.waiting; showUpdateBanner(); toast(tr("check_for_updates.message.update_ready_tap_update")); return reset(); }
 
     // Worker is current. Is its cached app.js still current too?
     const [liveRes, cachedRes] = await Promise.all([
       fetch(`./app.js?fresh=${Date.now()}`, { cache: 'no-store' }),
       caches.match('./app.js')
     ]);
-    if (!liveRes.ok || !cachedRes) { toast('You’re on the latest version ✓'); return reset(); }
+    if (!liveRes.ok || !cachedRes) { toast(tr("updates.status.latest")); return reset(); }
     const [live, cached] = await Promise.all([liveRes.text(), cachedRes.text()]);
-    if (live === cached) { toast('You’re on the latest version ✓'); return reset(); }
+    if (live === cached) { toast(tr("updates.status.latest")); return reset(); }
 
     reset();
-    showModal('Update available', `
-      <p class="small">A newer version is on the server, but this device is still serving a cached copy.</p>
-      <p class="small muted mt8">Reloading clears the app cache and fetches it. Your workouts, plan and settings are stored separately and are not affected.</p>`,
-      [{ label: 'Reload now', cls: 'primary', fn: forceRefresh }, { label: 'Not now' }]);
+    showModal(tr("check_for_updates.message.update_available"), `
+      <p class="small">${esc(tr("check_for_updates.text.a_newer_version_is_on_the_server_but_this_device"))}</p>
+      <p class="small muted mt8">${esc(tr("check_for_updates.text.reloading_clears_the_app_cache_and_fetches_it_yo"))}</p>`,
+      [{ label: tr("check_for_updates.button.reload_now"), cls: 'primary', fn: forceRefresh }, { label: tr("check_for_updates.button.not_now") }]);
   } catch (err) {
     reset();
-    toast('Could not check — are you offline?', 'err');
+    toast(tr("check_for_updates.message.could_not_check_are_you_offline"), 'err');
   }
 }
 
@@ -1259,19 +1241,19 @@ function viewStart() {
     if (idx >= 0) suggest = plan.days[(idx + 1) % plan.days.length].id;
   }
   return `
-    <h2 class="section">Start a workout</h2>
+    <h2 class="section">${esc(tr("view_start.text.start_a_workout"))}</h2>
     ${plan.days.map(d => `
       <div class="card">
         <div class="row between">
           <div class="grow">
-            <div class="bold">${esc(d.name)} ${d.id === suggest ? '<span class="day-pill green">up next</span>' : ''}</div>
-            <div class="muted small mt8">${d.exercises.map(e => esc(e.name)).join(' · ')}</div>
+            <div class="bold">${esc(d.name)} ${d.id === suggest ? `<span class="day-pill green">${esc(tr("view_start.text.up_next"))}</span>` : ''}</div>
+            <div class="muted small mt8">${d.exercises.map(e => esc(I18n.exercise(e.name))).join(' · ')}</div>
           </div>
         </div>
-        <button class="primary wide mt12" data-action="start-session" data-id="${d.id}">Start ${esc(d.name.split('—')[0].trim())}</button>
+        <button class="primary wide mt12" data-action="start-session" data-id="${d.id}">${esc(tr("view_start.text.start", { d_name_split_0_trim: d.name.split('—')[0].trim() }))}</button>
       </div>`).join('')}
-    ${last ? `<p class="muted small" style="text-align:center">Last workout: ${esc(last.dayName)} · ${fmtDate(last.date)}</p>` : ''}
-    <button class="ghost wide mt12" data-action="cmj-open">${icon('video', 16)} Test CMJ measurement</button>`;
+    ${last ? `<p class="muted small" style="text-align:center">${esc(tr("view_start.text.last_workout", { last_dayName: last.dayName, fmtDate_last_date: fmtDate(last.date) }))}</p>` : ''}
+    <button class="ghost wide mt12" data-action="cmj-open">${icon('video', 16)} ${esc(tr("view_start.text.test_cmj_measurement"))}</button>`;
 }
 
 /* ---- workout: active session ---- */
@@ -1283,42 +1265,42 @@ function viewActiveSession() {
   const hasReadiness = r.cmjCm != null || r.broadJumpCm != null || r.subjectiveEnergy != null;
   const readinessExpanded = readinessOpen != null ? readinessOpen : !(hasReadiness || doneSets > 0);
   const readinessSummary = hasReadiness
-    ? [r.cmjCm != null ? `CMJ ${r.cmjCm}${r.cmjAttempts?.length > 1 ? ` (${r.cmjAttempts.length} att)` : ''}` : '', r.broadJumpCm != null ? `Broad ${r.broadJumpCm}` : '', r.subjectiveEnergy != null ? `Energy ${r.subjectiveEnergy}` : ''].filter(Boolean).join(' · ')
-    : 'tap to log CMJ / energy';
+    ? [r.cmjCm != null ? tr("view_active_session.message.cmj", { r_cmjCm: r.cmjCm, r_cmjAttempts_length_1_tr_vi: r.cmjAttempts?.length > 1 ? ` ${tr("view_active_session.message.att", { r_cmjAttempts_length: r.cmjAttempts.length })}` : '' }) : '', r.broadJumpCm != null ? tr("view_active_session.message.broad", { r_broadJumpCm: r.broadJumpCm }) : '', r.subjectiveEnergy != null ? tr("view_active_session.message.energy", { r_subjectiveEnergy: r.subjectiveEnergy }) : ''].filter(Boolean).join(' · ')
+    : tr("view_active_session.message.tap_to_log_cmj_energy");
   return `
     <div class="row between">
       <h2 class="section" style="margin:4px">${esc(active.dayName)}</h2>
-      <button class="danger icon-btn" data-action="confirm-finish">Finish</button>
+      <button class="danger icon-btn" data-action="confirm-finish">${esc(tr("view_active_session.text.finish"))}</button>
     </div>
     <div class="session-progress">
       <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
-      <span class="small muted progress-label">${doneSets}/${totalSets} sets</span>
+      <span class="small muted progress-label">${esc(tr("view_active_session.text.sets", { doneSets: doneSets, totalSets: totalSets }))}</span>
     </div>
     ${readinessExpanded ? `
-    <h2 class="section tappable" data-action="readiness-toggle">Pre-session readiness <span class="muted small">(optional)</span> <span class="chev">${icon('chevDown', 14)}</span></h2>
+    <h2 class="section tappable" data-action="readiness-toggle">${esc(tr("view_active_session.text.pre_session_readiness"))} <span class="muted small">${esc(tr("view_active_session.text.optional"))}</span> <span class="chev">${icon('chevDown', 14)}</span></h2>
     <div class="card">
       <div class="row" style="gap:12px">
         <label style="flex:1">
-          <span class="small muted">CMJ (cm)</span>
+          <span class="small muted">${esc(tr("view_active_session.text.cmj_cm"))}</span>
           <input type="number" step="0.1" min="0" max="100" data-bind="readiness-cmj"
             value="${active.readiness?.cmjCm ?? ''}" placeholder="—">
         </label>
         <label style="flex:1">
-          <span class="small muted">Broad jump (cm)</span>
+          <span class="small muted">${esc(tr("view_active_session.text.broad_jump_cm"))}</span>
           <input type="number" step="1" min="0" max="400" data-bind="readiness-broad"
             value="${active.readiness?.broadJumpCm ?? ''}" placeholder="—">
         </label>
         <label style="flex:1">
-          <span class="small muted">Energy (1–10)</span>
+          <span class="small muted">${esc(tr("view_active_session.text.energy_1_10"))}</span>
           <input type="number" step="1" min="1" max="10" data-bind="readiness-energy"
             value="${active.readiness?.subjectiveEnergy ?? ''}" placeholder="—">
         </label>
       </div>
-      <button class="ghost wide mt8" data-action="cmj-open">${icon('video', 16)} Measure CMJ via video</button>
+      <button class="ghost wide mt8" data-action="cmj-open">${icon('video', 16)} ${esc(tr("view_active_session.text.measure_cmj_via_video"))}</button>
     </div>` : `
     <div class="card collapsed-ex tappable" data-action="readiness-toggle">
       <div class="row between">
-        <div class="grow"><span class="bold small">Readiness</span> <span class="muted small">· ${esc(readinessSummary)}</span></div>
+        <div class="grow"><span class="bold small">${esc(tr("view_active_session.text.readiness"))}</span> <span class="muted small">· ${esc(readinessSummary)}</span></div>
         <span class="chev">${icon('chevRight', 16)}</span>
       </div>
     </div>`}
@@ -1326,13 +1308,13 @@ function viewActiveSession() {
     ${supersetGroups(active.exercises).map(g => isRealGroup(g)
       ? supersetCard(g)
       : exerciseCard(active.exercises[g.idx[0]], g.idx[0])).join('')}
-    <button class="ghost wide mt8" data-action="session-ex-add">+ Add exercise</button>
-    <h2 class="section">Session notes</h2>
+    <button class="ghost wide mt8" data-action="session-ex-add">${esc(tr("view_active_session.text.add_exercise"))}</button>
+    <h2 class="section">${esc(tr("view_active_session.text.session_notes"))}</h2>
     <div class="card">
-      <textarea data-bind="session-notes" placeholder="How did it go? Anything Claude should know? (sleep, pain, energy…)">${esc(active.notes)}</textarea>
+      <textarea data-bind="session-notes" placeholder="${esc(tr("view_active_session.placeholder.how_did_it_go_anything_claude_should_know_sleep_"))}">${esc(active.notes)}</textarea>
     </div>
-    <button class="wide success mt12" data-action="confirm-finish">Finish workout</button>
-    <button class="wide ghost danger mt8" data-action="confirm-discard">Discard session</button>`;
+    <button class="wide success mt12" data-action="confirm-finish">${esc(tr("view_active_session.text.finish_workout"))}</button>
+    <button class="wide ghost danger mt8" data-action="confirm-discard">${esc(tr("view_active_session.text.discard_session"))}</button>`;
 }
 /*
  * The day's general warm-up: a checklist, not logged sets. Sits below readiness
@@ -1347,20 +1329,19 @@ function warmupCard() {
   if (!open) return `
     <div class="card collapsed-ex tappable" data-action="warmup-toggle">
       <div class="row between">
-        <div class="grow"><span class="green bold">✓</span> <span class="bold small">Warm-up</span>
-          <span class="muted small">· ${done}/${items.length} done</span></div>
+        <div class="grow"><span class="green bold">✓</span> <span class="bold small">${esc(tr("warmup_card.heading"))}</span>
+          <span class="muted small">${esc(tr("warmup_card.text.done", { done: done, items_length: items.length }))}</span></div>
         <span class="chev">${icon('chevRight', 16)}</span>
       </div>
     </div>`;
   return `
-    <h2 class="section tappable" data-action="warmup-toggle">Warm-up
+    <h2 class="section tappable" data-action="warmup-toggle">${esc(tr("warmup_card.heading"))}
       <span class="muted small">(${done}/${items.length})</span> <span class="chev">${icon('chevDown', 14)}</span></h2>
     <div class="card">
       ${items.map((w, i) => `
         <label class="merge-row">
           <input type="checkbox" data-action="warmup-check" data-i="${i}" ${w.done ? 'checked' : ''}>
-          <span class="grow ${w.done ? 'warmup-done' : ''}"><span class="bold small">${esc(w.name)}</span>${
-            w.detail ? `<div class="muted small">${esc(w.detail)}</div>` : ''}</span>
+          <span class="grow ${w.done ? 'warmup-done' : ''}"><span class="bold small">${esc(w.name)}</span>${w.detail ? `<div class="muted small">${esc(w.detail)}</div>` : ''}</span>
         </label>`).join('')}
     </div>`;
 }
@@ -1375,8 +1356,8 @@ function supersetCard(group) {
     return `
     <div class="card collapsed-ex tappable" data-action="ex-toggle" data-key="${esc(key)}">
       <div class="row between">
-        <div class="grow"><span class="green bold">✓</span> <span class="bold">Superset ${esc(group.tag)}</span>
-          <span class="muted small">· ${group.idx.map(j => esc(list[j].name)).join(' + ')}</span></div>
+        <div class="grow"><span class="green bold">✓</span> <span class="bold">${esc(tr("superset_card.heading", { group_tag: group.tag }))}</span>
+          <span class="muted small">· ${group.idx.map(j => esc(I18n.exercise(list[j].name))).join(' + ')}</span></div>
         <span class="chev">${icon('chevDown', 18)}</span>
       </div>
     </div>`;
@@ -1385,9 +1366,9 @@ function supersetCard(group) {
   return `
   <div class="card superset-card">
     <div class="superset-head row between">
-      <span class="bold">Superset ${esc(group.tag)}</span>
-      <span class="muted small">${complete ? 'complete' : `round ${Math.min(doneRounds + 1, rounds)} of ${rounds}`}</span>
-      ${complete ? `<button class="icon-btn" data-action="ex-toggle" data-key="${esc(key)}" title="Collapse">${icon('chevUp', 18)}</button>` : ''}
+      <span class="bold">${esc(tr("superset_card.heading", { group_tag: group.tag }))}</span>
+      <span class="muted small">${complete ? tr("workout.superset.complete") : tr("superset_card.message.round_of", { Math_min_doneRounds_1_rounds: Math.min(doneRounds + 1, rounds), rounds: rounds })}</span>
+      ${complete ? `<button class="icon-btn" data-action="ex-toggle" data-key="${esc(key)}" title="${esc(tr("common.action.collapse"))}">${icon('chevUp', 18)}</button>` : ''}
     </div>
     ${group.idx.map(j => `<div class="superset-member${slot && slot.ei === j ? ' ss-next' : ''}">${exerciseCard(list[j], j, { inGroup: true })}</div>`).join('')}
   </div>`;
@@ -1397,7 +1378,7 @@ function supersetCard(group) {
 // ramp was. Warm-ups need not be contiguous — the row number is a manual toggle.
 function setLabels(sets) {
   let w = 0, k = 0;
-  return sets.map((s, si) => ({ s, si, label: s.warmup ? 'W' + (++w) : String(++k) }));
+  return sets.map((s, si) => ({ s, si, label: s.warmup ? tr("set_labels.message.w") + (++w) : String(++k) }));
 }
 function exerciseCard(e, ei, opts) {
   const inGroup = !!(opts && opts.inGroup);
@@ -1410,15 +1391,15 @@ function exerciseCard(e, ei, opts) {
     // count but never chosen as the "best" set.
     const ws = workingSets(e.sets);
     const warmN = e.sets.length - ws.length;
-    const warmTag = warmN ? ` (+${warmN} warm-up)` : '';
+    const warmTag = warmN ? ` ${tr("exercise_card.message.warm_up", { warmN: warmN })}` : '';
     let summary;
     if (isJump(e)) {
-      summary = `${ws.length} attempt${ws.length === 1 ? '' : 's'}${warmTag} · best ${bestHeight(e.sets)} cm`;
+      summary = tr("exercise_card.message.attempt_best_cm", { ws_length: ws.length, ws_length_1_s: ws.length === 1 ? '' : 's', warmTag: warmTag, bestHeight_e_sets: bestHeight(e.sets) });
     } else if (ws.length) {
       const best = ws.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
-      summary = `${ws.length} set${ws.length === 1 ? '' : 's'}${warmTag} · best ${best.weight}×${best.reps}`;
+      summary = tr("exercise_card.message.set_best", { ws_length: ws.length, ws_length_1_s: ws.length === 1 ? '' : 's', warmTag: warmTag, best_weight: best.weight, best_reps: best.reps });
     } else {
-      summary = `${warmN} warm-up set${warmN === 1 ? '' : 's'} only`;
+      summary = tr("exercise_card.message.warm_up_set_only", { warmN: warmN, warmN_1_s: warmN === 1 ? '' : 's' });
     }
     // The note button carries its own data-action, and the delegated listener
     // resolves via closest('[data-action]'), so it wins over the row's expand
@@ -1426,10 +1407,10 @@ function exerciseCard(e, ei, opts) {
     return `
     <div class="card collapsed-ex tappable" data-action="ex-toggle" data-ei="${ei}">
       <div class="row between">
-        <div class="grow"><span class="green bold">✓</span> <span class="bold">${esc(e.name)}</span>
+        <div class="grow"><span class="green bold">✓</span> <span class="bold">${esc(I18n.exercise(e.name))}</span>
           <span class="muted small">· ${esc(summary)}</span>
           ${e.notes ? `<div class="small amber collapsed-note">${icon('note', 13)} ${esc(e.notes.slice(0, 60))}${e.notes.length > 60 ? '…' : ''}</div>` : ''}</div>
-        <button class="icon-btn" data-action="ex-note" data-ei="${ei}" title="Note">${icon('note', 16)}</button>
+        <button class="icon-btn" data-action="ex-note" data-ei="${ei}" title="${esc(tr("exercise_card.title.note"))}">${icon('note', 16)}</button>
         <span class="chev">${icon('chevDown', 18)}</span>
       </div>
     </div>`;
@@ -1440,40 +1421,40 @@ function exerciseCard(e, ei, opts) {
   <div class="${inGroup ? 'ss-body' : 'card'}">
     <div class="row between">
       <div class="grow">
-        <div class="ex-name">${allDone ? '✅ ' : ''}${esc(e.name)}</div>
+        <div class="ex-name">${allDone ? '✅ ' : ''}${esc(I18n.exercise(e.name))}</div>
         <div class="target-line">${isJump(e)
-          ? `Plan: ${e.plannedSets} attempt${e.plannedSets === 1 ? '' : 's'} · rest ${fmtClock(e.restSeconds)} ${equipChip(e)}`
-          : `Plan: ${e.plannedSets}×${esc(e.plannedReps)} @ ${e.plannedWeight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''} · rest ${fmtClock(e.restSeconds)} ${equipChip(e)}`}</div>
-        ${lastP ? `<div class="last-line">Last: ${lastP.jump ? `best ${bestHeight(lastP.sets)} cm` : lastP.sets.map(s => `${s.weight}×${s.reps}`).join(' · ') + (lastRpe ? ` @RPE ${lastRpe}` : '')} — ${fmtDate(lastP.date)}</div>` : ''}
-        ${e.swappedFrom ? `<div class="swap-note">↺ swapped from ${esc(e.swappedFrom)}</div>` : ''}
+          ? tr("exercise_card.message.plan_attempt_rest", { e_plannedSets: e.plannedSets, e_plannedSets_1_s: e.plannedSets === 1 ? '' : 's', fmtClock_e_restSeconds: fmtClock(e.restSeconds) })
+          : tr("exercise_card.message.plan_rest", { e_plannedSets: e.plannedSets, e_plannedReps: e.plannedReps, e_plannedWeight: e.plannedWeight, unit: unit(), e_targetRpe_tr_exercise_card: e.targetRpe ? tr("format.rpe_suffix", { rpe: e.targetRpe }) : '', fmtClock_e_restSeconds: fmtClock(e.restSeconds) })} ${equipChip(e)}</div>
+        ${lastP ? `<div class="last-line">${esc(tr("exercise_card.text.last", { lastP_jump_tr_exercise_card_: lastP.jump ? tr("exercise_card.message.best_cm", { bestHeight_lastP_sets: bestHeight(lastP.sets) }) : lastP.sets.map(s => `${s.weight}×${s.reps}`).join(' · ') + (lastRpe ? ` ${tr("exercise_card.message.rpe_2", { lastRpe: lastRpe })}` : ''), fmtDate_lastP_date: fmtDate(lastP.date) }))}</div>` : ''}
+        ${e.swappedFrom ? `<div class="swap-note">${esc(tr("exercise_card.text.swapped_from", { e_swappedFrom: I18n.exercise(e.swappedFrom) }))}</div>` : ''}
       </div>
-      <button class="icon-btn" data-action="ex-info" data-ei="${ei}" title="Explain">${icon('info', 18)}</button>
-      ${!isJump(e) && PLATE_EQUIPMENT.has(e.equipment || 'barbell') ? `<button class="icon-btn" data-action="plate-calc" data-ei="${ei}" title="Plate calculator">${icon('plate', 18)}</button>` : ''}
-      <button class="icon-btn" data-action="ex-swap" data-ei="${ei}" title="Swap">${icon('swap', 18)}</button>
-      ${allDone && !inGroup ? `<button class="icon-btn" data-action="ex-toggle" data-ei="${ei}" title="Collapse">${icon('chevUp', 18)}</button>` : ''}
+      <button class="icon-btn" data-action="ex-info" data-ei="${ei}" title="${esc(tr("exercise_card.title.explain"))}">${icon('info', 18)}</button>
+      ${!isJump(e) && PLATE_EQUIPMENT.has(e.equipment || 'barbell') ? `<button class="icon-btn" data-action="plate-calc" data-ei="${ei}" title="${esc(tr("exercise_card.title.plate_calculator"))}">${icon('plate', 18)}</button>` : ''}
+      <button class="icon-btn" data-action="ex-swap" data-ei="${ei}" title="${esc(tr("common.action.swap"))}">${icon('swap', 18)}</button>
+      ${allDone && !inGroup ? `<button class="icon-btn" data-action="ex-toggle" data-ei="${ei}" title="${esc(tr("common.action.collapse"))}">${icon('chevUp', 18)}</button>` : ''}
     </div>
     ${isJump(e) ? `
     <div class="set-grid jump">
       <div class="head">#</div><div class="head">cm</div><div class="head">✓</div>
       ${setLabels(e.sets).map(({ s, si, label }) => `
-        <button class="set-no-btn${s.warmup ? ' warm' : ''}" data-action="set-warmup" data-ei="${ei}" data-si="${si}" title="Mark as warm-up">${label}</button>
+        <button class="set-no-btn${s.warmup ? ' warm' : ''}" data-action="set-warmup" data-ei="${ei}" data-si="${si}" title="${esc(tr("exercise_card.action.mark_warmup"))}">${label}</button>
         <input class="${s.done ? 'set-row-done-i' : ''}${s.warmup ? ' warm-i' : ''}" type="number" inputmode="decimal" step="0.5" value="${s.heightCm != null ? s.heightCm : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="heightCm" ${s.done ? 'style="border-color:var(--green)"' : ''}>
         <button class="set-done-btn ${s.done ? 'success' : ''}" data-action="set-done" data-ei="${ei}" data-si="${si}">${s.done ? '✓' : '○'}</button>`).join('')}
     </div>` : `
     <div class="set-grid">
-      <div class="head">#</div><div class="head">${unit()}</div><div class="head">Reps</div><div class="head">RPE</div><div class="head">✓</div>
+      <div class="head">#</div><div class="head">${unit()}</div><div class="head">${esc(tr("exercise_card.text.reps"))}</div><div class="head">RPE</div><div class="head">✓</div>
       ${setLabels(e.sets).map(({ s, si, label }) => `
-        <button class="set-no-btn${s.warmup ? ' warm' : ''}" data-action="set-warmup" data-ei="${ei}" data-si="${si}" title="Mark as warm-up">${label}</button>
+        <button class="set-no-btn${s.warmup ? ' warm' : ''}" data-action="set-warmup" data-ei="${ei}" data-si="${si}" title="${esc(tr("exercise_card.action.mark_warmup"))}">${label}</button>
         <input class="${s.done ? 'set-row-done-i' : ''}${e.equipment === 'bodyweight' ? ' bw-weight-i' : ''}${s.warmup ? ' warm-i' : ''}" type="number" inputmode="decimal" step="0.5" value="${s.weight != null ? s.weight : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="weight" ${s.done ? 'style="border-color:var(--green)"' : ''}>
         <input class="${s.warmup ? 'warm-i' : ''}" type="number" inputmode="numeric" value="${s.reps != null ? s.reps : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="reps" ${s.done ? 'style="border-color:var(--green)"' : ''}>
         <button class="rpe-btn ${s.rpe != null ? '' : 'muted'}" data-action="rpe-pick" data-ei="${ei}" data-si="${si}" ${s.done ? 'style="border-color:var(--green)"' : ''}>${s.rpe != null ? s.rpe : '—'}</button>
         <button class="set-done-btn ${s.done ? 'success' : ''}" data-action="set-done" data-ei="${ei}" data-si="${si}">${s.done ? '✓' : '○'}</button>`).join('')}
     </div>`}
     <div class="row mt12">
-      <button class="ghost icon-btn" data-action="set-add" data-ei="${ei}">+ Set</button>
-      <button class="ghost icon-btn" data-action="set-remove" data-ei="${ei}">− Set</button>
-      ${isJump(e) ? `<button class="ghost icon-btn" data-action="cmj-open" data-ei="${ei}">${icon('video', 15)} Measure</button>` : ''}
-      <button class="ghost icon-btn grow note-btn" data-action="ex-note" data-ei="${ei}">${icon('note', 15)} ${e.notes ? esc(e.notes.slice(0, 24)) + (e.notes.length > 24 ? '…' : '') : 'Note'}</button>
+      <button class="ghost icon-btn" data-action="set-add" data-ei="${ei}">${esc(tr("exercise_card.text.set"))}</button>
+      <button class="ghost icon-btn" data-action="set-remove" data-ei="${ei}">${esc(tr("exercise_card.text.set_2"))}</button>
+      ${isJump(e) ? `<button class="ghost icon-btn" data-action="cmj-open" data-ei="${ei}">${icon('video', 15)} ${esc(tr("exercise_card.text.measure"))}</button>` : ''}
+      <button class="ghost icon-btn grow note-btn" data-action="ex-note" data-ei="${ei}">${icon('note', 15)} ${e.notes ? esc(e.notes.slice(0, 24)) + (e.notes.length > 24 ? '…' : '') : tr("exercise_card.message.note")}</button>
     </div>
   </div>`;
 }
@@ -1484,7 +1465,7 @@ function viewPlan() {
     <div class="row between">
       <div class="grow">
         <div class="bold">${esc(plan.name)}</div>
-        <div class="muted small">${plan.days.length} days · created ${esc(plan.createdAt || '?')}</div>
+        <div class="muted small">${esc(tr("view_plan.text.days_created", { plan_days_length: plan.days.length, plan_createdAt: plan.createdAt || '?' }))}</div>
       </div>
       <button class="icon-btn" data-action="plan-rename">✏️</button>
     </div>
@@ -1495,7 +1476,7 @@ function viewPlan() {
       <div class="card">
         <div class="row between tappable" data-action="day-toggle" data-id="${d.id}">
           <div class="bold grow">${esc(d.name)}</div>
-          <span class="day-pill">${d.exercises.length} exercise${d.exercises.length === 1 ? '' : 's'}</span>
+          <span class="day-pill">${esc(tr("view_plan.text.exercise_2", { d_exercises_length: d.exercises.length, d_exercises_length_1_s: d.exercises.length === 1 ? '' : 's' }))}</span>
           <span class="chev">${icon(open ? 'chevDown' : 'chevRight', 16)}</span>
         </div>
         ${open ? (() => {
@@ -1510,23 +1491,23 @@ function viewPlan() {
           ${d.exercises.map((e, i) => `
             <div class="row between" style="padding:9px 0">
               <div class="grow tappable" data-action="ex-menu" data-day="${d.id}" data-i="${i}">
-                <div class="bold">${esc(e.name)}${e.superset ? ` <span class="day-pill">SS ${esc(e.superset)}</span>` : ''}</div>
-                <div class="muted small">${e.warmupSets ? `${e.warmupSets}w + ` : ''}${e.sets}×${esc(e.reps)} @ ${e.weight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''} · rest ${fmtClock(e.restSeconds)}${e.alternates.length ? ' · ' + e.alternates.length + ' alt' : ''} ${equipChip(e)}</div>
+                <div class="bold">${esc(I18n.exercise(e.name))}${e.superset ? ` <span class="day-pill">${esc(tr("view_plan.text.ss", { e_superset: e.superset }))}</span>` : ''}</div>
+                <div class="muted small">${esc(tr("view_plan.text.rest", { e_warmupSets_tr_view_plan_me: e.warmupSets ? `${tr("view_plan.message.w", { e_warmupSets: e.warmupSets })} ` : '', e_sets: e.sets, e_reps: e.reps, e_weight: e.weight, unit: unit(), e_targetRpe_tr_view_plan_mes: e.targetRpe ? tr("format.rpe_suffix", { rpe: e.targetRpe }) : '', fmtClock_e_restSeconds: fmtClock(e.restSeconds), e_alternates_length_e_altern: e.alternates.length ? ' · ' + e.alternates.length + ' alt' : '' }))} ${equipChip(e)}</div>
               </div>
               <button class="icon-btn" data-action="ex-move" data-day="${d.id}" data-i="${i}" data-dir="-1" ${groupOfIdx.get(i) === 0 ? 'disabled' : ''}>↑</button>
               <button class="icon-btn" data-action="ex-move" data-day="${d.id}" data-i="${i}" data-dir="1" ${groupOfIdx.get(i) === groups.length - 1 ? 'disabled' : ''}>↓</button>
             </div>`).join('')}
           <div class="row mt8">
-            <button class="ghost icon-btn" data-action="ex-add" data-day="${d.id}">+ Exercise</button>
-            <button class="ghost icon-btn" data-action="day-warmup" data-id="${d.id}">Warm-up${(d.warmup || []).length ? ` (${d.warmup.length})` : ''}</button>
-            <button class="ghost icon-btn" data-action="day-rename" data-id="${d.id}">Rename</button>
-            <button class="ghost icon-btn red" data-action="day-delete" data-id="${d.id}">Delete</button>
+            <button class="ghost icon-btn" data-action="ex-add" data-day="${d.id}">${esc(tr("view_plan.text.exercise"))}</button>
+            <button class="ghost icon-btn" data-action="day-warmup" data-id="${d.id}">${esc(tr("view_plan.text.warm_up", { d_warmup_length_d_warmup_len: (d.warmup || []).length ? ` (${d.warmup.length})` : '' }))}</button>
+            <button class="ghost icon-btn" data-action="day-rename" data-id="${d.id}">${esc(tr("view_plan.text.rename"))}</button>
+            <button class="ghost icon-btn red" data-action="day-delete" data-id="${d.id}">${esc(tr("common.action.delete"))}</button>
           </div>`;
         })() : ''}
       </div>`;
     }).join('')}
-    <button class="wide mt8" data-action="day-add">+ Add day</button>
-    <p class="muted small mt12" style="text-align:center">Tap an exercise to edit targets, swap alternates, or read how to do it.<br>Import a whole new plan in the AI Coach tab.</p>`;
+    <button class="wide mt8" data-action="day-add">${esc(tr("view_plan.text.add_day"))}</button>
+    <p class="muted small mt12" style="text-align:center">${esc(tr("view_plan.text.tap_an_exercise_to_edit_targets_swap_alternates_"))}<br>${esc(tr("view_plan.text.import_a_whole_new_plan_in_the_ai_coach_tab"))}</p>`;
 }
 
 /* ---- history view ---- */
@@ -1631,45 +1612,50 @@ function viewHistory() {
   const thisWeek = weeks[weeks.length - 1];
   return `
     ${sessions.length ? `
-    <h2 class="section">Weekly training</h2>
+    <h2 class="section">${esc(tr("view_history.text.weekly_training"))}</h2>
     <div class="card">
       ${weeklyBarsSvg(weeks)}
-      <div class="muted small mt8">This week: <b class="green">${thisWeek.sessions} session${thisWeek.sessions === 1 ? '' : 's'}</b> · ${thisWeek.sets} sets · ${Math.round(thisWeek.volume).toLocaleString()} ${unit()} lifted</div>
+      <div class="muted small mt8">${esc(tr("history.week.summary", {
+        sessions: thisWeek.sessions, sets: thisWeek.sets,
+        volume: I18n.number(Math.round(thisWeek.volume)), unit: unit()
+      }))}</div>
     </div>` : ''}
 
-    <h2 class="section">Body weight</h2>
+    <h2 class="section">${esc(tr("view_history.text.body_weight"))}</h2>
     <div class="card">
       <div class="row">
-        <input id="bw-input" type="number" inputmode="decimal" step="0.1" placeholder="${bwLast ? bwLast.weight : 'e.g. 80'}" style="max-width:130px">
+        <input id="bw-input" type="number" inputmode="decimal" step="0.1" placeholder="${bwLast ? bwLast.weight : tr("history.weight.example")}" style="max-width:130px">
         <span class="muted">${unit()}</span>
-        <button class="primary grow" data-action="bw-add">Log today</button>
+        <button class="primary grow" data-action="bw-add">${esc(tr("view_history.text.log_today"))}</button>
       </div>
       ${bodyWeight.length ? `
         ${chartSvg(bodyWeight.slice(-15).map(b => ({ v: b.weight, d: b.date })))}
-        <div class="muted small mt8">Latest: <b class="green">${bwLast.weight} ${unit()}</b> on ${fmtDate(bwLast.date)} · ${bodyWeight.length} entries
-          <button class="ghost icon-btn small" data-action="bw-undo" style="float:right">undo last</button></div>` : ''}
+        <div class="muted small mt8">${esc(tr("history.body_weight.latest", {
+          weight: bwLast.weight, unit: unit(), date: fmtDate(bwLast.date), entries: bodyWeight.length
+        }))}
+          <button class="ghost icon-btn small" data-action="bw-undo" style="float:right">${esc(tr("view_history.text.undo_last"))}</button></div>` : ''}
     </div>
 
-    <h2 class="section">Exercise progress</h2>
+    <h2 class="section">${esc(tr("view_history.text.exercise_progress"))}</h2>
     <div class="card">
       ${exNames.length ? `
-        <select data-bind="history-ex">${exNames.map(n => `<option ${n === sel ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
+        <select data-bind="history-ex">${exNames.map(n => `<option value="${esc(n)}" ${n === sel ? 'selected' : ''}>${esc(I18n.exercise(n))}</option>`).join('')}</select>
         ${histRows.length ? `
           ${chartSvg(histRows.slice(-12).map(r => ({ v: histJump ? r.heightCm : r.e1rm, d: r.date })))}
-          <div class="muted small mt8">${histJump ? `Best jump: <b class="amber">${prBest} cm</b>` : `Best est. 1RM: <b class="amber">${prBest} ${unit()}</b>`}</div>
-          ${hist.length > histRows.length ? `<div class="muted small mt8">${hist.length - histRows.length} earlier session${hist.length - histRows.length === 1 ? '' : 's'} logged this exercise with a different metric and ${hist.length - histRows.length === 1 ? 'is' : 'are'} not shown.</div>` : ''}
+          <div class="muted small mt8">${histJump ? `${esc(tr("view_history.text.best_jump"))} <b class="amber">${esc(tr("view_history.text.cm", { prBest: prBest }))}</b>` : `${esc(tr("view_history.text.best_est_1rm"))} <b class="amber">${prBest} ${unit()}</b>`}</div>
+          ${hist.length > histRows.length ? `<div class="muted small mt8">${esc(tr("view_history.text.earlier_session_logged_this_exercise_with_a_diff", { hist_length_histRows_length: hist.length - histRows.length, hist_length_histRows_length_: hist.length - histRows.length === 1 ? '' : 's', hist_length_histRows_length_2: hist.length - histRows.length === 1 ? 'is' : 'are' }))}</div>` : ''}
           <div class="divider"></div>
           ${histRows.slice(-8).reverse().map(r => `
             <div class="row between" style="padding:5px 0">
               <span class="muted small">${fmtDate(r.date)}</span>
-              <span class="small">${histJump ? r.sets.map(s => `${s.heightCm}cm`).join(' · ') : r.sets.map(s => `${s.weight}×${s.reps}`).join(' · ')}</span>
-              <span class="small bold ${(histJump ? r.heightCm : r.e1rm) >= prBest ? 'amber' : ''}">${(histJump ? r.heightCm : r.e1rm) >= prBest ? '🏆 ' : ''}${histJump ? `${r.heightCm} cm` : `e1RM ${r.e1rm}`}</span>
-            </div>`).join('')}` : '<p class="muted mt8">No logged sets for this exercise yet.</p>'}
-        ${exNames.length > 1 || Object.keys(aliases).length ? `<button class="ghost wide mt8 small" data-action="merge-names" data-name="${esc(sel)}">Merge names…</button>` : ''}`
-      : '<p class="empty"><span class="big">📈</span>Finish your first workout and your progress will show up here.</p>'}
+              <span class="small">${histJump ? r.sets.map(s => tr("view_history.message.cm", { s_heightCm: s.heightCm })).join(' · ') : r.sets.map(s => `${s.weight}×${s.reps}`).join(' · ')}</span>
+              <span class="small bold ${(histJump ? r.heightCm : r.e1rm) >= prBest ? 'amber' : ''}">${(histJump ? r.heightCm : r.e1rm) >= prBest ? '🏆 ' : ''}${histJump ? tr("view_history.message.cm_2", { r_heightCm: r.heightCm }) : tr("view_history.message.e1rm", { r_e1rm: r.e1rm })}</span>
+            </div>`).join('')}` : `<p class="muted mt8">${esc(tr("view_history.text.no_logged_sets_for_this_exercise_yet"))}</p>`}
+        ${exNames.length > 1 || Object.keys(aliases).length ? `<button class="ghost wide mt8 small" data-action="merge-names" data-name="${esc(sel)}">${esc(tr("view_history.text.merge_names"))}</button>` : ''}`
+      : `<p class="empty"><span class="big">📈</span>${esc(tr("view_history.text.finish_your_first_workout_and_your_progress_will"))}</p>`}
     </div>
 
-    <h2 class="section">Sessions (${sessions.length})</h2>
+    <h2 class="section">${esc(tr("view_history.text.sessions", { sessions_length: sessions.length }))}</h2>
     ${sessions.length ? sessions.slice().reverse().map(s => {
       const open = expandedSession === s.id;
       const setCount = s.exercises.reduce((n, e) => n + workingSets(e.sets).length, 0);
@@ -1679,32 +1665,30 @@ function viewHistory() {
         <div class="row between tappable" data-action="session-toggle" data-id="${s.id}">
           <div class="grow">
             <div class="bold">${esc(s.dayName)}</div>
-            <div class="muted small">${fmtDate(s.date)} · ${fmtDur(s.durationMin)} · ${setCount} sets${
-              sl ? ` · RPE ${sl.rpe} · ${sl.load} AU${sl.partial ? '*' : ''}` : ''}</div>
+            <div class="muted small">${esc(tr("view_history.text.sets", { fmtDate_s_date: fmtDate(s.date), fmtDur_s_durationMin: fmtDur(s.durationMin), setCount: setCount, sl_tr_view_history_message_r: sl ? ` ${tr("view_history.message.rpe_au", { sl_rpe: sl.rpe, sl_load: sl.load, sl_partial: sl.partial ? '*' : '' })}` : '' }))}</div>
           </div>
           <span class="chev">${icon(open ? 'chevDown' : 'chevRight', 16)}</span>
         </div>
         ${open ? `
           <div class="divider"></div>
-          ${sl && sl.partial ? `<div class="muted small">* session RPE from only ${
-            Math.round(sl.coverage * 100)}% of sets — the rest were logged without one.</div>` : ''}
+          ${sl && sl.partial ? `<div class="muted small">${esc(tr("view_history.text.session_rpe_from_only_of_sets_the_rest_were_logg", { Math_round_sl_coverage_100: Math.round(sl.coverage * 100) }))}</div>` : ''}
           ${s.exercises.map(e => `
             <div style="padding:5px 0">
-              <div class="bold small">${esc(e.name)}${e.swappedFrom ? ` <span class="swap-note">(was ${esc(e.swappedFrom)})</span>` : ''}</div>
+              <div class="bold small">${esc(I18n.exercise(e.name))}${e.swappedFrom ? ` <span class="swap-note">${esc(tr("view_history.text.was", { e_swappedFrom: I18n.exercise(e.swappedFrom) }))}</span>` : ''}</div>
               <div class="muted small">${e.sets.map(x => {
                 const txt = e.metric === 'height'
-                  ? `${x.heightCm} cm`
+                  ? tr("view_history.message.cm_3", { x_heightCm: x.heightCm })
                   : `${x.weight}${unit()}×${x.reps}${x.rpe ? '@' + x.rpe : ''}`;
                 // Warm-ups stay visible here — this is the raw log, not a stat —
                 // but dimmed and prefixed so they can't be misread as work sets.
-                return x.warmup ? `<span class="warmup-set">w ${txt}</span>` : txt;
+                return x.warmup ? `<span class="warmup-set">${esc(tr("view_history.text.w", { txt: txt }))}</span>` : txt;
               }).join(' · ')}</div>
               ${e.notes ? `<div class="small amber">📝 ${esc(e.notes)}</div>` : ''}
             </div>`).join('')}
           ${s.notes ? `<div class="divider"></div><div class="small">📝 ${esc(s.notes)}</div>` : ''}
-          <button class="ghost icon-btn red mt8" data-action="session-delete" data-id="${s.id}">Delete session</button>` : ''}
+          <button class="ghost icon-btn red mt8" data-action="session-delete" data-id="${s.id}">${esc(tr("view_history.text.delete_session"))}</button>` : ''}
       </div>`;
-    }).join('') : '<p class="empty"><span class="big">🗓️</span>No sessions yet.</p>'}`;
+    }).join('') : `<p class="empty"><span class="big">🗓️</span>${esc(tr("view_history.text.no_sessions_yet"))}</p>`}`;
 }
 
 /* ---- merge exercise names (aliases) ---- */
@@ -1713,15 +1697,15 @@ function mergeNamesModal(selName) {
   const others = [...new Set(sessions.flatMap(s => s.exercises.map(e => canonicalName(e.name))))]
     .filter(n => n.toLowerCase() !== sel.toLowerCase()).sort();
   const currentAliases = Object.keys(aliases).filter(k => aliases[k].toLowerCase() === sel.toLowerCase()).sort();
-  showModal('Merge into "' + sel + '"', `
-    <p class="small muted">Tick names that are really the same exercise as <b>${esc(sel)}</b> (typos, abbreviations). Their history shows up under this name — the original logs are untouched.</p>
+  showModal(tr("history.merge.title", { exercise: sel }), `
+    <p class="small muted">${esc(tr("merge_names_modal.text.tick_names_that_are_really_the_same_exercise_as"))} <b>${esc(sel)}</b> ${esc(tr("merge_names_modal.text.typos_abbreviations_their_history_shows_up_under"))}</p>
     ${others.length ? others.map(n => `
       <label class="merge-row"><input type="checkbox" class="merge-cb" value="${esc(n)}"><span>${esc(n)}</span></label>`).join('')
-      : '<p class="muted small mt8">No other exercise names in your history.</p>'}
-    ${currentAliases.length ? `<div class="divider"></div><p class="small muted">Already merged into this name:</p>
-      ${currentAliases.map(k => `<div class="row between mt8"><span class="small">${esc(k)}</span><button class="ghost icon-btn red" data-action="unmerge-alias" data-k="${esc(k)}" data-name="${esc(sel)}">Remove</button></div>`).join('')}` : ''}`,
+      : `<p class="muted small mt8">${esc(tr("merge_names_modal.text.no_other_exercise_names_in_your_history"))}</p>`}
+    ${currentAliases.length ? `<div class="divider"></div><p class="small muted">${esc(tr("merge_names_modal.text.already_merged_into_this_name"))}</p>
+      ${currentAliases.map(k => `<div class="row between mt8"><span class="small">${esc(k)}</span><button class="ghost icon-btn red" data-action="unmerge-alias" data-k="${esc(k)}" data-name="${esc(sel)}">${esc(tr("merge_names_modal.text.remove"))}</button></div>`).join('')}` : ''}`,
     [
-      { label: 'Merge', cls: 'primary', fn: () => {
+      { label: tr("merge_names_modal.button.merge"), cls: 'primary', fn: () => {
           const checked = [...document.querySelectorAll('.merge-cb:checked')].map(c => c.value);
           if (!checked.length) { closeModal(); return; }
           for (const n of checked) {
@@ -1731,34 +1715,34 @@ function mergeNamesModal(selName) {
           }
           historyExercise = sel;
           saveAliases(); closeModal(); render();
-          toast('Merged under ' + sel + ' ✓');
+          toast(tr("history.merge.success", { exercise: sel }));
         } },
-      { label: 'Cancel' }
+      { label: tr("common.action.cancel") }
     ]);
 }
 
 /* ---- AI coach tab ---- */
 function viewCoach() {
   return `
-    <h2 class="section">Share with AI</h2>
+    <h2 class="section">${esc(tr("view_coach.text.share_with_ai"))}</h2>
     <div class="card">
-      <button class="primary wide" data-action="share-ai">${icon('link', 18)} Share with AI</button>
-      <p class="small muted mt8">Copies a link you can paste into Claude, ChatGPT, or Gemini. The AI fetches your latest training data automatically — ask it to review your training or write your next plan.</p>
+      <button class="primary wide" data-action="share-ai">${icon('link', 18)} ${esc(tr("view_coach.text.share_with_ai_2"))}</button>
+      <p class="small muted mt8">${esc(tr("view_coach.text.copies_a_link_you_can_paste_into_claude_chatgpt_"))}</p>
       <div id="sync-status" class="mt8">${syncStatusHtml()}</div>
     </div>
 
-    <h2 class="section">Or copy your data directly</h2>
+    <h2 class="section">${esc(tr("view_coach.text.or_copy_your_data_directly"))}</h2>
     <div class="card">
-      <p class="small muted">Copies a coaching prompt + your last 15 sessions, body weight and current plan. Paste it into any AI chat.</p>
-      <button class="wide mt12" data-action="copy-coach">${icon('copy', 18)} Copy coaching prompt + data</button>
-      <button class="ghost wide mt8" data-action="copy-data">Copy raw data only</button>
+      <p class="small muted">${esc(tr("view_coach.text.copies_a_coaching_prompt_your_last_15_sessions_b"))}</p>
+      <button class="wide mt12" data-action="copy-coach">${icon('copy', 18)} ${esc(tr("view_coach.text.copy_coaching_prompt_data"))}</button>
+      <button class="ghost wide mt8" data-action="copy-data">${esc(tr("view_coach.text.copy_raw_data_only"))}</button>
     </div>
 
-    <h2 class="section">Import a plan</h2>
+    <h2 class="section">${esc(tr("view_coach.text.import_a_plan"))}</h2>
     <div class="card">
-      <p class="small muted">Paste the <code class="inline">workout-plan</code> JSON code block your AI coach gives you. It replaces your current plan (history is kept).</p>
+      <p class="small muted">${esc(tr("view_coach.import.instructions"))}</p>
       <textarea id="import-area" class="mt8" placeholder='{"type":"workout-plan", "days":[...]}'></textarea>
-      <button class="primary wide mt8" data-action="import-plan">Import plan</button>
+      <button class="primary wide mt8" data-action="import-plan">${esc(tr("view_coach.text.import_plan"))}</button>
     </div>`;
 }
 
@@ -1766,95 +1750,100 @@ function viewCoach() {
 function viewSettings() {
   return `
     <div class="row settings-head">
-      <button class="icon-btn ghost" data-action="settings-back" aria-label="Back">${icon('back', 22)}</button>
-      <h2 class="settings-title">Settings</h2>
+      <button class="icon-btn ghost" data-action="settings-back" aria-label="${esc(tr("view_settings.aria-label.back"))}">${icon('back', 22)}</button>
+      <h2 class="settings-title">${esc(tr("view_settings.text.settings"))}</h2>
     </div>
 
-    <h2 class="section">Preferences</h2>
+    <div class="card"><label class="row between"><span>${esc(tr("settings.language.label"))}</span><select data-bind="set-language" aria-label="${esc(tr("settings.language.label"))}"><option value="en" ${I18n.locale() === 'en' ? 'selected' : ''}>${esc(tr("settings.language.english"))}</option><option value="fi" ${I18n.locale() === 'fi' ? 'selected' : ''}>${esc(tr("settings.language.finnish"))}</option></select></label></div>
+    <div class="card">
+      <p class="small muted">${esc(I18n.pendingExercises().length ? tr("settings.exercise_review.pending", { count: I18n.pendingExercises().length }) : tr("settings.exercise_review.none"))}</p>
+      <button class="ghost wide mt8" data-action="download-pending-exercises" ${I18n.pendingExercises().length ? '' : 'disabled'}>${esc(tr("settings.exercise_review.download"))}</button>
+    </div>
+    <h2 class="section">${esc(tr("view_settings.text.preferences"))}</h2>
     <div class="card">
       <div class="row between" style="padding:6px 0">
-        <span>Weight unit</span>
+        <span>${esc(tr("view_settings.text.weight_unit"))}</span>
         <select data-bind="set-unit" style="max-width:110px"><option ${unit() === 'kg' ? 'selected' : ''}>kg</option><option ${unit() === 'lb' ? 'selected' : ''}>lb</option></select>
       </div>
       <div class="row between" style="padding:6px 0">
-        <span>Rest-timer sound</span>
-        <button class="icon-btn ${settings.sound ? 'success' : ''}" data-action="toggle-sound">${settings.sound ? 'On' : 'Off'}</button>
+        <span>${esc(tr("view_settings.text.rest_timer_sound"))}</span>
+        <button class="icon-btn ${settings.sound ? 'success' : ''}" data-action="toggle-sound">${settings.sound ? tr("view_settings.message.on") : tr("view_settings.message.off")}</button>
       </div>
       <div class="row between" style="padding:6px 0">
-        <span>Vibration</span>
+        <span>${esc(tr("view_settings.text.vibration"))}</span>
         ${navigator.vibrate
-          ? `<button class="icon-btn ${settings.vibrate ? 'success' : ''}" data-action="toggle-vibrate">${settings.vibrate ? 'On' : 'Off'}</button>`
-          : `<span class="muted small">Not supported on this device</span>`}
+          ? `<button class="icon-btn ${settings.vibrate ? 'success' : ''}" data-action="toggle-vibrate">${settings.vibrate ? tr("view_settings.message.on_2") : tr("view_settings.message.off_2")}</button>`
+          : `<span class="muted small">${esc(tr("view_settings.text.not_supported_on_this_device"))}</span>`}
       </div>
-      <button class="ghost wide mt8" data-action="test-sound">🔊 Test the rest-timer sound</button>
+      <button class="ghost wide mt8" data-action="test-sound">${esc(tr("view_settings.text.test_the_rest_timer_sound"))}</button>
     </div>
 
-    <h2 class="section">Cloud sync</h2>
+    <h2 class="section">${esc(tr("view_settings.text.cloud_sync"))}</h2>
     <div class="card">
       <div class="row between">
-        <span class="bold">Auto-sync</span>
-        <button class="icon-btn ${settings.autoSync ? 'success' : ''}" data-action="toggle-autosync">${settings.autoSync ? 'On' : 'Off'}</button>
+        <span class="bold">${esc(tr("view_settings.text.auto_sync"))}</span>
+        <button class="icon-btn ${settings.autoSync ? 'success' : ''}" data-action="toggle-autosync">${settings.autoSync ? tr("view_settings.message.on_3") : tr("view_settings.message.off_3")}</button>
       </div>
       <div id="sync-status" class="mt8">${syncStatusHtml()}</div>
-      <p class="small muted mt8">Syncs automatically after every workout — no setup needed.</p>
+      <p class="small muted mt8">${esc(tr("view_settings.text.syncs_automatically_after_every_workout_no_setup"))}</p>
       <div class="divider"></div>
-      <p class="small muted"><b>Your backup code</b></p>
+      <p class="small muted"><b>${esc(tr("view_settings.text.your_backup_code"))}</b></p>
       <code class="inline" style="word-break:break-all;display:block;margin-top:6px;user-select:all">${esc(gymUUID)}</code>
-      <button class="ghost wide mt8" data-action="copy-uuid">Copy backup code</button>
-      <p class="small muted mt8">Save this somewhere safe. If you lose your phone or clear the app, paste it into Restore below to recover all your data on a new device.</p>
+      <button class="ghost wide mt8" data-action="copy-uuid">${esc(tr("view_settings.text.copy_backup_code"))}</button>
+      <p class="small muted mt8">${esc(tr("view_settings.text.save_this_somewhere_safe_if_you_lose_your_phone_"))}</p>
       <div class="divider"></div>
-      <p class="small muted"><b>Restore from backup code</b></p>
-      <input id="restore-uuid-input" class="mt8" placeholder="Paste your backup code or full share URL" style="width:100%;box-sizing:border-box">
-      <button class="ghost wide mt8" data-action="restore-uuid">Restore</button>
+      <p class="small muted"><b>${esc(tr("view_settings.text.restore_from_backup_code"))}</b></p>
+      <input id="restore-uuid-input" class="mt8" placeholder="${esc(tr("view_settings.placeholder.paste_your_backup_code_or_full_share_url"))}" style="width:100%;box-sizing:border-box">
+      <button class="ghost wide mt8" data-action="restore-uuid">${esc(tr("common.action.restore"))}</button>
       <div class="divider"></div>
-      <p class="small muted"><b>Write token</b> ${writeToken ? '<span class="green">· set</span>' : '<span class="red">· not set</span>'}</p>
-      <input id="write-token-input" class="mt8" placeholder="Paste your write token" style="width:100%;box-sizing:border-box">
-      <button class="ghost wide mt8" data-action="save-write-token">Save write token</button>
-      <p class="small muted mt8">Your backup code is shareable and read-only. This token is what lets this device <b>write</b> to the cloud — keep it off any share link. Set it once per device.</p>
+      <p class="small muted"><b>${esc(tr("view_settings.text.write_token"))}</b> ${writeToken ? `<span class="green">${esc(tr("view_settings.text.set"))}</span>` : `<span class="red">${esc(tr("view_settings.text.not_set"))}</span>`}</p>
+      <input id="write-token-input" class="mt8" placeholder="${esc(tr("view_settings.placeholder.paste_your_write_token"))}" style="width:100%;box-sizing:border-box">
+      <button class="ghost wide mt8" data-action="save-write-token">${esc(tr("view_settings.text.save_write_token"))}</button>
+      <p class="small muted mt8">${esc(tr("settings.write_token.explanation"))}</p>
     </div>
 
-    <h2 class="section">Backup</h2>
+    <h2 class="section">${esc(tr("view_settings.text.backup"))}</h2>
     <div class="card">
       <div class="row">
-        <button class="grow" data-action="backup-copy">Copy full backup</button>
-        <button class="grow" data-action="backup-restore">Restore backup</button>
+        <button class="grow" data-action="backup-copy">${esc(tr("view_settings.text.copy_full_backup"))}</button>
+        <button class="grow" data-action="backup-restore">${esc(tr("view_settings.text.restore_backup"))}</button>
       </div>
-      <button class="ghost wide danger mt8" data-action="reset-all">Reset everything</button>
+      <button class="ghost wide danger mt8" data-action="reset-all">${esc(tr("view_settings.text.reset_everything"))}</button>
     </div>
 
-    <h2 class="section">App version</h2>
+    <h2 class="section">${esc(tr("view_settings.text.app_version"))}</h2>
     <div class="card">
-      <button class="ghost wide" data-action="check-updates">Check for updates</button>
-      <p class="small muted mt8">Updates normally appear as a banner at the top. Use this if the banner never shows.</p>
+      <button class="ghost wide" data-action="check-updates">${esc(tr("updates.action.check"))}</button>
+      <p class="small muted mt8">${esc(tr("view_settings.text.updates_normally_appear_as_a_banner_at_the_top_u"))}</p>
     </div>
-    <p class="muted small" style="text-align:center">GymTrack v1 · data lives on this device${settings.autoSync ? ' + auto-synced to cloud' : ''}</p>`;
+    <p class="muted small" style="text-align:center">${esc(tr("view_settings.text.gymtrack_v1_data_lives_on_this_device", { settings_autoSync_tr_view_se: settings.autoSync ? tr("view_settings.message.auto_synced_to_cloud") : '' }))}</p>`;
 }
 
 /* ================= modals for plan editing ================= */
 function exMenuModal(dayId, i) {
   const day = plan.days.find(d => d.id === dayId); if (!day) return;
   const e = day.exercises[i];
-  const desc = e.description || lookupExplanation(e.name);
-  showModal(e.name, `
-    <p class="muted small">${e.sets}×${esc(e.reps)} @ ${e.weight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''} · rest ${fmtClock(e.restSeconds)}</p>
+  const desc = I18n.explanation(e.name, e.description) || lookupExplanation(e.name);
+  showModal(I18n.exercise(e.name), `
+    <p class="muted small">${esc(tr("ex_menu_modal.text.rest", { e_sets: e.sets, e_reps: e.reps, e_weight: e.weight, unit: unit(), e_targetRpe_tr_ex_menu_modal: e.targetRpe ? tr("format.rpe_suffix", { rpe: e.targetRpe }) : '', fmtClock_e_restSeconds: fmtClock(e.restSeconds) }))}</p>
     ${desc ? `<p class="small mt8">${esc(desc)}</p>` : ''}
-    ${e.alternates.length ? `<div class="divider"></div><p class="small muted">Alternates: ${e.alternates.map(a => esc(a.name)).join(', ')}</p>` : ''}`,
+    ${e.alternates.length ? `<div class="divider"></div><p class="small muted">${esc(tr("ex_menu_modal.text.alternates", { e_alternates_map_a_esc_a_nam: e.alternates.map(a => esc(I18n.exercise(a.name))).join(', ') }))}</p>` : ''}`,
     [
-      { label: 'Edit', cls: 'primary', fn: () => exEditModal(dayId, i) },
-      ...(e.alternates.length ? [{ label: 'Swap', fn: () => exSwapPlanModal(dayId, i) }] : []),
-      { label: 'Remove', cls: 'danger', fn: () => { day.exercises.splice(i, 1); savePlan(); closeModal(); render(); } },
-      { label: 'Close' }
+      { label: tr("ex_menu_modal.button.edit"), cls: 'primary', fn: () => exEditModal(dayId, i) },
+      ...(e.alternates.length ? [{ label: tr("common.action.swap"), fn: () => exSwapPlanModal(dayId, i) }] : []),
+      { label: tr("ex_menu_modal.button.remove"), cls: 'danger', fn: () => { day.exercises.splice(i, 1); savePlan(); closeModal(); render(); } },
+      { label: tr("common.action.close") }
     ]);
 }
 // Human-readable increment rule for the plan editor's weight field.
 function ladderHint(equipment) {
   if (unit() !== 'kg') return '';
-  if (equipment === 'bodyweight') return 'bodyweight — leave at 0';
-  if (equipment === 'other') return 'increments not checked';
-  if (equipment === 'dumbbell') return '1 kg steps to 10 kg, then 2 kg';
-  if (equipment === 'cable' || equipment === 'machine') return '2.5 kg steps to 25 kg, then 5 kg';
-  if (equipment === 'landmine') return '1.25 kg steps (load on the end)';
-  return `2.5 kg steps from the ${resolvedBarWeight({ equipment, barWeight: null })} kg bar`;
+  if (equipment === 'bodyweight') return tr("ladder_hint.message.bodyweight_leave_at_0");
+  if (equipment === 'other') return tr("exercise.weight.unchecked");
+  if (equipment === 'dumbbell') return tr("ladder_hint.message.1_kg_steps_to_10_kg_then_2_kg");
+  if (equipment === 'cable' || equipment === 'machine') return tr("ladder_hint.message.2_5_kg_steps_to_25_kg_then_5_kg");
+  if (equipment === 'landmine') return tr("ladder_hint.message.1_25_kg_steps_load_on_the_end");
+  return tr("ladder_hint.message.2_5_kg_steps_from_the_kg_bar", { resolvedBarWeight_equipment_: resolvedBarWeight({ equipment, barWeight: null }) });
 }
 /*
  * The one place a weight is judged before it can be saved. Shared by the plan
@@ -1865,20 +1854,21 @@ function ladderHint(equipment) {
 function weightValidationError({ equipment, barWeight, weight, metric }) {
   if (metric === 'height') {
     return weight
-      ? 'A jump-height exercise carries no weight — set it to 0 (box height goes in the description)'
+      ? tr("weight_validation_error.message.a_jump_height_exercise_carries_no_weight_set_it_")
       : null;
   }
   if (unit() !== 'kg') return null; // the ladder is kg-only
   const bar = barWeight != null ? barWeight : resolvedBarWeight({ equipment, barWeight: null });
   const kind = weightIssueKind(equipment, bar, weight);
-  if (kind === 'bodyweight') return `${weight}${unit()} — bodyweight exercises must be 0${unit()}`;
+  if (kind === 'bodyweight') return tr("weight_validation_error.message.bodyweight_exercises_must_be_0", { weight: weight, unit: unit(), unit2: unit() });
   if (kind === 'below-bar') {
-    return `${weight}${unit()} is below the empty ${EQUIPMENT_LABELS[equipment].toLowerCase()} (${bar}${unit()}) — ` +
-      'is the Equipment field set wrong? A dumbbell/cable/machine move this light usually isn\'t a barbell';
+    return tr("weight_validation.error.below_empty_equipment", {
+      weight, unit: unit(), equipment: equipmentLabel(equipment).toLowerCase(), bar
+    });
   }
   if (kind === 'off-ladder') {
     const n = nearestRungs(equipment, bar, weight);
-    return `${weight}${unit()} is not loadable on a ${EQUIPMENT_LABELS[equipment].toLowerCase()} — try ${n.lo} or ${n.hi}`;
+    return tr("weight_validation_error.message.is_not_loadable_on_a_try_or", { weight: weight, unit: unit(), EQUIPMENT_LABELS_equipment_t: equipmentLabel(equipment, 'validation').toLowerCase(), n_lo: n.lo, n_hi: n.hi });
   }
   return null;
 }
@@ -1886,45 +1876,45 @@ function exEditModal(dayId, i) {
   const day = plan.days.find(d => d.id === dayId);
   const e = i != null ? day.exercises[i] : { name: '', sets: 3, warmupSets: 0, reps: '8-12', weight: 0, targetRpe: 8, restSeconds: 120, restSecondsNext: null, equipment: 'barbell', barWeight: null, metric: 'load', superset: null, description: '', alternates: [] };
   const equipment = e.equipment || 'barbell';
-  showModal(i != null ? 'Edit exercise' : 'Add exercise', `
-    <label class="field"><span>Name</span><input id="f-name" value="${esc(e.name)}"></label>
+  showModal(i != null ? tr("ex_edit_modal.message.edit_exercise") : tr("exercise.add.title"), `
+    <label class="field"><span>${esc(tr("exercise.form.name"))}</span><input id="f-name" value="${esc(e.name)}"><span class="field-hint">${esc(tr("exercise.edit.translated_name", { name: I18n.exercise(e.name) }))}</span></label>
     <div class="row">
-      <label class="field grow"><span>Sets</span><input id="f-sets" type="number" inputmode="numeric" value="${e.sets}"></label>
-      <label class="field grow"><span>Reps</span><input id="f-reps" value="${esc(e.reps)}"></label>
-      <label class="field grow"><span>Warm-up sets</span><input id="f-warmupsets" type="number" inputmode="numeric" min="0" value="${e.warmupSets || 0}">
-        <span class="field-hint">extra ramp rows, seeded from the working weight</span></label>
+      <label class="field grow"><span>${esc(tr("exercise.form.sets"))}</span><input id="f-sets" type="number" inputmode="numeric" value="${e.sets}"></label>
+      <label class="field grow"><span>${esc(tr("exercise.form.reps"))}</span><input id="f-reps" value="${esc(e.reps)}"></label>
+      <label class="field grow"><span>${esc(tr("ex_edit_modal.text.warm_up_sets"))}</span><input id="f-warmupsets" type="number" inputmode="numeric" min="0" value="${e.warmupSets || 0}">
+        <span class="field-hint">${esc(tr("ex_edit_modal.text.extra_ramp_rows_seeded_from_the_working_weight"))}</span></label>
     </div>
     <div class="row">
-      <label class="field grow"><span>Weight (${unit()})</span><input id="f-weight" type="number" inputmode="decimal" step="0.5" value="${e.weight}">
+      <label class="field grow"><span>${esc(tr("exercise.form.weight", { unit: unit() }))}</span><input id="f-weight" type="number" inputmode="decimal" step="0.5" value="${e.weight}">
         <span class="field-hint" id="f-weight-hint">${esc(ladderHint(equipment))}</span></label>
-      <label class="field grow"><span>Target RPE</span><button type="button" id="f-rpe" class="rpe-btn" data-action="edit-rpe-pick" data-v="${e.targetRpe != null ? e.targetRpe : ''}">${e.targetRpe != null ? e.targetRpe : '—'}</button></label>
+      <label class="field grow"><span>${esc(tr("ex_edit_modal.text.target_rpe"))}</span><button type="button" id="f-rpe" class="rpe-btn" data-action="edit-rpe-pick" data-v="${e.targetRpe != null ? e.targetRpe : ''}">${e.targetRpe != null ? e.targetRpe : '—'}</button></label>
     </div>
     <div class="row">
-      <label class="field grow"><span>Rest between sets (sec)</span><input id="f-rest" type="number" inputmode="numeric" value="${e.restSeconds}"></label>
-      <label class="field grow"><span>Rest before next movement (sec, optional)</span><input id="f-rest-next" type="number" inputmode="numeric" placeholder="same as above" value="${e.restSecondsNext != null ? e.restSecondsNext : ''}"></label>
+      <label class="field grow"><span>${esc(tr("ex_edit_modal.text.rest_between_sets_sec"))}</span><input id="f-rest" type="number" inputmode="numeric" value="${e.restSeconds}"></label>
+      <label class="field grow"><span>${esc(tr("ex_edit_modal.text.rest_before_next_movement_sec_optional"))}</span><input id="f-rest-next" type="number" inputmode="numeric" placeholder="${esc(tr("ex_edit_modal.placeholder.same_as_above"))}" value="${e.restSecondsNext != null ? e.restSecondsNext : ''}"></label>
     </div>
-    <label class="field"><span>Equipment</span>
-      <select id="f-equipment" data-bind="edit-equipment">${EQUIPMENT_TYPES.map(t => `<option value="${t}" ${t === equipment ? 'selected' : ''}>${EQUIPMENT_LABELS[t]}</option>`).join('')}</select>
+    <label class="field"><span>${esc(tr("exercise.form.equipment"))}</span>
+      <select id="f-equipment" data-bind="edit-equipment">${EQUIPMENT_TYPES.map(t => `<option value="${t}" ${t === equipment ? 'selected' : ''}>${esc(equipmentLabel(t, 'edit'))}</option>`).join('')}</select>
     </label>
-    <label class="field${BAR_WEIGHT_EQUIPMENT.has(equipment) ? '' : ' hidden'}" id="f-barweight-row"><span>Bar weight (${unit()})</span><input id="f-barweight" type="number" inputmode="decimal" step="0.5" placeholder="default ${resolvedBarWeight({ equipment, barWeight: null })}" value="${e.barWeight != null ? e.barWeight : ''}"></label>
-    <label class="field"><span>What the sets measure</span>
+    <label class="field${BAR_WEIGHT_EQUIPMENT.has(equipment) ? '' : ' hidden'}" id="f-barweight-row"><span>${esc(tr("ex_edit_modal.text.bar_weight", { unit: unit() }))}</span><input id="f-barweight" type="number" inputmode="decimal" step="0.5" placeholder="${esc(tr("ex_edit_modal.placeholder.default", { resolvedBarWeight_equipment_: resolvedBarWeight({ equipment, barWeight: null }) }))}" value="${e.barWeight != null ? e.barWeight : ''}"></label>
+    <label class="field"><span>${esc(tr("exercise.form.measurement"))}</span>
       <select id="f-metric">
-        <option value="load" ${e.metric !== 'height' ? 'selected' : ''}>Weight × reps (normal lift)</option>
-        <option value="height" ${e.metric === 'height' ? 'selected' : ''}>Jump height in cm (one attempt per set)</option>
+        <option value="load" ${e.metric !== 'height' ? 'selected' : ''}>${esc(tr("exercise.form.measurement.load"))}</option>
+        <option value="height" ${e.metric === 'height' ? 'selected' : ''}>${esc(tr("exercise.form.measurement.height"))}</option>
       </select>
     </label>
-    <label class="field"><span>Superset group</span>
+    <label class="field"><span>${esc(tr("ex_edit_modal.text.superset_group"))}</span>
       <select id="f-superset">
-        <option value="" ${!e.superset ? 'selected' : ''}>None</option>
-        ${['A', 'B', 'C', 'D'].map(t => `<option value="${t}" ${e.superset === t ? 'selected' : ''}>${t}</option>`).join('')}
-        ${e.superset && !['A', 'B', 'C', 'D'].includes(e.superset) ? `<option value="${esc(e.superset)}" selected>${esc(e.superset)}</option>` : ''}
+        <option value="" ${!e.superset ? 'selected' : ''}>${esc(tr("ex_edit_modal.text.none"))}</option>
+        ${["A", "B", "C", "D"].map(t => `<option value="${t}" ${e.superset === t ? 'selected' : ''}>${t}</option>`).join('')}
+        ${e.superset && !["A", "B", "C", "D"].includes(e.superset) ? `<option value="${esc(e.superset)}" selected>${esc(e.superset)}</option>` : ''}
       </select>
-      <span class="field-hint">Members must sit next to each other in the day — use the ↑↓ buttons on the day list.</span>
+      <span class="field-hint">${esc(tr("ex_edit_modal.text.members_must_sit_next_to_each_other_in_the_day_u"))}</span>
     </label>
-    <label class="field"><span>How-to / description (optional)</span><textarea id="f-desc" style="min-height:60px">${esc(e.description)}</textarea></label>`,
+    <label class="field"><span>${esc(tr("ex_edit_modal.text.how_to_description_optional"))}</span><textarea id="f-desc" style="min-height:60px">${esc(e.description)}</textarea></label>`,
     [
-      { label: 'Save', cls: 'primary', fn: () => {
-          const name = mval('f-name'); if (!name) { toast('Name is required', 'err'); return; }
+      { label: tr("common.action.save"), cls: 'primary', fn: () => {
+          const name = mval('f-name'); if (!name) { toast(tr("exercise.validation.name_required"), 'err'); return; }
           const rpeRaw = document.getElementById('f-rpe').dataset.v;
           const restNextRaw = mval('f-rest-next');
           const barWeightRaw = mval('f-barweight');
@@ -1943,13 +1933,13 @@ function exEditModal(dayId, i) {
             const sim = day.exercises.map((x, xi) => ({ superset: xi === i ? ssVal : (x.superset || null) }));
             if (i == null) sim.push({ superset: ssVal });
             if ((supersetRunCounts(sim).get(ssVal) || 0) > 1) {
-              toast(`Superset ${ssVal} would be split across the day — move its members next to each other with the ↑↓ buttons first`, 'err');
+              toast(tr("ex_edit_modal.message.superset_would_be_split_across_the_day_move_its_", { ssVal: ssVal }), 'err');
               return;
             }
           }
           const warmN = Math.max(0, mnum('f-warmupsets', 0));
           if (metricVal === 'height' && warmN) {
-            toast('A jump exercise has no load to ramp — mark a warm-up attempt by tapping its row number during the session', 'err');
+            toast(tr("ex_edit_modal.message.a_jump_exercise_has_no_load_to_ramp_mark_a_warm_"), 'err');
             return;
           }
           const upd = { name, sets: Math.max(1, mnum('f-sets', 3)), warmupSets: warmN, reps: mval('f-reps') || '8-12', weight: wVal,
@@ -1964,7 +1954,7 @@ function exEditModal(dayId, i) {
           else day.exercises.push(Object.assign({ id: uid(), notes: '', alternates: [] }, upd));
           savePlan(); closeModal(); render();
         } },
-      { label: 'Cancel' }
+      { label: tr("common.action.cancel") }
     ]);
 }
 // Free-text editor for a day's warm-up checklist — one item per line, with an
@@ -1973,27 +1963,27 @@ function exEditModal(dayId, i) {
 function dayWarmupModal(dayId) {
   const day = plan.days.find(d => d.id === dayId); if (!day) return;
   const text = (day.warmup || []).map(w => w.detail ? `${w.name} — ${w.detail}` : w.name).join('\n');
-  showModal('Warm-up — ' + day.name, `
-    <p class="muted small">One item per line. Anything after a dash becomes a note.</p>
-    <textarea id="f-warmup" style="min-height:150px" placeholder="Bike — 5 min easy&#10;Band pull-apart × 20&#10;Empty bar bench × 10">${esc(text)}</textarea>`,
+  showModal(tr("warmup_editor.title", { day: day.name }), `
+    <p class="muted small">${esc(tr("day_warmup_modal.text.one_item_per_line_anything_after_a_dash_becomes_"))}</p>
+    <textarea id="f-warmup" style="min-height:150px" placeholder="${esc(tr("day_warmup_modal.placeholder.bike_5_min_easy_10_band_pull_apart_20_10_empty_b"))}">${esc(text)}</textarea>`,
     [
-      { label: 'Save', cls: 'primary', fn: () => {
+      { label: tr("common.action.save"), cls: 'primary', fn: () => {
           day.warmup = mval('f-warmup').split('\n').map(l => l.trim()).filter(Boolean).map(l => {
             const m = l.match(/^(.*?)\s+[—–-]\s+(.*)$/);
             return m ? { name: m[1].trim(), detail: m[2].trim() } : { name: l, detail: '' };
           });
           savePlan(); closeModal(); render();
         } },
-      { label: 'Cancel' }
+      { label: tr("common.action.cancel") }
     ]);
 }
 function exSwapPlanModal(dayId, i) {
   const day = plan.days.find(d => d.id === dayId);
   const e = day.exercises[i];
-  showModal('Swap ' + e.name, e.alternates.map((a, ai) => `
+  showModal(tr("exercise.swap.title", { exercise: I18n.exercise(e.name) }), e.alternates.map((a, ai) => `
     <button class="wide mt8" data-action="plan-swap-pick" data-day="${dayId}" data-i="${i}" data-ai="${ai}">
-      ${esc(a.name)}${a.weight ? ` · ${a.weight}${unit()}` : ''} ${equipChip({ equipment: a.equipment || e.equipment, barWeight: a.equipment ? a.barWeight : e.barWeight })}</button>`).join(''),
-    [{ label: 'Cancel' }]);
+      ${esc(I18n.exercise(a.name))}${a.weight ? ` · ${a.weight}${unit()}` : ''} ${equipChip({ equipment: a.equipment || e.equipment, barWeight: a.equipment ? a.barWeight : e.barWeight })}</button>`).join(''),
+    [{ label: tr("common.action.cancel") }]);
 }
 function doPlanSwap(dayId, i, ai) {
   const day = plan.days.find(d => d.id === dayId);
@@ -2017,30 +2007,30 @@ function doPlanSwap(dayId, i, ai) {
     alternates: newAlts
   });
   savePlan(); closeModal(); render();
-  toast('Swapped to ' + a.name);
+  toast(tr("exercise.swap.success", { exercise: I18n.exercise(a.name) }));
 }
 
 /* ================= session modals ================= */
 function sessionSwapModal(ei) {
   const e = active.exercises[ei];
   const alts = e.alternates || [];
-  showModal('Swap ' + e.name, `
+  showModal(tr("exercise.swap.title", { exercise: I18n.exercise(e.name) }), `
     ${alts.length ? alts.map((a, ai) => `
       <button class="wide mt8" data-action="session-swap-pick" data-ei="${ei}" data-ai="${ai}">
-        ${esc(a.name)}${a.weight ? ` · ${a.weight}${unit()}` : ''} ${equipChip({ equipment: a.equipment || e.equipment, barWeight: a.equipment ? a.barWeight : e.barWeight })}</button>`).join('') : '<p class="muted small">No alternates in the plan for this one.</p>'}
+        ${esc(I18n.exercise(a.name))}${a.weight ? ` · ${a.weight}${unit()}` : ''} ${equipChip({ equipment: a.equipment || e.equipment, barWeight: a.equipment ? a.barWeight : e.barWeight })}</button>`).join('') : `<p class="muted small">${esc(tr("session_swap_modal.text.no_alternates_in_the_plan_for_this_one"))}</p>`}
     <div class="divider"></div>
-    <label class="field"><span>…or type any exercise</span><input id="swap-custom" placeholder="e.g. Machine Chest Press"></label>
-    <label class="field"><span>Equipment for the typed exercise</span>
-      <select id="swap-custom-equip">${EQUIPMENT_TYPES.map(t => `<option value="${t}" ${t === (e.equipment || 'barbell') ? 'selected' : ''}>${EQUIPMENT_LABELS[t]}</option>`).join('')}</select>
+    <label class="field"><span>${esc(tr("session_swap_modal.text.or_type_any_exercise"))}</span><input id="swap-custom" placeholder="${esc(tr("session_swap_modal.placeholder.e_g_machine_chest_press"))}"></label>
+    <label class="field"><span>${esc(tr("session_swap_modal.text.equipment_for_the_typed_exercise"))}</span>
+      <select id="swap-custom-equip">${EQUIPMENT_TYPES.map(t => `<option value="${t}" ${t === (e.equipment || 'barbell') ? 'selected' : ''}>${esc(equipmentLabel(t, 'swap'))}</option>`).join('')}</select>
     </label>`,
     [
-      { label: 'Use typed exercise', cls: 'primary', fn: () => {
-          const name = mval('swap-custom'); if (!name) { toast('Type a name first', 'err'); return; }
+      { label: tr("session_swap_modal.button.use_typed_exercise"), cls: 'primary', fn: () => {
+          const name = mval('swap-custom'); if (!name) { toast(tr("session_swap_modal.message.type_a_name_first"), 'err'); return; }
           const eq = document.getElementById('swap-custom-equip').value;
           doSessionSwap(ei, { name, weight: e.sets[0] ? e.sets[0].weight : e.plannedWeight,
             description: '', equipment: eq, barWeight: eq === e.equipment ? e.barWeight : null });
         } },
-      { label: 'Cancel' }
+      { label: tr("common.action.cancel") }
     ]);
 }
 function doSessionSwap(ei, alt) {
@@ -2051,7 +2041,7 @@ function doSessionSwap(ei, alt) {
   // row — so a change has to rebuild the grid. Refuse once anything is logged
   // rather than silently discarding sets the athlete actually did.
   if (metricChanged && e.sets.some(s => s.done)) {
-    toast(`${alt.name} is logged as ${newMetric === 'height' ? 'jump height' : 'weight × reps'} — swap it before logging sets, not after`, 'err');
+    toast(tr("do_session_swap.message.is_logged_as_swap_it_before_logging_sets_not_aft", { alt_name: I18n.exercise(alt.name), newMetric_height_jump_height: newMetric === 'height' ? tr("workout.swap.height") : tr("do_session_swap.message.weight_reps") }), 'err');
     return;
   }
   const original = e.swappedFrom || e.name;
@@ -2069,7 +2059,7 @@ function doSessionSwap(ei, alt) {
   }
   if (alt.description) e.description = alt.description;
   saveActive(); closeModal(); render();
-  toast('Swapped to ' + alt.name);
+  toast(tr("exercise.swap.success", { exercise: I18n.exercise(alt.name) }));
 }
 /*
  * Add a movement to the workout already in progress. Session-only by default —
@@ -2084,32 +2074,32 @@ function doSessionSwap(ei, alt) {
 function sessionAddExerciseModal() {
   if (!active) return;
   const day = plan.days.find(d => d.id === active.dayId);
-  showModal('Add exercise', `
-    <p class="muted small">Logged in this session only, unless you tick the box below.</p>
-    <label class="field"><span>Name</span><input id="a-name" placeholder="e.g. Face Pull"></label>
+  showModal(tr("exercise.add.title"), `
+    <p class="muted small">${esc(tr("session_add_exercise_modal.text.logged_in_this_session_only_unless_you_tick_the_"))}</p>
+    <label class="field"><span>${esc(tr("exercise.form.name"))}</span><input id="a-name" placeholder="${esc(tr("session_add_exercise_modal.placeholder.e_g_face_pull"))}"></label>
     <div class="row">
-      <label class="field grow"><span>Sets</span><input id="a-sets" type="number" inputmode="numeric" value="3"></label>
-      <label class="field grow"><span>Reps</span><input id="a-reps" value="8-12"></label>
+      <label class="field grow"><span>${esc(tr("exercise.form.sets"))}</span><input id="a-sets" type="number" inputmode="numeric" value="3"></label>
+      <label class="field grow"><span>${esc(tr("exercise.form.reps"))}</span><input id="a-reps" value="8-12"></label>
     </div>
     <div class="row">
-      <label class="field grow"><span>Weight (${unit()})</span><input id="a-weight" type="number" inputmode="decimal" step="0.5" value="0">
+      <label class="field grow"><span>${esc(tr("exercise.form.weight", { unit: unit() }))}</span><input id="a-weight" type="number" inputmode="decimal" step="0.5" value="0">
         <span class="field-hint" id="a-weight-hint">${esc(ladderHint('barbell'))}</span></label>
-      <label class="field grow"><span>Rest (sec)</span><input id="a-rest" type="number" inputmode="numeric" value="120"></label>
+      <label class="field grow"><span>${esc(tr("session_add_exercise_modal.text.rest_sec"))}</span><input id="a-rest" type="number" inputmode="numeric" value="120"></label>
     </div>
-    <label class="field"><span>Equipment</span>
-      <select id="a-equipment" data-bind="add-equipment">${EQUIPMENT_TYPES.map(t => `<option value="${t}">${EQUIPMENT_LABELS[t]}</option>`).join('')}</select>
+    <label class="field"><span>${esc(tr("exercise.form.equipment"))}</span>
+      <select id="a-equipment" data-bind="add-equipment">${EQUIPMENT_TYPES.map(t => `<option value="${t}">${esc(equipmentLabel(t, 'add'))}</option>`).join('')}</select>
     </label>
-    <label class="field"><span>What the sets measure</span>
+    <label class="field"><span>${esc(tr("exercise.form.measurement"))}</span>
       <select id="a-metric">
-        <option value="load" selected>Weight × reps (normal lift)</option>
-        <option value="height">Jump height in cm (one attempt per set)</option>
+        <option value="load" selected>${esc(tr("exercise.form.measurement.load"))}</option>
+        <option value="height">${esc(tr("exercise.form.measurement.height"))}</option>
       </select>
     </label>
-    ${day ? `<label class="merge-row"><input type="checkbox" id="a-to-plan"><span class="small">Also add to <b>${esc(day.name)}</b> in my plan</span></label>` : ''}`,
+    ${day ? `<label class="merge-row"><input type="checkbox" id="a-to-plan"><span class="small">${esc(tr("session_add_exercise_modal.option.add_to_plan", { day: day.name }))}</span></label>` : ''}`,
     [
-      { label: 'Add', cls: 'primary', fn: () => {
+      { label: tr("common.action.add"), cls: 'primary', fn: () => {
           const name = mval('a-name');
-          if (!name) { toast('Name is required', 'err'); return; }
+          if (!name) { toast(tr("exercise.validation.name_required"), 'err'); return; }
           const eqVal = document.getElementById('a-equipment').value;
           const metricVal = document.getElementById('a-metric').value;
           const wVal = mnum('a-weight');
@@ -2120,10 +2110,10 @@ function sessionAddExerciseModal() {
           // name GLOBALLY, so two different movements sharing a name silently
           // merge into one progression history. Same rule push-plan.mjs enforces.
           if (active.exercises.some(x => sameExercise(x.name, name))) {
-            toast(`"${name}" is already in this session — give it a distinct name`, 'err'); return;
+            toast(tr("session_add_exercise_modal.message.is_already_in_this_session_give_it_a_distinct_na", { name: name }), 'err'); return;
           }
           if (toPlan && plan.days.some(d => d.exercises.some(x => sameExercise(x.name, name)))) {
-            toast(`"${name}" already exists in your plan — history is keyed on name, so give it a distinct one`, 'err'); return;
+            toast(tr("session_add_exercise_modal.message.already_exists_in_your_plan_history_is_keyed_on_", { name: name }), 'err'); return;
           }
           const wErr = weightValidationError({ equipment: eqVal, barWeight: null, weight: wVal, metric: metricVal });
           if (wErr) { toast(wErr, 'err'); return; }
@@ -2148,21 +2138,21 @@ function sessionAddExerciseModal() {
               : Array.from({ length: sets }, () => ({ weight: wVal, reps: parseRepsLow(reps), rpe: null, done: false }))
           });
           saveActive(); closeModal(); render();
-          toast(toPlan ? `Added ${name} — also saved to ${day.name}` : `Added ${name} for today`);
+          toast(toPlan ? tr("session_add_exercise_modal.message.added_also_saved_to", { name: name, day_name: day.name }) : tr("session_add_exercise_modal.message.added_for_today", { name: name }));
         } },
-      { label: 'Cancel' }
+      { label: tr("common.action.cancel") }
     ]);
 }
 function exInfoModal(ei) {
   const e = active.exercises[ei];
-  const desc = e.description || lookupExplanation(e.name) || 'No description available — ask your AI coach to include a "description" for each exercise in your next plan.';
+  const desc = I18n.explanation(e.name, e.description) || lookupExplanation(e.name) || tr("ex_info_modal.message.no_description_available_ask_your_ai_coach_to_in");
   // A jump has no load or rep target — every other jump surface already branches
   // on the metric, so building this line unconditionally read "Target: 3×1 @ 0kg".
   const target = isJump(e)
-    ? `${e.plannedSets} attempt${e.plannedSets === 1 ? '' : 's'}`
-    : `${e.plannedSets}×${esc(e.plannedReps)} @ ${e.plannedWeight}${unit()}${e.targetRpe ? ' · RPE ' + e.targetRpe : ''}`;
-  showModal(e.name, `<p>${esc(desc)}</p>
-    <p class="muted small mt12">Target: ${target}</p>`);
+    ? tr("ex_info_modal.message.attempt", { e_plannedSets: e.plannedSets, e_plannedSets_1_s: e.plannedSets === 1 ? '' : 's' })
+    : `${e.plannedSets}×${esc(e.plannedReps)} @ ${e.plannedWeight}${unit()}${e.targetRpe ? tr("format.rpe_suffix", { rpe: e.targetRpe }) : ''}`;
+  showModal(I18n.exercise(e.name), `<p>${esc(desc)}</p>
+    <p class="muted small mt12">${esc(tr("ex_info_modal.text.target", { target: target }))}</p>`);
 }
 // Greedy largest-first breakdown of one side's load. `remain` is whatever the
 // plate set can't express — surfaced rather than silently dropped.
@@ -2205,22 +2195,21 @@ function showPlateCalculator(e) {
   const targetSet = e.sets[idx];
   const weight = targetSet && targetSet.weight != null ? targetSet.weight : (e.plannedWeight || 0);
   const lbl = setLabels(e.sets)[idx];
-  const setLabel = lbl ? (lbl.s.warmup ? `warm-up ${lbl.label.slice(1)}` : `set ${lbl.label}`) : '';
+  const setLabel = lbl ? (lbl.s.warmup ? tr("show_plate_calculator.message.warm_up", { lbl_label_slice_1: lbl.label.slice(1) }) : tr("show_plate_calculator.message.set", { lbl_label: lbl.label })) : '';
   // …and the useful answer is what CHANGES, so find the last set actually loaded.
   let prev = null;
   for (let i = idx - 1; i >= 0; i--) {
     if (e.sets[i].done && e.sets[i].weight != null) { prev = e.sets[i].weight; break; }
   }
 
-  const sideLabel = isLandmine ? 'on the end' : 'per side';
   const fmtPlates = rs => rs.map(r => `${r.count} × ${r.p}${unit()}`).join(' + ');
   const head = `<p class="plate-target"><b>${weight}${unit()}</b>${setLabel ? ` <span class="muted small">· ${setLabel}</span>` : ''}</p>`;
 
   if (!isLandmine && weight <= barWeight) {
     const strip = prev != null && prev > barWeight
-      ? `<p class="plate-delta">Strip everything — down from ${prev}${unit()}.</p>` : '';
-    showModal('Plate calculator', `${head}${strip}
-      <p class="muted small">${weight}${unit()} is at or below the bar (${barWeight}${unit()}) — no plates needed.</p>`);
+      ? `<p class="plate-delta">${esc(tr("show_plate_calculator.text.strip_everything_down_from", { prev: prev, unit: unit() }))}</p>` : '';
+    showModal(tr("plate_calculator.title"), `${head}${strip}
+      <p class="muted small">${esc(tr("show_plate_calculator.text.is_at_or_below_the_bar_no_plates_needed", { weight: weight, unit: unit(), barWeight: barWeight, unit2: unit() }))}</p>`);
     return;
   }
 
@@ -2229,30 +2218,32 @@ function showPlateCalculator(e) {
   if (prev != null && prev !== weight) {
     const { rows: prevRows } = platesPerSide((prev - barWeight) / sides, plates);
     const { add, strip } = plateDiff(prevRows, rows);
-    const parts = [];
-    if (strip.length) parts.push(`strip <b>${fmtPlates(strip)}</b>`);
-    if (add.length) parts.push(`add <b>${fmtPlates(add)}</b>`);
     const diff = Math.round((weight - prev) * 100) / 100;
-    deltaHtml = `<p class="plate-delta">${diff > 0 ? '+' : '−'}${Math.abs(diff)}${unit()} from ${prev}${unit()} — ${
-      parts.length ? parts.join(', then ') + ' ' + sideLabel : 'no plate change possible with these plates'}</p>`;
+    const params = {
+      sign: diff > 0 ? '+' : '−', difference: Math.abs(diff), unit: unit(), previous: prev,
+      remove: fmtPlates(strip), add: fmtPlates(add)
+    };
+    const change = strip.length && add.length ? 'replace' : strip.length ? 'remove' : add.length ? 'add' : 'unavailable';
+    const position = isLandmine ? 'end' : 'side';
+    deltaHtml = `<p class="plate-delta">${esc(tr(change === 'unavailable' ? 'plates.delta.unavailable' : `plates.delta.${change}.${position}`, params))}</p>`;
   }
   const summary = isLandmine
-    ? `Load on the landmine end`
-    : `Bar ${barWeight}${unit()} · ${((weight - barWeight) / sides).toFixed(2)}${unit()} per side`;
-  showModal('Plate calculator', `
+    ? tr("show_plate_calculator.message.load_on_the_landmine_end")
+    : tr("show_plate_calculator.message.bar_per_side", { barWeight: barWeight, unit: unit(), weight_barWeight_sides_toFix: ((weight - barWeight) / sides).toFixed(2), unit2: unit() });
+  showModal(tr("plate_calculator.title"), `
     ${head}
     ${deltaHtml}
     <p class="muted small">${summary}</p>
     <div class="divider"></div>
-    ${rows.length ? rows.map(r => `<div class="row between mt8"><span class="bold">${r.p}${unit()}</span><span>× ${r.count} ${sideLabel}</span></div>`).join('') : '<p class="muted small">Just the bar.</p>'}
-    ${remain > 0.01 ? `<p class="muted small mt12">${remain.toFixed(2)}${unit()} ${sideLabel} can't be made with these plates.</p>` : ''}`);
+    ${rows.length ? rows.map(r => `<div class="row between mt8"><span class="bold">${r.p}${unit()}</span><span>${esc(tr(isLandmine ? "plates.row.end" : "plates.row.side", { count: r.count }))}</span></div>`).join('') : `<p class="muted small">${esc(tr("show_plate_calculator.text.just_the_bar"))}</p>`}
+    ${remain > 0.01 ? `<p class="muted small mt12">${esc(tr(isLandmine ? "plates.unavailable.end" : "plates.unavailable.side", { remainder: remain.toFixed(2), unit: unit() }))}</p>` : ''}`);
 }
 function exNoteModal(ei) {
   const e = active.exercises[ei];
-  showModal('Note — ' + e.name, `<textarea id="ex-note-area" placeholder="e.g. felt heavy, slight knee pain, used safety bar…">${esc(e.notes)}</textarea>`,
+  showModal(tr("exercise.note.title", { exercise: I18n.exercise(e.name) }), `<textarea id="ex-note-area" placeholder="${esc(tr("ex_note_modal.placeholder.e_g_felt_heavy_slight_knee_pain_used_safety_bar"))}">${esc(e.notes)}</textarea>`,
     [
-      { label: 'Save', cls: 'primary', fn: () => { e.notes = mval('ex-note-area'); saveActive(); closeModal(); render(); } },
-      { label: 'Cancel' }
+      { label: tr("common.action.save"), cls: 'primary', fn: () => { e.notes = mval('ex-note-area'); saveActive(); closeModal(); render(); } },
+      { label: tr("common.action.cancel") }
     ]);
 }
 
@@ -2260,20 +2251,20 @@ function exNoteModal(ei) {
 // Renders into #picker-root (its own overlay layer) so it can open on top of
 // a sheet modal (e.g. the plan's exercise-edit modal) without replacing it.
 const RPE_SCALE = [
-  [10, 'Max effort — nothing left'],
-  [9.5, 'Maybe half a rep left'],
-  [9, 'Could have done 1 more rep'],
-  [8.5, '1–2 reps left'],
-  [8, '2 reps left'],
-  [7.5, '2–3 reps left'],
-  [7, '3 reps left — bar still fast'],
-  [6.5, '3–4 reps left'],
-  [6, '4 reps left'],
-  [5.5, '4–5 reps left'],
-  [5, '5+ reps left — easy']
+  [10, "app.message.max_effort_nothing_left"],
+  [9.5, "app.message.maybe_half_a_rep_left"],
+  [9, "app.message.could_have_done_1_more_rep"],
+  [8.5, "app.message.1_2_reps_left"],
+  [8, "app.message.2_reps_left"],
+  [7.5, "app.message.2_3_reps_left"],
+  [7, "app.message.3_reps_left_bar_still_fast"],
+  [6.5, "app.message.3_4_reps_left"],
+  [6, "app.message.4_reps_left"],
+  [5.5, "app.message.4_5_reps_left"],
+  [5, "app.message.5_reps_left_easy"]
 ];
 let rpePickCb = null;
-function showRpePicker(current, onPick, title = 'How hard was that set?') {
+function showRpePicker(current, onPick, title = tr("show_rpe_picker.message.how_hard_was_that_set")) {
   rpePickCb = onPick;
   document.getElementById('picker-root').innerHTML = `
     <div class="overlay" data-action="picker-dismiss">
@@ -2282,8 +2273,8 @@ function showRpePicker(current, onPick, title = 'How hard was that set?') {
         <div class="modal-body">
           ${RPE_SCALE.map(([v, txt]) => `
             <button class="rpe-opt ${current === v ? 'active' : ''}" data-action="rpe-opt" data-v="${v}">
-              <span class="rpe-val">${v}</span><span class="muted small">${txt}</span></button>`).join('')}
-          <button class="rpe-opt" data-action="rpe-opt" data-v=""><span class="rpe-val muted">—</span><span class="muted small">Clear / skip</span></button>
+              <span class="rpe-val">${v}</span><span class="muted small">${esc(tr(txt))}</span></button>`).join('')}
+          <button class="rpe-opt" data-action="rpe-opt" data-v=""><span class="rpe-val muted">—</span><span class="muted small">${esc(tr("show_rpe_picker.text.clear_skip"))}</span></button>
         </div>
       </div>
     </div>`;
@@ -2303,8 +2294,8 @@ let stepperHideTimer = null;
 function stepperInfo(el) {
   if (!el || !el.dataset || el.dataset.bind !== 'set') return null;
   const f = el.dataset.f;
-  if (f === 'reps') return { kind: 'reps', label: 'reps', down: 1, up: 1 };
-  if (f === 'heightCm') return { kind: 'height', label: 'cm', down: 0.5, up: 0.5 };
+  if (f === 'reps') return { kind: 'reps', label: tr("stepper_info.button.reps"), down: 1, up: 1 };
+  if (f === 'heightCm') return { kind: 'height', label: tr("stepper_info.button.cm"), down: 0.5, up: 0.5 };
   if (f !== 'weight') return null;
   const ex = active && active.exercises[+el.dataset.ei];
   if (!ex || ex.equipment === 'bodyweight') return null;   // nothing to load
@@ -2382,27 +2373,27 @@ let cmjState = null; // { objectUrl, video, fps, detectedFps, seeking, lastMedia
 
 function cmjVideoModal(targetEi) {
   cmjState = { objectUrl: null, video: null, fps: 30, slowFactor: settings.cmjSlowFactor || 1, captureFps: settings.cmjCaptureFps || 240, seeking: false, lastMediaTime: 0, takeoffTime: null, landingTime: null, attempts: [], pollTimer: null, targetEi: targetEi != null ? targetEi : null };
-  showModal('Measure CMJ via video', `
+  showModal(tr("cmj_video_modal.message.measure_cmj_via_video"), `
     <input type="file" id="cmj-file-input" accept="video/*">
     <details class="cmj-tips mt8">
-      <summary class="small muted">How to record for accurate results</summary>
-      <p class="small muted mt8">Frame rate <em>is</em> your accuracy. At a ~500&nbsp;ms flight time one frame is worth ~5&nbsp;cm at 24&nbsp;fps but only ~0.5&nbsp;cm at 240&nbsp;fps.</p>
+      <summary class="small muted">${esc(tr("cmj_video_modal.text.how_to_record_for_accurate_results"))}</summary>
+      <p class="small muted mt8">${esc(tr("cmj_video_modal.tip.frame_rate_accuracy"))}</p>
       <ul class="small muted mt8">
-        <li><b>Don't use “Take Video” here.</b> The camera iOS opens from a web page only does standard video — Slo-Mo isn't offered. It will give you 24–30 fps and a useless number.</li>
-        <li><b>Record in the Camera app first</b>, in <b>Slo-Mo</b> (1080p/240 fps via Settings › Camera › Record Slo-mo), then come back and choose <b>Photo Library</b>.</li>
-        <li><b>Keep the clip short — 3–4 seconds.</b> Start recording, jump, stop. iPhone only slows a <em>region</em> of a long clip, leaving the rest at normal speed, and a mixed-rate file makes every timing wrong.</li>
-        <li><b>Set “Filmed at” to your Camera setting</b> (240 fps) and the <b>slow-motion factor</b> to match the clip — iPhone renders 240 fps Slo-Mo onto a 60 fps timeline, so that's <b>4×</b>. Check the “→ Xs real” line matches how long you actually filmed; if not, change the factor.</li>
-        <li>Film side-on, whole body in frame, feet clearly visible, phone steady.</li>
+        <li>${esc(tr("cmj_video_modal.tip.avoid_web_camera"))}</li>
+        <li>${esc(tr("cmj_video_modal.tip.record_slow_motion"))}</li>
+        <li>${esc(tr("cmj_video_modal.tip.keep_clip_short"))}</li>
+        <li>${esc(tr("cmj_video_modal.tip.match_capture_settings"))}</li>
+        <li>${esc(tr("cmj_video_modal.text.film_side_on_whole_body_in_frame_feet_clearly_vi"))}</li>
       </ul>
     </details>
     <div id="cmj-fps-row" class="hidden mt8">
-      <span class="small muted">Filmed at (your Camera app setting)</span>
+      <span class="small muted">${esc(tr("cmj_video_modal.text.filmed_at_your_camera_app_setting"))}</span>
       <div class="cmj-fps-group cmj-capture-group mt8">
-        ${CAPTURE_RATES.map(f => `<button type="button" data-capture="${f}" class="ghost icon-btn">${f} fps</button>`).join('')}
+        ${CAPTURE_RATES.map(f => `<button type="button" data-capture="${f}" class="ghost icon-btn">${esc(tr("cmj_video_modal.text.fps", { f: f }))}</button>`).join('')}
       </div>
-      <span class="small muted mt12" style="display:block">Slow motion in the clip</span>
+      <span class="small muted mt12" style="display:block">${esc(tr("cmj_video_modal.text.slow_motion_in_the_clip"))}</span>
       <div class="cmj-fps-group cmj-slow-group mt8">
-        ${SLOW_FACTORS.map(f => `<button type="button" data-slow="${f}" class="ghost icon-btn">${f === 1 ? 'Normal' : f + '×'}</button>`).join('')}
+        ${SLOW_FACTORS.map(f => `<button type="button" data-slow="${f}" class="ghost icon-btn">${f === 1 ? tr("cmj_video_modal.message.normal") : f + '×'}</button>`).join('')}
       </div>
       <div id="cmj-duration-check" class="small muted mt8"></div>
       <div id="cmj-fps-detect" class="small muted mt8"></div>
@@ -2413,22 +2404,22 @@ function cmjVideoModal(targetEi) {
       </div>
       <input type="range" id="cmj-scrub" min="0" max="1" step="0.001" value="0" class="mt8" style="width:100%">
       <div class="row between mt8">
-        <button type="button" class="ghost icon-btn" id="cmj-step-back">◀ frame</button>
-        <span id="cmj-time-readout" class="small muted">0:00.000 · frame 0</span>
-        <button type="button" class="ghost icon-btn" id="cmj-step-fwd">frame ▶</button>
+        <button type="button" class="ghost icon-btn" id="cmj-step-back">${esc(tr("cmj_video_modal.text.frame"))}</button>
+        <span id="cmj-time-readout" class="small muted">${esc(tr("cmj_video_modal.text.0_00_000_frame_0"))}</span>
+        <button type="button" class="ghost icon-btn" id="cmj-step-fwd">${esc(tr("cmj_video_modal.text.frame_2"))}</button>
       </div>
       <div class="cmj-marker-row mt12">
-        <button type="button" id="cmj-set-takeoff">Last frame on ground</button>
-        <button type="button" id="cmj-set-landing">First frame back down</button>
+        <button type="button" id="cmj-set-takeoff">${esc(tr("cmj_video_modal.text.last_frame_on_ground"))}</button>
+        <button type="button" id="cmj-set-landing">${esc(tr("cmj_video_modal.text.first_frame_back_down"))}</button>
       </div>
       <div id="cmj-markers" class="small muted mt8"></div>
       <div id="cmj-result" class="cmj-result hidden"></div>
-      <button type="button" id="cmj-add-attempt" class="ghost wide mt8 hidden">Add attempt</button>
+      <button type="button" id="cmj-add-attempt" class="ghost wide mt8 hidden">${esc(tr("cmj_video_modal.text.add_attempt"))}</button>
       <div id="cmj-attempts" class="cmj-attempts"></div>
     </div>`,
     [
-      { label: 'Save best', cls: 'primary', fn: cmjAccept },
-      { label: 'Cancel', fn: cmjCancel }
+      { label: tr("cmj.action.save_best"), cls: 'primary', fn: cmjAccept },
+      { label: tr("common.action.cancel"), fn: cmjCancel }
     ]);
   cmjInitListeners();
   const acceptBtn = document.querySelector('[data-idx="m0"]');
@@ -2443,7 +2434,7 @@ function cmjInitListeners() {
     // already null by then (set synchronously before this async event arrives), so
     // that case is distinguishable from a genuine load failure.
     if (!cmjState) return;
-    toast('Could not load this video', 'err');
+    toast(tr("cmj_init_listeners.message.could_not_load_this_video"), 'err');
     document.getElementById('cmj-stage').classList.add('hidden');
   });
   const fileInput = document.getElementById('cmj-file-input');
@@ -2549,10 +2540,14 @@ function cmjRenderDurationCheck() {
   const eff = Math.round(cmjEffectiveFps());
   const precision = (G_MS2 * 0.5 / 4) * (0.5 / eff) * 100; // at a typical 500ms flight
   el.innerHTML = factor === 1
-    ? `Clip is ${dur.toFixed(2)}s, played as filmed · <b>${eff} fps effective</b> (≈±${precision.toFixed(1)} cm)`
-    : `Clip is ${dur.toFixed(2)}s in the file → <b>${(dur / factor).toFixed(2)}s real</b> at ${factor}×
-       · timeline ${Math.round(cmjPlaybackFps())} fps · <b>${eff} fps effective</b> (≈±${precision.toFixed(1)} cm)
-       <br><span class="muted">If that real duration doesn't match what you filmed, change the slow-motion factor.</span>`;
+    ? esc(tr("cmj.duration.played_as_filmed", {
+        fileSeconds: dur.toFixed(2), effectiveFps: eff, precisionCm: precision.toFixed(1)
+      }))
+    : `${esc(tr("cmj.duration.slow_motion", {
+        fileSeconds: dur.toFixed(2), realSeconds: (dur / factor).toFixed(2), factor,
+        timelineFps: Math.round(cmjPlaybackFps()), effectiveFps: eff,
+        precisionCm: precision.toFixed(1)
+      }))}<br><span class="muted">${esc(tr("cmj_render_duration_check.text.if_that_real_duration_doesn_t_match_what_you_fil"))}</span>`;
 }
 
 // Browsers don't expose a video file's true frame rate directly. Estimate it by
@@ -2570,7 +2565,7 @@ function cmjAutoDetectFps() {
   if (sampleWindow < 0.15) return false;
   if (!cmjRvfcSupported() && !video.getVideoPlaybackQuality) return false;
 
-  if (detectEl) detectEl.textContent = 'Detecting frame rate…';
+  if (detectEl) detectEl.textContent = tr("cmj_auto_detect_fps.message.detecting_frame_rate");
   cmjState.seeking = true; // block stepper/scrub while we play through the sample window
 
   let done = false;
@@ -2591,8 +2586,8 @@ function cmjAutoDetectFps() {
         if (detectEl) {
           const derived = cmjPlaybackFps();
           detectEl.innerHTML = snapped > derived * 1.5
-            ? `<span class="amber">Measured ~${snapped} fps in this clip, but the settings above imply a ${Math.round(derived)} fps timeline — check them.</span>`
-            : `<span class="muted">Measured ~${snapped} fps (rough — the decoder skips frames on high-rate clips, so this is a hint, not the truth).</span>`;
+            ? `<span class="amber">${esc(tr("restore.text.measured_fps_in_this_clip_but_the_settings_above", { snapped: snapped, Math_round_derived: Math.round(derived) }))}</span>`
+            : `<span class="muted">${esc(tr("restore.text.measured_fps_rough_the_decoder_skips_frames_on_h", { snapped: snapped }))}</span>`;
         }
       } else if (detectEl) {
         detectEl.textContent = '';
@@ -2728,7 +2723,7 @@ function cmjDrawFrame() {
   const { video, lastMediaTime } = cmjState;
   if (!video) return;
   document.getElementById('cmj-scrub').value = String(lastMediaTime);
-  document.getElementById('cmj-time-readout').textContent = `${lastMediaTime.toFixed(3)}s · frame ${Math.round(lastMediaTime * cmjPlaybackFps())}`;
+  document.getElementById('cmj-time-readout').textContent = tr("cmj_draw_frame.message.s_frame", { lastMediaTime_toFixed_3: lastMediaTime.toFixed(3), Math_round_lastMediaTime_cmj: Math.round(lastMediaTime * cmjPlaybackFps()) });
 }
 
 function cmjSetTakeoff() {
@@ -2792,11 +2787,11 @@ function cmjRenderAttempts() {
   const list = cmjState.attempts;
   if (!list.length) { el.innerHTML = ''; return; }
   const bestIdx = list.reduce((b, a, i) => a.heightCm > list[b].heightCm ? i : b, 0);
-  el.innerHTML = `<div class="small muted mt12">Attempts</div>` + list.map((a, i) => `
-    <div class="cmj-attempt${i === bestIdx ? ' best' : ''}">
-      <b>${a.heightCm.toFixed(1)} cm</b>
-      <span class="small muted">±${a.precisionCm.toFixed(1)} · ${a.flightTimeMs} ms · ${a.effectiveFps} fps</span>
-      <button type="button" class="ghost icon-btn" data-attempt-del="${i}" aria-label="Remove attempt ${i + 1}">✕</button>
+  el.innerHTML = `<div class="small muted mt12">${esc(tr("cmj_render_attempts.text.attempts"))}</div>` + list.map((a, i) => `
+    <div class="cmj-attempt${i === bestIdx ? tr("cmj.attempt.best") : ''}">
+      <b>${esc(tr("cmj_render_attempts.text.cm", { a_heightCm_toFixed_1: a.heightCm.toFixed(1) }))}</b>
+      <span class="small muted">${esc(tr("cmj_render_attempts.text.ms_fps", { a_precisionCm_toFixed_1: a.precisionCm.toFixed(1), a_flightTimeMs: a.flightTimeMs, a_effectiveFps: a.effectiveFps }))}</span>
+      <button type="button" class="ghost icon-btn" data-attempt-del="${i}" aria-label="${esc(tr("cmj_render_attempts.aria-label.remove_attempt", { i_1: i + 1 }))}">✕</button>
     </div>`).join('');
 }
 
@@ -2807,8 +2802,8 @@ function cmjUpdateResultUI() {
   const addBtn = document.getElementById('cmj-add-attempt');
   const acceptBtn = document.querySelector('[data-idx="m0"]');
   const pf = cmjPlaybackFps();
-  const fmt = t => t == null ? '—' : `${t.toFixed(3)}s (frame ${Math.round(t * pf)})`;
-  markersEl.innerHTML = `Last on ground: ${fmt(takeoffTime)} &nbsp;·&nbsp; First back down: ${fmt(landingTime)}`;
+  const fmt = t => t == null ? '—' : tr("fmt.message.s_frame", { t_toFixed_3: t.toFixed(3), Math_round_t_pf: Math.round(t * pf) });
+  markersEl.innerHTML = tr("cmj_update_result_ui.message.last_on_ground_nbsp_nbsp_first_back_down", { fmt_takeoffTime: fmt(takeoffTime), fmt_landingTime: fmt(landingTime) });
 
   const result = cmjCurrentResult();
   cmjRenderAttempts();
@@ -2818,24 +2813,24 @@ function cmjUpdateResultUI() {
     // otherwise a single measured jump would look unsaveable.
     const n = attempts.length + (result ? 1 : 0);
     acceptBtn.disabled = n === 0;
-    acceptBtn.textContent = n > 1 ? `Save best (${n})` : 'Save best';
+    acceptBtn.textContent = n > 1 ? tr("cmj_update_result_ui.message.save_best", { n: n }) : tr("cmj.action.save_best");
   }
 
   if (takeoffTime == null || landingTime == null) { resultEl.classList.add('hidden'); return; }
   resultEl.classList.remove('hidden');
   if (!result) {
-    resultEl.innerHTML = `<p class="small red">No flight time from those frames — the first-back-down frame must be at least two frames after the last-on-ground frame.</p>`;
+    resultEl.innerHTML = `<p class="small red">${esc(tr("cmj_update_result_ui.text.no_flight_time_from_those_frames_the_first_back_"))}</p>`;
     return;
   }
   const factor = cmjState.slowFactor || 1;
   const plausible = result.heightCm >= 3 && result.heightCm <= 180;
   resultEl.innerHTML = `
-    <div class="big">${result.heightCm.toFixed(1)} cm</div>
-    <div class="small muted">± ${result.precisionCm.toFixed(1)} cm · flight ${result.flightTimeMs} ms · ${result.effectiveFps} fps effective</div>
-    <div class="small muted">−1 frame applied (half-frame midpoint correction at each end)</div>
-    ${factor !== 1 ? `<div class="small muted">${cmjState.captureFps} fps filmed at ${factor}× → ${Math.round(cmjPlaybackFps())} fps timeline</div>` : ''}
-    ${result.effectiveFps < 60 ? `<p class="small amber mt8">Only ±${result.precisionCm.toFixed(1)} cm at ${result.effectiveFps} fps. Record in Slo-Mo at 240 fps for ~±0.3 cm — see “How to record” at the top.</p>` : ''}
-    ${plausible ? '' : '<p class="small amber mt8">That seems unusually low/high — double check your markers.</p>'}`;
+    <div class="big">${esc(tr("cmj_update_result_ui.text.cm", { result_heightCm_toFixed_1: result.heightCm.toFixed(1) }))}</div>
+    <div class="small muted">${esc(tr("cmj_update_result_ui.text.cm_flight_ms_fps_effective", { result_precisionCm_toFixed_1: result.precisionCm.toFixed(1), result_flightTimeMs: result.flightTimeMs, result_effectiveFps: result.effectiveFps }))}</div>
+    <div class="small muted">${esc(tr("cmj_update_result_ui.text.1_frame_applied_half_frame_midpoint_correction_a"))}</div>
+    ${factor !== 1 ? `<div class="small muted">${esc(tr("cmj_update_result_ui.text.fps_filmed_at_fps_timeline", { cmjState_captureFps: cmjState.captureFps, factor: factor, Math_round_cmjPlaybackFps: Math.round(cmjPlaybackFps()) }))}</div>` : ''}
+    ${result.effectiveFps < 60 ? `<p class="small amber mt8">${esc(tr("cmj_update_result_ui.text.only_cm_at_fps_record_in_slo_mo_at_240_fps_for_0", { result_precisionCm_toFixed_1: result.precisionCm.toFixed(1), result_effectiveFps: result.effectiveFps }))}</p>` : ''}
+    ${plausible ? '' : `<p class="small amber mt8">${esc(tr("cmj_update_result_ui.text.that_seems_unusually_low_high_double_check_your_"))}</p>`}`;
 }
 
 function cmjAccept() {
@@ -2863,17 +2858,17 @@ function cmjAccept() {
     // Route through the same post-completion path as tapping the checkmark, so
     // this starts the rest timer and advances a superset's round-robin pointer.
     completeSet(targetEi, targetEx.sets.indexOf(slot));
-    toast(`${heightCm} cm logged to ${targetEx.name} ✓`);
+    toast(tr("cmj_accept.message.cm_logged_to", { heightCm: heightCm, targetEx_name: I18n.exercise(targetEx.name) }));
   } else if (active) {
     active.readiness.cmjCm = heightCm;
     active.readiness.flightTimeMs = best.flightTimeMs;
     active.readiness.method = 'video';
     active.readiness.cmjAttempts = list;
     saveActive();
-    toast(list.length > 1 ? `CMJ ${heightCm} cm — best of ${list.length} ✓` : 'CMJ height set from video ✓');
+    toast(list.length > 1 ? tr("cmj_accept.message.cmj_cm_best_of", { heightCm: heightCm, list_length: list.length }) : tr("cmj_accept.message.cmj_height_set_from_video"));
   } else {
     // Nothing to attach to: say so loudly rather than silently dropping a full test set.
-    toast(`Best ${heightCm} cm of ${list.length} — not saved, start a session first`, 'err');
+    toast(tr("cmj_accept.message.best_cm_of_not_saved_start_a_session_first", { heightCm: heightCm, list_length: list.length }), 'err');
   }
   cmjCleanup();
   closeModal(); render();
@@ -2917,17 +2912,17 @@ document.addEventListener('click', e => {
     case 'start-session': startSession(el.dataset.id); break;
     case 'confirm-finish': {
       const done = active.exercises.reduce((n, x) => n + x.sets.filter(s => s.done).length, 0);
-      showModal('Finish workout?', `<p>${done} sets logged in ${fmtClock((Date.now() - active.startedAt) / 1000)}.</p>`,
-        [{ label: 'Finish & save', cls: 'success', fn: finishSession }, { label: 'Keep going' }]);
+      showModal(tr("action_confirm-finish.message.finish_workout"), `<p>${esc(tr("action_confirm-finish.text.sets_logged_in", { done: done, fmtClock_Date_now_active_sta: fmtClock((Date.now() - active.startedAt) / 1000) }))}</p>`,
+        [{ label: tr("action_confirm-finish.button.finish_save"), cls: 'success', fn: finishSession }, { label: tr("workout.action.keep_going") }]);
       break;
     }
     case 'confirm-discard':
-      showModal('Discard session?', '<p>All logged sets from this session will be lost.</p>',
-        [{ label: 'Discard', cls: 'danger', fn: () => {
+      showModal(tr("action_confirm-discard.message.discard_session"), `<p>${esc(tr("action_confirm-discard.text.all_logged_sets_from_this_session_will_be_lost"))}</p>`,
+        [{ label: tr("action_confirm-discard.button.discard"), cls: 'danger', fn: () => {
             // A button WITH a handler owns closing its own modal — the modal-btn
             // dispatcher only auto-closes handler-less buttons.
-            endSession(); closeModal(); render(); toast('Session discarded');
-          } }, { label: 'Keep going' }]);
+            endSession(); closeModal(); render(); toast(tr("action_confirm-discard.message.session_discarded"));
+          } }, { label: tr("workout.action.keep_going") }]);
       break;
 
     /* set logging */
@@ -2976,7 +2971,7 @@ document.addEventListener('click', e => {
     case 'edit-rpe-pick': {
       const btn = el;
       showRpePicker(btn.dataset.v ? parseFloat(btn.dataset.v) : null,
-        v => { btn.dataset.v = v != null ? v : ''; btn.textContent = v != null ? v : '—'; }, 'Target RPE');
+        v => { btn.dataset.v = v != null ? v : ''; btn.textContent = v != null ? v : '—'; }, tr("action_edit-rpe-pick.message.target_rpe"));
       break;
     }
     case 'picker-dismiss': if (e.target === el) closeRpePicker(); break;
@@ -3048,29 +3043,29 @@ document.addEventListener('click', e => {
     }
     case 'plan-swap-pick': doPlanSwap(el.dataset.day, +el.dataset.i, +el.dataset.ai); break;
     case 'plan-rename':
-      showModal('Rename plan', `<label class="field"><span>Plan name</span><input id="f-plan-name" value="${esc(plan.name)}"></label>`,
-        [{ label: 'Save', cls: 'primary', fn: () => { plan.name = mval('f-plan-name') || plan.name; savePlan(); closeModal(); render(); } }, { label: 'Cancel' }]);
+      showModal(tr("action_plan-rename.message.rename_plan"), `<label class="field"><span>${esc(tr("action_plan-rename.text.plan_name"))}</span><input id="f-plan-name" value="${esc(plan.name)}"></label>`,
+        [{ label: tr("common.action.save"), cls: 'primary', fn: () => { plan.name = mval('f-plan-name') || plan.name; savePlan(); closeModal(); render(); } }, { label: tr("common.action.cancel") }]);
       break;
     case 'day-add':
-      showModal('Add day', `<label class="field"><span>Day name</span><input id="f-day-name" placeholder="Day D — Upper"></label>`,
-        [{ label: 'Add', cls: 'primary', fn: () => {
+      showModal(tr("action_day-add.message.add_day"), `<label class="field"><span>${esc(tr("plan.form.day_name"))}</span><input id="f-day-name" placeholder="${esc(tr("action_day-add.placeholder.day_d_upper"))}"></label>`,
+        [{ label: tr("common.action.add"), cls: 'primary', fn: () => {
             const name = mval('f-day-name'); if (!name) return;
             plan.days.push({ id: uid(), name, warmup: [], exercises: [] });
             expandedDay = plan.days[plan.days.length - 1].id;
             savePlan(); closeModal(); render();
-          } }, { label: 'Cancel' }]);
+          } }, { label: tr("common.action.cancel") }]);
       break;
     case 'day-rename': {
       const day = plan.days.find(d => d.id === el.dataset.id);
-      showModal('Rename day', `<label class="field"><span>Day name</span><input id="f-day-name" value="${esc(day.name)}"></label>`,
-        [{ label: 'Save', cls: 'primary', fn: () => { day.name = mval('f-day-name') || day.name; savePlan(); closeModal(); render(); } }, { label: 'Cancel' }]);
+      showModal(tr("action_day-rename.message.rename_day"), `<label class="field"><span>${esc(tr("plan.form.day_name"))}</span><input id="f-day-name" value="${esc(day.name)}"></label>`,
+        [{ label: tr("common.action.save"), cls: 'primary', fn: () => { day.name = mval('f-day-name') || day.name; savePlan(); closeModal(); render(); } }, { label: tr("common.action.cancel") }]);
       break;
     }
     case 'day-delete': {
       const id = el.dataset.id;
       const day = plan.days.find(d => d.id === id);
-      showModal('Delete ' + day.name + '?', '<p>The day and its exercises are removed from the plan. Past sessions are kept.</p>',
-        [{ label: 'Delete', cls: 'danger', fn: () => { plan.days = plan.days.filter(d => d.id !== id); savePlan(); closeModal(); render(); } }, { label: 'Cancel' }]);
+      showModal(tr("plan.day.delete.title", { day: day.name }), `<p>${esc(tr("action_day-delete.text.the_day_and_its_exercises_are_removed_from_the_p"))}</p>`,
+        [{ label: tr("common.action.delete"), cls: 'danger', fn: () => { plan.days = plan.days.filter(d => d.id !== id); savePlan(); closeModal(); render(); } }, { label: tr("common.action.cancel") }]);
       break;
     }
 
@@ -3078,16 +3073,16 @@ document.addEventListener('click', e => {
     case 'session-toggle': expandedSession = expandedSession === el.dataset.id ? null : el.dataset.id; render(); break;
     case 'session-delete': {
       const id = el.dataset.id;
-      showModal('Delete this session?', '<p>This permanently removes it from your history and AI exports.</p>',
-        [{ label: 'Delete', cls: 'danger', fn: () => { sessions = sessions.filter(s => s.id !== id); saveSessions(); render(); } }, { label: 'Cancel' }]);
+      showModal(tr("action_session-delete.message.delete_this_session"), `<p>${esc(tr("action_session-delete.text.this_permanently_removes_it_from_your_history_an"))}</p>`,
+        [{ label: tr("common.action.delete"), cls: 'danger', fn: () => { sessions = sessions.filter(s => s.id !== id); saveSessions(); render(); } }, { label: tr("common.action.cancel") }]);
       break;
     }
     case 'bw-add': {
       const v = parseFloat(document.getElementById('bw-input').value);
-      if (!v || v <= 0) { toast('Enter a weight first', 'err'); break; }
+      if (!v || v <= 0) { toast(tr("action_bw-add.message.enter_a_weight_first"), 'err'); break; }
       bodyWeight = bodyWeight.filter(b => b.date !== today());
       bodyWeight.push({ date: today(), weight: v });
-      saveBW(); render(); toast('Body weight logged ✓');
+      saveBW(); render(); toast(tr("action_bw-add.message.body_weight_logged"));
       break;
     }
     case 'bw-undo': bodyWeight.pop(); saveBW(); render(); break;
@@ -3100,22 +3095,32 @@ document.addEventListener('click', e => {
     }
 
     /* claude tab */
-    case 'copy-coach': copyText(CLAUDE_PROMPT() + buildExport()).then(ok => toast(ok ? 'Coaching prompt copied — paste it to Claude' : 'Copy failed', ok ? 'ok' : 'err')); break;
-    case 'copy-data': copyText(buildExport()).then(ok => toast(ok ? 'Data copied' : 'Copy failed', ok ? 'ok' : 'err')); break;
+    case 'copy-coach': copyText(CLAUDE_PROMPT() + buildExport()).then(ok => toast(ok ? tr("action_copy-coach.message.coaching_prompt_copied_paste_it_to_claude") : tr("common.error.copy_failed"), ok ? 'ok' : 'err')); break;
+    case 'copy-data': copyText(buildExport()).then(ok => toast(ok ? tr("action_copy-data.message.data_copied") : tr("common.error.copy_failed"), ok ? 'ok' : 'err')); break;
     case 'import-plan': {
       const raw = mval('import-area');
-      if (!raw) { toast('Paste the plan JSON first', 'err'); break; }
+      if (!raw) { toast(tr("action_import-plan.message.paste_the_plan_json_first"), 'err'); break; }
       try {
         const cleaned = raw.replace(/^```(json)?/m, '').replace(/```\s*$/m, '').trim();
         const newPlan = normalizePlan(JSON.parse(cleaned));
-        showModal('Import "' + newPlan.name + '"?', `<p>${newPlan.days.length} days, ${newPlan.days.reduce((n, d) => n + d.exercises.length, 0)} exercises. Your current plan is replaced; workout history is kept.</p>`,
-          [{ label: 'Import', cls: 'primary', fn: () => { plan = newPlan; savePlan(); expandedDay = null; tab = 'plan'; render(); toast('Plan imported ✓'); } }, { label: 'Cancel' }]);
-      } catch (err) { toast('Invalid plan: ' + err.message, 'err'); }
+        showModal(tr("plan.import.title", { plan: newPlan.name }), `<p>${esc(tr("action_import-plan.text.days_exercises_your_current_plan_is_replaced_wor", { newPlan_days_length: newPlan.days.length, newPlan_days_reduce_n_d_n_d_: newPlan.days.reduce((n, d) => n + d.exercises.length, 0) }))}</p>`,
+          [{ label: tr("action_import-plan.button.import"), cls: 'primary', fn: () => { plan = newPlan; savePlan(); expandedDay = null; tab = 'plan'; render(); toast(tr("action_import-plan.message.plan_imported")); } }, { label: tr("common.action.cancel") }]);
+      } catch (err) { toast(tr("plan_import.error.invalid", { error: err.message }), 'err'); }
       break;
     }
     case 'toggle-autosync': settings.autoSync = !settings.autoSync; saveSettings(); render(); if (settings.autoSync) workerPush({ silent: true }); break;
-    case 'share-ai': copyText(workerShareUrl()).then(ok => toast(ok ? 'Link copied — paste into any AI chat' : 'Copy failed', ok ? 'ok' : 'err')); break;
-    case 'copy-uuid': copyText(gymUUID).then(ok => toast(ok ? 'Backup code copied' : 'Copy failed', ok ? 'ok' : 'err')); break;
+    case 'share-ai': copyText(workerShareUrl()).then(ok => toast(ok ? tr("action_share-ai.message.link_copied_paste_into_any_ai_chat") : tr("common.error.copy_failed"), ok ? 'ok' : 'err')); break;
+    case 'copy-uuid': copyText(gymUUID).then(ok => toast(ok ? tr("action_copy-uuid.message.backup_code_copied") : tr("common.error.copy_failed"), ok ? 'ok' : 'err')); break;
+    case 'download-pending-exercises': {
+      const file = new Blob([I18n.exportPendingExercises()], { type: 'application/json' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(file);
+      link.href = url;
+      link.download = 'gymtrack-pending-exercises.json';
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      break;
+    }
     case 'restore-uuid': restoreFromCode(mval('restore-uuid-input')); break;
     case 'save-write-token': saveWriteToken(mval('write-token-input')); break;
     case 'toggle-sound': settings.sound = !settings.sound; saveSettings(); render(); break;
@@ -3123,27 +3128,27 @@ document.addEventListener('click', e => {
     case 'test-sound': {
       beep(3); buzz();
       const st = audioState();
-      toast(st === 'running' ? "That's the rest-timer cue"
-        : `Audio context is "${st}" — sound may not fire. Tap anywhere and retry.`, st === 'running' ? 'ok' : 'err');
+      toast(st === 'running' ? tr("action_test-sound.message.that_s_the_rest_timer_cue")
+        : tr("action_test-sound.message.audio_context_is_sound_may_not_fire_tap_anywhere", { st: st }), st === 'running' ? 'ok' : 'err');
       break;
     }
-    case 'backup-copy': copyText(buildBackup()).then(ok => toast(ok ? 'Backup copied — store it somewhere safe' : 'Copy failed', ok ? 'ok' : 'err')); break;
+    case 'backup-copy': copyText(buildBackup()).then(ok => toast(ok ? tr("action_backup-copy.message.backup_copied_store_it_somewhere_safe") : tr("common.error.copy_failed"), ok ? 'ok' : 'err')); break;
     case 'backup-restore':
-      showModal('Restore backup', `<p class="muted small">Paste a backup JSON. This replaces everything on this device.</p><textarea id="restore-area" class="mt8"></textarea>`,
-        [{ label: 'Restore', cls: 'danger', fn: () => {
-            try { restoreBackup(mval('restore-area')); render(); toast('Backup restored ✓'); }
-            catch (err) { toast('Restore failed: ' + err.message, 'err'); }
-          } }, { label: 'Cancel' }]);
+      showModal(tr("action_backup-restore.message.restore_backup"), `<p class="muted small">${esc(tr("action_backup-restore.text.paste_a_backup_json_this_replaces_everything_on_"))}</p><textarea id="restore-area" class="mt8"></textarea>`,
+        [{ label: tr("common.action.restore"), cls: 'danger', fn: () => {
+            try { restoreBackup(mval('restore-area')); render(); toast(tr("action_backup-restore.message.backup_restored")); }
+            catch (err) { toast(tr("backup.error.restore", { error: err.message }), 'err'); }
+          } }, { label: tr("common.action.cancel") }]);
       break;
     case 'reset-all':
-      showModal('Reset everything?', '<p>Deletes your plan, all sessions, body weight log and settings from this device. Consider copying a backup first.</p>',
-        [{ label: 'Reset', cls: 'danger', fn: () => {
+      showModal(tr("action_reset-all.message.reset_everything"), `<p>${esc(tr("action_reset-all.text.deletes_your_plan_all_sessions_body_weight_log_a"))}</p>`,
+        [{ label: tr("action_reset-all.button.reset"), cls: 'danger', fn: () => {
             endSession(); // clears `active` and its UI state, stops rest, releases the wake lock
             ['plan', 'sessions', 'active', 'bw', 'settings', 'updatedAt'].forEach(k => store.del(k));
             plan = defaultPlan(); sessions = []; bodyWeight = []; dataUpdatedAt = 0;
             settings = { unit: 'kg', sound: true, vibrate: true, autoSync: true };
-            closeModal(); render(); toast('Fresh start');
-          } }, { label: 'Cancel' }]);
+            closeModal(); render(); toast(tr("action_reset-all.message.fresh_start"));
+          } }, { label: tr("common.action.cancel") }]);
       break;
   }
 });
@@ -3182,14 +3187,20 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('change', e => {
   const bind = e.target.dataset.bind;
+  if (bind === 'set-language') {
+    const drafts = [...document.querySelectorAll('#app input[id], #app textarea[id]')].map(el => [el.id, el.value]);
+    I18n.setLocale(e.target.value); render(); renderRest();
+    drafts.forEach(([id, value]) => { const el = document.getElementById(id); if (el) el.value = value; });
+    const banner = document.getElementById('update-banner'); if (banner) { banner.remove(); showUpdateBanner(); }
+  }
   if (bind === 'history-ex') { historyExercise = e.target.value; render(); }
-  if (bind === 'set-unit') { settings.unit = e.target.value; saveSettings(); render(); toast('Unit set to ' + settings.unit + ' (existing numbers are not converted)'); }
+  if (bind === 'set-unit') { settings.unit = e.target.value; saveSettings(); render(); toast(tr("settings.unit.changed", { unit: settings.unit })); }
   if (bind === 'edit-equipment') {
     const row = document.getElementById('f-barweight-row');
     if (row) {
       row.classList.toggle('hidden', !BAR_WEIGHT_EQUIPMENT.has(e.target.value));
       const input = document.getElementById('f-barweight');
-      if (input) input.placeholder = 'default ' + resolvedBarWeight({ equipment: e.target.value, barWeight: null });
+      if (input) input.placeholder = tr("ex_edit_modal.placeholder.default", { resolvedBarWeight_equipment_: resolvedBarWeight({ equipment: e.target.value, barWeight: null }) });
     }
     const hint = document.getElementById('f-weight-hint');
     if (hint) hint.textContent = ladderHint(e.target.value);

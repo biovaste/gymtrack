@@ -1,0 +1,3577 @@
+{
+  "start_rest.message.rest": {
+    "en": "Rest",
+    "fi": "Lepo",
+    "context": "Rest timer: message for Rest",
+    "screen": "Rest timer",
+    "role": "message"
+  },
+  "render_rest.message.rest_over_go": {
+    "en": "Rest over — GO! 🔥",
+    "fi": "Lepo päättyi — MENOKSI! 🔥",
+    "context": "Rest timer: message for Rest over — GO! 🔥",
+    "screen": "Rest timer",
+    "role": "message"
+  },
+  "render_rest.text.15s": {
+    "en": "−15s",
+    "fi": "−15 s",
+    "context": "Rest timer: text for −15s",
+    "screen": "Rest timer",
+    "role": "text"
+  },
+  "render_rest.message.ok": {
+    "en": "OK",
+    "fi": "OK",
+    "context": "Rest timer: message for OK",
+    "screen": "Rest timer",
+    "role": "message"
+  },
+  "render_rest.message.skip": {
+    "en": "Skip",
+    "fi": "Ohita",
+    "context": "Rest timer: message for Skip",
+    "screen": "Rest timer",
+    "role": "message"
+  },
+  "render_rest.text.15s_2": {
+    "en": "+15s",
+    "fi": "+15 s",
+    "context": "Rest timer: text for +15s",
+    "screen": "Rest timer",
+    "role": "text"
+  },
+  "normalize_plan.message.not_a_json_object": {
+    "en": "Not a JSON object.",
+    "fi": "Tämä ei ole JSON-objekti.",
+    "context": "Plan import: message for Not a JSON object.",
+    "screen": "Plan import",
+    "role": "message"
+  },
+  "normalize_plan.message.json_type_should_be_workout_plan": {
+    "en": "JSON \"type\" should be \"workout-plan\".",
+    "fi": "JSON-tiedoston \"type\"-arvon pitää olla \"workout-plan\".",
+    "context": "Plan import: message for JSON \"type\" should be \"workout-plan\".",
+    "screen": "Plan import",
+    "role": "message"
+  },
+  "normalize_plan.message.plan_needs_a_non_empty_days_array": {
+    "en": "Plan needs a non-empty \"days\" array.",
+    "fi": "Ohjelma tarvitsee vähintään yhden päivän \"days\"-taulukossa.",
+    "context": "Plan import: message for Plan needs a non-empty \"days\" array.",
+    "screen": "Plan import",
+    "role": "message"
+  },
+  "normalize_plan.message.imported_plan": {
+    "en": "Imported plan",
+    "fi": "Tuotu ohjelma",
+    "context": "Plan import: message for Imported plan",
+    "screen": "Plan import",
+    "role": "message"
+  },
+  "normalize_plan.message.day_needs_an_exercises_array": {
+    "en": "Day \"{d_name}\" needs an \"exercises\" array.",
+    "fi": "Päivä \"{d_name}\" tarvitsee \"exercises\"-taulukon.",
+    "context": "Plan import: message for Day \"{d_name}\" needs an \"exercises\" array.",
+    "screen": "Plan import",
+    "role": "message",
+    "examples": [
+      "{d_name}"
+    ]
+  },
+  "normalize_plan.message.day": {
+    "en": "Day",
+    "fi": "Päivä",
+    "context": "Plan import: message for Day",
+    "screen": "Plan import",
+    "role": "message"
+  },
+  "normalize_plan.message.every_exercise_needs_a_name": {
+    "en": "Every exercise needs a \"name\".",
+    "fi": "Jokainen liike tarvitsee \"name\"-arvon.",
+    "context": "Plan import: message for Every exercise needs a \"name\".",
+    "screen": "Plan import",
+    "role": "message"
+  },
+  "start_session.message.session_started_go_crush_it": {
+    "en": "Session started — go crush it 💪",
+    "fi": "Treeni alkoi — anna mennä 💪",
+    "context": "Active workout: message for Session started — go crush it 💪",
+    "screen": "Active workout",
+    "role": "message"
+  },
+  "finish_session.message.warm_up": {
+    "en": "(+{warmCount} warm-up)",
+    "fi": "(+{warmCount} lämmittelysarjaa)",
+    "context": "Workout completion: message for (+{warmCount} warm-up)",
+    "screen": "Workout completion",
+    "role": "message",
+    "examples": [
+      "{warmCount}"
+    ]
+  },
+  "finish_session.text.saved": {
+    "en": "Saved",
+    "fi": "Tallennettu",
+    "context": "Workout completion: text for Saved",
+    "screen": "Workout completion",
+    "role": "text"
+  },
+  "finish_session.text.working_set_in": {
+    "en": "— working sets: {setCount}{warmCount_tr_finish_session_} · duration: {fmtDur_durationMin}.",
+    "fi": "— työsarjoja: {setCount}{warmCount_tr_finish_session_} · kesto: {fmtDur_durationMin}.",
+    "context": "Workout completion: text for — working sets: {setCount}{warmCount_tr_finish_session_} · duration: {fmtDur_durationMin}.",
+    "screen": "Workout completion",
+    "role": "text",
+    "examples": [
+      "{setCount}",
+      "{warmCount_tr_finish_session_}",
+      "{fmtDur_durationMin}"
+    ]
+  },
+  "finish_session.text.only_of_sets_had_an_rpe": {
+    "en": "(only {Math_round_sl_coverage_100}% of sets had an RPE)",
+    "fi": "(vain {Math_round_sl_coverage_100} %:lle sarjoista kirjattiin RPE)",
+    "context": "Workout completion: text for (only {Math_round_sl_coverage_100}% of sets had an RPE)",
+    "screen": "Workout completion",
+    "role": "text",
+    "examples": [
+      "{Math_round_sl_coverage_100}"
+    ]
+  },
+  "finish_session.text.session_rpe": {
+    "en": "Session RPE",
+    "fi": "Treenin RPE",
+    "context": "Workout completion: text for Session RPE",
+    "screen": "Workout completion",
+    "role": "text"
+  },
+  "finish_session.text.new_prs": {
+    "en": "🏆 New PRs:",
+    "fi": "🏆 Uudet ennätykset:",
+    "context": "Workout completion: text for 🏆 New PRs:",
+    "screen": "Workout completion",
+    "role": "text"
+  },
+  "finish_session.message.syncing_to_the_cloud_for_your_ai_coach": {
+    "en": "☁️ Syncing to the cloud for your AI coach…",
+    "fi": "☁️ Synkronoidaan pilveen tekoälyvalmentajaa varten…",
+    "context": "Workout completion: message for ☁️ Syncing to the cloud for your AI coach…",
+    "screen": "Workout completion",
+    "role": "message"
+  },
+  "finish_session.message.head_to_the_ai_coach_tab_to_export_this_for_your": {
+    "en": "Head to the AI Coach tab to export this for your next plan update.",
+    "fi": "Vie treenin tiedot tekoälyvalmentajalle seuraavan ohjelmapäivityksen pohjaksi.",
+    "context": "Workout completion: message for Head to the AI Coach tab to export this for your next plan update.",
+    "screen": "Workout completion",
+    "role": "message"
+  },
+  "finish_session.message.workout_complete": {
+    "en": "Workout complete 🎉",
+    "fi": "Treeni valmis 🎉",
+    "context": "Workout completion: message for Workout complete 🎉",
+    "screen": "Workout completion",
+    "role": "message"
+  },
+  "finish_session.button.done": {
+    "en": "Done",
+    "fi": "Valmis",
+    "context": "Workout completion: button for Done",
+    "screen": "Workout completion",
+    "role": "button"
+  },
+  "complete_set.message.round_of": {
+    "en": "Round {Math_min_si_2_rounds} of {rounds}",
+    "fi": "Kierros {Math_min_si_2_rounds}/{rounds}",
+    "context": "Active workout: message for Round {Math_min_si_2_rounds} of {rounds}",
+    "screen": "Active workout",
+    "role": "message",
+    "examples": [
+      "{Math_min_si_2_rounds}",
+      "{rounds}"
+    ]
+  },
+  "complete_set.message.rest_next_movement": {
+    "en": "Rest — next movement",
+    "fi": "Lepo — seuraava liike",
+    "context": "Active workout: message for Rest — next movement",
+    "screen": "Active workout",
+    "role": "message"
+  },
+  "restore_backup.message.not_a_gymtrack_backup_expected_type_gymtrack_bac": {
+    "en": "Not a GymTrack backup (expected type \"gymtrack-backup\").",
+    "fi": "Tämä ei ole GymTrack-varmuuskopio (odotettu tyyppi \"gymtrack-backup\").",
+    "context": "Backup restore: message for Not a GymTrack backup (expected type \"gymtrack-backup\").",
+    "screen": "Backup restore",
+    "role": "message"
+  },
+  "sync_status_html.text.auto_sync_off": {
+    "en": "⏸ Auto-sync off",
+    "fi": "⏸ Automaattinen synkronointi pois päältä",
+    "context": "Cloud sync: text for ⏸ Auto-sync off",
+    "screen": "Cloud sync",
+    "role": "text"
+  },
+  "sync_status_html.text.syncing": {
+    "en": "⟳ Syncing…",
+    "fi": "⟳ Synkronoidaan…",
+    "context": "Cloud sync: text for ⟳ Syncing…",
+    "screen": "Cloud sync",
+    "role": "text"
+  },
+  "sync_status_html.message.sync_error": {
+    "en": "Sync error",
+    "fi": "Synkronointivirhe",
+    "context": "Cloud sync: message for Sync error",
+    "screen": "Cloud sync",
+    "role": "message"
+  },
+  "sync_status_html.text.connected_syncing_on_launch": {
+    "en": "🔗 Connected — syncing on launch",
+    "fi": "🔗 Yhdistetty — synkronoidaan käynnistettäessä",
+    "context": "Cloud sync: text for 🔗 Connected — syncing on launch",
+    "screen": "Cloud sync",
+    "role": "text"
+  },
+  "worker_push.message.write_token_missing_or_invalid_re_enter_it_in_se": {
+    "en": "Write token missing or invalid — re-enter it in Settings",
+    "fi": "Kirjoitustunnus puuttuu tai on virheellinen — syötä se uudelleen asetuksissa",
+    "context": "Cloud sync: message for Write token missing or invalid — re-enter it in Settings",
+    "screen": "Cloud sync",
+    "role": "message"
+  },
+  "worker_push.message.synced_to_cloud": {
+    "en": "Synced to cloud ✓",
+    "fi": "Synkronoitu pilveen ✓",
+    "context": "Cloud sync: message for Synced to cloud ✓",
+    "screen": "Cloud sync",
+    "role": "message"
+  },
+  "restore_from_code.message.paste_your_backup_code_first": {
+    "en": "Paste your backup code first",
+    "fi": "Liitä ensin varmuuskopiokoodisi",
+    "context": "Backup restore: message for Paste your backup code first",
+    "screen": "Backup restore",
+    "role": "message"
+  },
+  "restore_from_code.message.invalid_backup_code": {
+    "en": "Invalid backup code",
+    "fi": "Virheellinen varmuuskopiokoodi",
+    "context": "Backup restore: message for Invalid backup code",
+    "screen": "Backup restore",
+    "role": "message"
+  },
+  "restore_from_code.message.no_data_found_for_this_backup_code": {
+    "en": "No data found for this backup code",
+    "fi": "Tällä varmuuskopiokoodilla ei löytynyt tietoja",
+    "context": "Backup restore: message for No data found for this backup code",
+    "screen": "Backup restore",
+    "role": "message"
+  },
+  "restore_from_code.message.not_found": {
+    "en": "Not found",
+    "fi": "Ei löytynyt",
+    "context": "Backup restore: message for Not found",
+    "screen": "Backup restore",
+    "role": "message"
+  },
+  "restore_from_code.message.restored": {
+    "en": "Restored ✓",
+    "fi": "Palautettu ✓",
+    "context": "Backup restore: message for Restored ✓",
+    "screen": "Backup restore",
+    "role": "message"
+  },
+  "save_write_token.message.paste_your_write_token_first": {
+    "en": "Paste your write token first",
+    "fi": "Liitä ensin kirjoitustunnuksesi",
+    "context": "Application: message for Paste your write token first",
+    "screen": "Application",
+    "role": "message"
+  },
+  "save_write_token.message.that_does_not_look_like_a_write_token_64_hex_cha": {
+    "en": "That does not look like a write token (64 hex characters)",
+    "fi": "Tämä ei näytä kirjoitustunnukselta (64 heksadesimaalimerkkiä)",
+    "context": "Application: message for That does not look like a write token (64 hex characters)",
+    "screen": "Application",
+    "role": "message"
+  },
+  "save_write_token.message.write_token_saved": {
+    "en": "Write token saved ✓",
+    "fi": "Kirjoitustunnus tallennettu ✓",
+    "context": "Application: message for Write token saved ✓",
+    "screen": "Application",
+    "role": "message"
+  },
+  "show_onboarding.message.welcome_to_gymtrack": {
+    "en": "Welcome to GymTrack",
+    "fi": "Tervetuloa GymTrackiin",
+    "context": "Onboarding: message for Welcome to GymTrack",
+    "screen": "Onboarding",
+    "role": "message"
+  },
+  "show_onboarding.text.log_your_workouts": {
+    "en": "Log your workouts",
+    "fi": "Kirjaa treenisi",
+    "context": "Onboarding: text for Log your workouts",
+    "screen": "Onboarding",
+    "role": "text"
+  },
+  "show_onboarding.text.sets_reps_rpe_with_a_rest_timer_that_runs_itself": {
+    "en": "Sets, reps, RPE — with a rest timer that runs itself.",
+    "fi": "Sarjat, toistot ja RPE — lepoajastin toimii automaattisesti.",
+    "context": "Onboarding: text for Sets, reps, RPE — with a rest timer that runs itself.",
+    "screen": "Onboarding",
+    "role": "text"
+  },
+  "show_onboarding.text.your_ai_coach_writes_the_next_plan": {
+    "en": "Your AI coach writes the next plan",
+    "fi": "Tekoälyvalmentaja laatii seuraavan ohjelman",
+    "context": "Onboarding: text for Your AI coach writes the next plan",
+    "screen": "Onboarding",
+    "role": "text"
+  },
+  "show_onboarding.text.share_your_training_data_with_claude_chatgpt_or_": {
+    "en": "Share your training data with Claude, ChatGPT or Gemini in one tap.",
+    "fi": "Jaa treenitietosi Claudelle, ChatGPT:lle tai Geminille yhdellä painalluksella.",
+    "context": "Onboarding: text for Share your training data with Claude, ChatGPT or Gemini in one tap.",
+    "screen": "Onboarding",
+    "role": "text"
+  },
+  "show_onboarding.text.everything_syncs_automatically": {
+    "en": "Everything syncs automatically",
+    "fi": "Kaikki synkronoituu automaattisesti",
+    "context": "Onboarding: text for Everything syncs automatically",
+    "screen": "Onboarding",
+    "role": "text"
+  },
+  "show_onboarding.text.your_backup_code_in_settings_restores_it_all_on_": {
+    "en": "Your backup code (in Settings) restores it all on any device.",
+    "fi": "Asetuksissa oleva varmuuskopiokoodi palauttaa kaikki tiedot mille tahansa laitteelle.",
+    "context": "Onboarding: text for Your backup code (in Settings) restores it all on any device.",
+    "screen": "Onboarding",
+    "role": "text"
+  },
+  "show_onboarding.text.a_starter_push_pull_legs_plan_is_loaded_edit_it_": {
+    "en": "A starter Push / Pull / Legs plan is loaded — edit it in the Plan tab or import your own.",
+    "fi": "Aloitusohjelma Push / Pull / Legs on ladattu — muokkaa sitä Ohjelma-välilehdellä tai tuo oma ohjelmasi.",
+    "context": "Onboarding: text for A starter Push / Pull / Legs plan is loaded — edit it in the Plan tab or import your own.",
+    "screen": "Onboarding",
+    "role": "text"
+  },
+  "show_onboarding.button.get_started": {
+    "en": "Get started",
+    "fi": "Aloita",
+    "context": "Onboarding: button for Get started",
+    "screen": "Onboarding",
+    "role": "button"
+  },
+  "show_onboarding.button.i_have_a_backup_code": {
+    "en": "I have a backup code",
+    "fi": "Minulla on varmuuskopiokoodi",
+    "context": "Onboarding: button for I have a backup code",
+    "screen": "Onboarding",
+    "role": "button"
+  },
+  "show_onboarding.message.restore_your_data": {
+    "en": "Restore your data",
+    "fi": "Palauta tietosi",
+    "context": "Onboarding: message for Restore your data",
+    "screen": "Onboarding",
+    "role": "message"
+  },
+  "show_onboarding.placeholder.paste_your_backup_code": {
+    "en": "Paste your backup code",
+    "fi": "Liitä varmuuskopiokoodisi",
+    "context": "Onboarding: placeholder for Paste your backup code",
+    "screen": "Onboarding",
+    "role": "placeholder"
+  },
+  "show_onboarding.text.paste_the_backup_code_or_share_url_from_your_old": {
+    "en": "Paste the backup code (or share URL) from your old device.",
+    "fi": "Liitä vanhan laitteesi varmuuskopiokoodi tai jakolinkki.",
+    "context": "Onboarding: text for Paste the backup code (or share URL) from your old device.",
+    "screen": "Onboarding",
+    "role": "text"
+  },
+  "show_update_banner.text.new_version_available": {
+    "en": "New version available",
+    "fi": "Uusi versio saatavilla",
+    "context": "Updates: text for New version available",
+    "screen": "Updates",
+    "role": "text"
+  },
+  "show_update_banner.text.update": {
+    "en": "Update",
+    "fi": "Päivitä",
+    "context": "Updates: text for Update",
+    "screen": "Updates",
+    "role": "text"
+  },
+  "check_for_updates.message.checking": {
+    "en": "Checking…",
+    "fi": "Tarkistetaan…",
+    "context": "Updates: message for Checking…",
+    "screen": "Updates",
+    "role": "message"
+  },
+  "check_for_updates.message.updates_need_a_browser_with_service_workers": {
+    "en": "Updates need a browser with service workers",
+    "fi": "Päivitykset vaativat selaimen, joka tukee service workereita",
+    "context": "Updates: message for Updates need a browser with service workers",
+    "screen": "Updates",
+    "role": "message"
+  },
+  "check_for_updates.message.app_not_installed_as_a_pwa_just_reload_the_page": {
+    "en": "App not installed as a PWA — just reload the page",
+    "fi": "Sovellusta ei ole asennettu — lataa sivu uudelleen",
+    "context": "Updates: message for App not installed as a PWA — just reload the page",
+    "screen": "Updates",
+    "role": "message"
+  },
+  "check_for_updates.message.update_ready_tap_update": {
+    "en": "Update ready — tap Update",
+    "fi": "Päivitys valmis — paina Päivitä",
+    "context": "Updates: message for Update ready — tap Update",
+    "screen": "Updates",
+    "role": "message"
+  },
+  "check_for_updates.message.update_available": {
+    "en": "Update available",
+    "fi": "Päivitys saatavilla",
+    "context": "Updates: message for Update available",
+    "screen": "Updates",
+    "role": "message"
+  },
+  "check_for_updates.text.a_newer_version_is_on_the_server_but_this_device": {
+    "en": "A newer version is on the server, but this device is still serving a cached copy.",
+    "fi": "Palvelimella on uudempi versio, mutta tämä laite käyttää vielä välimuistiin tallennettua versiota.",
+    "context": "Updates: text for A newer version is on the server, but this device is still serving a cached copy.",
+    "screen": "Updates",
+    "role": "text"
+  },
+  "check_for_updates.text.reloading_clears_the_app_cache_and_fetches_it_yo": {
+    "en": "Reloading clears the app cache and fetches it. Your workouts, plan and settings are stored separately and are not affected.",
+    "fi": "Uudelleenlataus tyhjentää sovelluksen välimuistin ja hakee päivityksen. Treenisi, ohjelmasi ja asetuksesi säilyvät erikseen tallennettuina.",
+    "context": "Updates: text for Reloading clears the app cache and fetches it. Your workouts, plan and settings are stored separately and are not affected.",
+    "screen": "Updates",
+    "role": "text"
+  },
+  "check_for_updates.button.reload_now": {
+    "en": "Reload now",
+    "fi": "Lataa uudelleen nyt",
+    "context": "Updates: button for Reload now",
+    "screen": "Updates",
+    "role": "button"
+  },
+  "check_for_updates.button.not_now": {
+    "en": "Not now",
+    "fi": "Ei nyt",
+    "context": "Updates: button for Not now",
+    "screen": "Updates",
+    "role": "button"
+  },
+  "check_for_updates.message.could_not_check_are_you_offline": {
+    "en": "Could not check — are you offline?",
+    "fi": "Tarkistus epäonnistui — onko verkkoyhteys käytössä?",
+    "context": "Updates: message for Could not check — are you offline?",
+    "screen": "Updates",
+    "role": "message"
+  },
+  "view_start.text.up_next": {
+    "en": "up next",
+    "fi": "seuraavaksi",
+    "context": "Start screen: text for up next",
+    "screen": "Start screen",
+    "role": "text"
+  },
+  "view_start.text.start": {
+    "en": "Start {d_name_split_0_trim}",
+    "fi": "Aloita {d_name_split_0_trim}",
+    "context": "Start screen: text for Start {d_name_split_0_trim}",
+    "screen": "Start screen",
+    "role": "text",
+    "examples": [
+      "{d_name_split_0_trim}"
+    ]
+  },
+  "view_start.text.last_workout": {
+    "en": "Last workout: {last_dayName} · {fmtDate_last_date}",
+    "fi": "Edellinen treeni: {last_dayName} · {fmtDate_last_date}",
+    "context": "Start screen: text for Last workout: {last_dayName} · {fmtDate_last_date}",
+    "screen": "Start screen",
+    "role": "text",
+    "examples": [
+      "{last_dayName}",
+      "{fmtDate_last_date}"
+    ]
+  },
+  "view_start.text.start_a_workout": {
+    "en": "Start a workout",
+    "fi": "Aloita treeni",
+    "context": "Start screen: text for Start a workout",
+    "screen": "Start screen",
+    "role": "text"
+  },
+  "view_start.text.test_cmj_measurement": {
+    "en": "Test CMJ measurement",
+    "fi": "Kokeile CMJ-mittausta",
+    "context": "Start screen: text for Test CMJ measurement",
+    "screen": "Start screen",
+    "role": "text"
+  },
+  "view_active_session.message.att": {
+    "en": "({r_cmjAttempts_length} att)",
+    "fi": "({r_cmjAttempts_length} yritystä)",
+    "context": "Active workout: message for ({r_cmjAttempts_length} att)",
+    "screen": "Active workout",
+    "role": "message",
+    "examples": [
+      "{r_cmjAttempts_length}"
+    ]
+  },
+  "view_active_session.message.cmj": {
+    "en": "CMJ {r_cmjCm}{r_cmjAttempts_length_1_tr_vi}",
+    "fi": "CMJ {r_cmjCm}{r_cmjAttempts_length_1_tr_vi}",
+    "context": "Active workout: message for CMJ {r_cmjCm}{r_cmjAttempts_length_1_tr_vi}",
+    "screen": "Active workout",
+    "role": "message",
+    "examples": [
+      "{r_cmjCm}",
+      "{r_cmjAttempts_length_1_tr_vi}"
+    ]
+  },
+  "view_active_session.message.broad": {
+    "en": "Broad {r_broadJumpCm}",
+    "fi": "Vauhditon pituus {r_broadJumpCm}",
+    "context": "Active workout: message for Broad {r_broadJumpCm}",
+    "screen": "Active workout",
+    "role": "message",
+    "examples": [
+      "{r_broadJumpCm}"
+    ]
+  },
+  "view_active_session.message.energy": {
+    "en": "Energy {r_subjectiveEnergy}",
+    "fi": "Vireys {r_subjectiveEnergy}",
+    "context": "Active workout: message for Energy {r_subjectiveEnergy}",
+    "screen": "Active workout",
+    "role": "message",
+    "examples": [
+      "{r_subjectiveEnergy}"
+    ]
+  },
+  "view_active_session.message.tap_to_log_cmj_energy": {
+    "en": "tap to log CMJ / energy",
+    "fi": "kirjaa CMJ tai vireys napauttamalla",
+    "context": "Active workout: message for tap to log CMJ / energy",
+    "screen": "Active workout",
+    "role": "message"
+  },
+  "view_active_session.text.pre_session_readiness": {
+    "en": "Pre-session readiness",
+    "fi": "Valmius ennen treeniä",
+    "context": "Active workout: text for Pre-session readiness",
+    "screen": "Active workout",
+    "role": "text"
+  },
+  "view_active_session.text.optional": {
+    "en": "(optional)",
+    "fi": "(valinnainen)",
+    "context": "Active workout: text for (optional)",
+    "screen": "Active workout",
+    "role": "text"
+  },
+  "view_active_session.text.cmj_cm": {
+    "en": "CMJ (cm)",
+    "fi": "Kevennyshyppy, CMJ (cm)",
+    "context": "Active workout: text for CMJ (cm)",
+    "screen": "Active workout",
+    "role": "text"
+  },
+  "view_active_session.text.broad_jump_cm": {
+    "en": "Broad jump (cm)",
+    "fi": "Vauhditon pituushyppy (cm)",
+    "context": "Active workout: text for Broad jump (cm)",
+    "screen": "Active workout",
+    "role": "text"
+  },
+  "view_active_session.text.energy_1_10": {
+    "en": "Energy (1–10)",
+    "fi": "Vireys (1–10)",
+    "context": "Active workout: text for Energy (1–10)",
+    "screen": "Active workout",
+    "role": "text"
+  },
+  "view_active_session.text.measure_cmj_via_video": {
+    "en": "Measure CMJ via video",
+    "fi": "Mittaa CMJ videolta",
+    "context": "Active workout: text for Measure CMJ via video",
+    "screen": "Active workout",
+    "role": "text"
+  },
+  "view_active_session.text.readiness": {
+    "en": "Readiness",
+    "fi": "Treenivalmius",
+    "context": "Active workout: text for Readiness",
+    "screen": "Active workout",
+    "role": "text"
+  },
+  "view_active_session.placeholder.how_did_it_go_anything_claude_should_know_sleep_": {
+    "en": "How did it go? Anything Claude should know? (sleep, pain, energy…)",
+    "fi": "Miten meni? Mitä valmentajan tulisi tietää? (uni, kipu, vireys…)",
+    "context": "Active workout: placeholder for How did it go? Anything Claude should know? (sleep, pain, energy…)",
+    "screen": "Active workout",
+    "role": "placeholder"
+  },
+  "view_active_session.text.finish": {
+    "en": "Finish",
+    "fi": "Lopeta",
+    "context": "Active workout: text for Finish",
+    "screen": "Active workout",
+    "role": "text"
+  },
+  "view_active_session.text.sets": {
+    "en": "{doneSets}/{totalSets} sets",
+    "fi": "{doneSets}/{totalSets} sarjaa",
+    "context": "Active workout: text for {doneSets}/{totalSets} sets",
+    "screen": "Active workout",
+    "role": "text",
+    "examples": [
+      "{doneSets}",
+      "{totalSets}"
+    ]
+  },
+  "view_active_session.text.add_exercise": {
+    "en": "+ Add exercise",
+    "fi": "+ Lisää liike",
+    "context": "Active workout: text for + Add exercise",
+    "screen": "Active workout",
+    "role": "text"
+  },
+  "view_active_session.text.session_notes": {
+    "en": "Session notes",
+    "fi": "Treenin muistiinpanot",
+    "context": "Active workout: text for Session notes",
+    "screen": "Active workout",
+    "role": "text"
+  },
+  "view_active_session.text.finish_workout": {
+    "en": "Finish workout",
+    "fi": "Lopeta treeni",
+    "context": "Active workout: text for Finish workout",
+    "screen": "Active workout",
+    "role": "text"
+  },
+  "view_active_session.text.discard_session": {
+    "en": "Discard session",
+    "fi": "Hylkää treeni",
+    "context": "Active workout: text for Discard session",
+    "screen": "Active workout",
+    "role": "text"
+  },
+  "warmup_card.text.done": {
+    "en": "· {done}/{items_length} done",
+    "fi": "· {done}/{items_length} tehty",
+    "context": "Warm-up card: text for · {done}/{items_length} done",
+    "screen": "Warm-up card",
+    "role": "text",
+    "examples": [
+      "{done}",
+      "{items_length}"
+    ]
+  },
+  "superset_card.message.round_of": {
+    "en": "round {Math_min_doneRounds_1_rounds} of {rounds}",
+    "fi": "kierros {Math_min_doneRounds_1_rounds}/{rounds}",
+    "context": "Superset card: message for round {Math_min_doneRounds_1_rounds} of {rounds}",
+    "screen": "Superset card",
+    "role": "message",
+    "examples": [
+      "{Math_min_doneRounds_1_rounds}",
+      "{rounds}"
+    ]
+  },
+  "set_labels.message.w": {
+    "en": "W",
+    "fi": "L",
+    "context": "Workout input controls: message for W",
+    "screen": "Workout input controls",
+    "role": "message"
+  },
+  "exercise_card.message.warm_up": {
+    "en": "(+{warmN} warm-up)",
+    "fi": "(+{warmN} lämmittelysarjaa)",
+    "context": "Active workout exercise card: message for (+{warmN} warm-up)",
+    "screen": "Active workout exercise card",
+    "role": "message",
+    "examples": [
+      "{warmN}"
+    ]
+  },
+  "exercise_card.message.attempt_best_cm": {
+    "en": "Attempts: {ws_length}{warmTag} · best {bestHeight_e_sets} cm",
+    "fi": "Yrityksiä: {ws_length}{warmTag} · paras {bestHeight_e_sets} cm",
+    "context": "Active workout exercise card: message for Attempts: {ws_length}{warmTag} · best {bestHeight_e_sets} cm",
+    "screen": "Active workout exercise card",
+    "role": "message",
+    "examples": [
+      "{ws_length}",
+      "{warmTag}",
+      "{bestHeight_e_sets}"
+    ]
+  },
+  "exercise_card.message.set_best": {
+    "en": "Sets: {ws_length}{warmTag} · best {best_weight}×{best_reps}",
+    "fi": "Sarjoja: {ws_length}{warmTag} · paras {best_weight}×{best_reps}",
+    "context": "Active workout exercise card: message for Sets: {ws_length}{warmTag} · best {best_weight}×{best_reps}",
+    "screen": "Active workout exercise card",
+    "role": "message",
+    "examples": [
+      "{ws_length}",
+      "{warmTag}",
+      "{best_weight}",
+      "{best_reps}"
+    ]
+  },
+  "exercise_card.message.warm_up_set_only": {
+    "en": "Warm-up sets only: {warmN}",
+    "fi": "Vain lämmittelysarjoja: {warmN}",
+    "context": "Active workout exercise card: message for Warm-up sets only: {warmN}",
+    "screen": "Active workout exercise card",
+    "role": "message",
+    "examples": [
+      "{warmN}"
+    ]
+  },
+  "exercise_card.title.note": {
+    "en": "Note",
+    "fi": "Muistiinpano",
+    "context": "Active workout exercise card: title for Note",
+    "screen": "Active workout exercise card",
+    "role": "title"
+  },
+  "exercise_card.message.plan_attempt_rest": {
+    "en": "Plan: attempts {e_plannedSets} · rest {fmtClock_e_restSeconds}",
+    "fi": "Tavoite: yrityksiä {e_plannedSets} · lepo {fmtClock_e_restSeconds}",
+    "context": "Active workout exercise card: message for Plan: attempts {e_plannedSets} · rest {fmtClock_e_restSeconds}",
+    "screen": "Active workout exercise card",
+    "role": "message",
+    "examples": [
+      "{e_plannedSets}",
+      "{fmtClock_e_restSeconds}"
+    ]
+  },
+  "exercise_card.message.plan_rest": {
+    "en": "Plan: {e_plannedSets}×{e_plannedReps} @ {e_plannedWeight}{unit}{e_targetRpe_tr_exercise_card} · rest {fmtClock_e_restSeconds}",
+    "fi": "Tavoite: {e_plannedSets}×{e_plannedReps} @ {e_plannedWeight}{unit}{e_targetRpe_tr_exercise_card} · lepo {fmtClock_e_restSeconds}",
+    "context": "Active workout exercise card: message for Plan: {e_plannedSets}×{e_plannedReps} @ {e_plannedWeight}{unit}{e_targetRpe_tr_exercise_card} · rest {fmtClock_e_restSeconds}",
+    "screen": "Active workout exercise card",
+    "role": "message",
+    "examples": [
+      "{e_plannedSets}",
+      "{e_plannedReps}",
+      "{e_plannedWeight}",
+      "{unit}",
+      "{e_targetRpe_tr_exercise_card}",
+      "{fmtClock_e_restSeconds}"
+    ]
+  },
+  "exercise_card.message.best_cm": {
+    "en": "best {bestHeight_lastP_sets} cm",
+    "fi": "paras {bestHeight_lastP_sets} cm",
+    "context": "Active workout exercise card: message for best {bestHeight_lastP_sets} cm",
+    "screen": "Active workout exercise card",
+    "role": "message",
+    "examples": [
+      "{bestHeight_lastP_sets}"
+    ]
+  },
+  "exercise_card.message.rpe_2": {
+    "en": "@RPE {lastRpe}",
+    "fi": "@RPE {lastRpe}",
+    "context": "Active workout exercise card: RPE input or target guidance for @RPE {lastRpe}",
+    "screen": "Active workout exercise card",
+    "role": "RPE input or target guidance",
+    "examples": [
+      "{lastRpe}"
+    ]
+  },
+  "exercise_card.text.last": {
+    "en": "Last: {lastP_jump_tr_exercise_card_} — {fmtDate_lastP_date}",
+    "fi": "Edellinen: {lastP_jump_tr_exercise_card_} — {fmtDate_lastP_date}",
+    "context": "Active workout exercise card: text for Last: {lastP_jump_tr_exercise_card_} — {fmtDate_lastP_date}",
+    "screen": "Active workout exercise card",
+    "role": "text",
+    "examples": [
+      "{lastP_jump_tr_exercise_card_}",
+      "{fmtDate_lastP_date}"
+    ]
+  },
+  "exercise_card.text.swapped_from": {
+    "en": "↺ swapped from {e_swappedFrom}",
+    "fi": "↺ korvattu liike: {e_swappedFrom}",
+    "context": "Active workout exercise card: text for ↺ swapped from {e_swappedFrom}",
+    "screen": "Active workout exercise card",
+    "role": "text",
+    "examples": [
+      "{e_swappedFrom}"
+    ]
+  },
+  "exercise_card.title.plate_calculator": {
+    "en": "Plate calculator",
+    "fi": "Levypainolaskuri",
+    "context": "Active workout exercise card: title for Plate calculator",
+    "screen": "Active workout exercise card",
+    "role": "title"
+  },
+  "exercise_card.text.reps": {
+    "en": "Reps",
+    "fi": "Toistot",
+    "context": "Active workout exercise card: repetition input or repetition guidance for Reps",
+    "screen": "Active workout exercise card",
+    "role": "repetition input or repetition guidance"
+  },
+  "exercise_card.text.measure": {
+    "en": "Measure",
+    "fi": "Mittaa",
+    "context": "Active workout exercise card: text for Measure",
+    "screen": "Active workout exercise card",
+    "role": "text"
+  },
+  "exercise_card.message.note": {
+    "en": "Note",
+    "fi": "Muistiinpano",
+    "context": "Active workout exercise card: message for Note",
+    "screen": "Active workout exercise card",
+    "role": "message"
+  },
+  "exercise_card.title.explain": {
+    "en": "Explain",
+    "fi": "Suoritusohje",
+    "context": "Active workout exercise card: title for Explain",
+    "screen": "Active workout exercise card",
+    "role": "title"
+  },
+  "exercise_card.text.set": {
+    "en": "+ Set",
+    "fi": "+ Sarja",
+    "context": "Active workout exercise card: text for + Set",
+    "screen": "Active workout exercise card",
+    "role": "text"
+  },
+  "exercise_card.text.set_2": {
+    "en": "− Set",
+    "fi": "− Sarja",
+    "context": "Active workout exercise card: text for − Set",
+    "screen": "Active workout exercise card",
+    "role": "text"
+  },
+  "view_plan.text.ss": {
+    "en": "SS {e_superset}",
+    "fi": "SS {e_superset}",
+    "context": "Plan: text for SS {e_superset}",
+    "screen": "Plan",
+    "role": "text",
+    "examples": [
+      "{e_superset}"
+    ]
+  },
+  "view_plan.message.w": {
+    "en": "{e_warmupSets}w +",
+    "fi": "{e_warmupSets} l +",
+    "context": "Plan: message for {e_warmupSets}w +",
+    "screen": "Plan",
+    "role": "message",
+    "examples": [
+      "{e_warmupSets}"
+    ]
+  },
+  "view_plan.text.rest": {
+    "en": "{e_warmupSets_tr_view_plan_me}{e_sets}×{e_reps} @ {e_weight}{unit}{e_targetRpe_tr_view_plan_mes} · rest {fmtClock_e_restSeconds}{e_alternates_length_e_altern}",
+    "fi": "{e_warmupSets_tr_view_plan_me}{e_sets}×{e_reps} @ {e_weight}{unit}{e_targetRpe_tr_view_plan_mes} · lepo {fmtClock_e_restSeconds}{e_alternates_length_e_altern}",
+    "context": "Plan: text for {e_warmupSets_tr_view_plan_me}{e_sets}×{e_reps} @ {e_weight}{unit}{e_targetRpe_tr_view_plan_mes} · rest {fmtClock_e_restSeconds}{e_alternates_length_e_altern}",
+    "screen": "Plan",
+    "role": "text",
+    "examples": [
+      "{e_warmupSets_tr_view_plan_me}",
+      "{e_sets}",
+      "{e_reps}",
+      "{e_weight}",
+      "{unit}",
+      "{e_targetRpe_tr_view_plan_mes}",
+      "{fmtClock_e_restSeconds}",
+      "{e_alternates_length_e_altern}"
+    ]
+  },
+  "view_plan.text.exercise": {
+    "en": "+ Exercise",
+    "fi": "+ Liike",
+    "context": "Plan: text for + Exercise",
+    "screen": "Plan",
+    "role": "text"
+  },
+  "view_plan.text.warm_up": {
+    "en": "Warm-up{d_warmup_length_d_warmup_len}",
+    "fi": "Lämmittely{d_warmup_length_d_warmup_len}",
+    "context": "Plan: text for Warm-up{d_warmup_length_d_warmup_len}",
+    "screen": "Plan",
+    "role": "text",
+    "examples": [
+      "{d_warmup_length_d_warmup_len}"
+    ]
+  },
+  "view_plan.text.rename": {
+    "en": "Rename",
+    "fi": "Nimeä uudelleen",
+    "context": "Plan: text for Rename",
+    "screen": "Plan",
+    "role": "text"
+  },
+  "view_plan.text.exercise_2": {
+    "en": "Exercises: {d_exercises_length}",
+    "fi": "Liikkeitä: {d_exercises_length}",
+    "context": "Plan: text for Exercises: {d_exercises_length}",
+    "screen": "Plan",
+    "role": "text",
+    "examples": [
+      "{d_exercises_length}"
+    ]
+  },
+  "view_plan.text.days_created": {
+    "en": "{plan_days_length} days · created {plan_createdAt}",
+    "fi": "{plan_days_length} päivää · luotu {plan_createdAt}",
+    "context": "Plan: text for {plan_days_length} days · created {plan_createdAt}",
+    "screen": "Plan",
+    "role": "text",
+    "examples": [
+      "{plan_days_length}",
+      "{plan_createdAt}"
+    ]
+  },
+  "view_plan.text.add_day": {
+    "en": "+ Add day",
+    "fi": "+ Lisää päivä",
+    "context": "Plan: text for + Add day",
+    "screen": "Plan",
+    "role": "text"
+  },
+  "view_plan.text.tap_an_exercise_to_edit_targets_swap_alternates_": {
+    "en": "Tap an exercise to edit targets, swap alternates, or read how to do it.",
+    "fi": "Muokkaa tavoitteita, vaihda vaihtoehtoiseen liikkeeseen tai lue suoritusohje napauttamalla liikettä.",
+    "context": "Plan: text for Tap an exercise to edit targets, swap alternates, or read how to do it.",
+    "screen": "Plan",
+    "role": "text"
+  },
+  "view_plan.text.import_a_whole_new_plan_in_the_ai_coach_tab": {
+    "en": "Import a whole new plan in the AI Coach tab.",
+    "fi": "Tuo kokonaan uusi ohjelma Tekoälyvalmentaja-välilehdellä.",
+    "context": "Plan: text for Import a whole new plan in the AI Coach tab.",
+    "screen": "Plan",
+    "role": "text"
+  },
+  "view_history.text.weekly_training": {
+    "en": "Weekly training",
+    "fi": "Viikon harjoittelu",
+    "context": "History: text for Weekly training",
+    "screen": "History",
+    "role": "text"
+  },
+  "view_history.text.undo_last": {
+    "en": "undo last",
+    "fi": "kumoa viimeisin",
+    "context": "History: text for undo last",
+    "screen": "History",
+    "role": "text"
+  },
+  "view_history.text.best_jump": {
+    "en": "Best jump:",
+    "fi": "Paras hyppy:",
+    "context": "History: text for Best jump:",
+    "screen": "History",
+    "role": "text"
+  },
+  "view_history.text.cm": {
+    "en": "{prBest} cm",
+    "fi": "{prBest} cm",
+    "context": "History: text for {prBest} cm",
+    "screen": "History",
+    "role": "text",
+    "examples": [
+      "{prBest}"
+    ]
+  },
+  "view_history.text.best_est_1rm": {
+    "en": "Best est. 1RM:",
+    "fi": "Paras arvioitu 1RM:",
+    "context": "History: text for Best est. 1RM:",
+    "screen": "History",
+    "role": "text"
+  },
+  "view_history.text.earlier_session_logged_this_exercise_with_a_diff": {
+    "en": "Earlier sessions hidden because this exercise used a different metric: {hist_length_histRows_length}.",
+    "fi": "Aiemmat treenit, jotka on piilotettu liikkeen eri mittarin vuoksi: {hist_length_histRows_length}.",
+    "context": "History: text for Earlier sessions hidden because this exercise used a different metric: {hist_length_histRows_length}.",
+    "screen": "History",
+    "role": "text",
+    "examples": [
+      "{hist_length_histRows_length}"
+    ]
+  },
+  "view_history.message.cm": {
+    "en": "{s_heightCm}cm",
+    "fi": "{s_heightCm} cm",
+    "context": "History: message for {s_heightCm}cm",
+    "screen": "History",
+    "role": "message",
+    "examples": [
+      "{s_heightCm}"
+    ]
+  },
+  "view_history.message.cm_2": {
+    "en": "{r_heightCm} cm",
+    "fi": "{r_heightCm} cm",
+    "context": "History: message for {r_heightCm} cm",
+    "screen": "History",
+    "role": "message",
+    "examples": [
+      "{r_heightCm}"
+    ]
+  },
+  "view_history.message.e1rm": {
+    "en": "e1RM {r_e1rm}",
+    "fi": "arvioitu 1RM {r_e1rm}",
+    "context": "History: message for e1RM {r_e1rm}",
+    "screen": "History",
+    "role": "message",
+    "examples": [
+      "{r_e1rm}"
+    ]
+  },
+  "view_history.text.no_logged_sets_for_this_exercise_yet": {
+    "en": "No logged sets for this exercise yet.",
+    "fi": "Tälle liikkeelle ei ole vielä kirjattu sarjoja.",
+    "context": "History: text for No logged sets for this exercise yet.",
+    "screen": "History",
+    "role": "text"
+  },
+  "view_history.text.merge_names": {
+    "en": "Merge names…",
+    "fi": "Yhdistä nimiä…",
+    "context": "History: text for Merge names…",
+    "screen": "History",
+    "role": "text"
+  },
+  "view_history.text.finish_your_first_workout_and_your_progress_will": {
+    "en": "Finish your first workout and your progress will show up here.",
+    "fi": "Kun saat ensimmäisen treenisi valmiiksi, näet kehityksesi täällä.",
+    "context": "History: text for Finish your first workout and your progress will show up here.",
+    "screen": "History",
+    "role": "text"
+  },
+  "view_history.message.rpe_au": {
+    "en": "· RPE {sl_rpe} · {sl_load} AU{sl_partial}",
+    "fi": "· RPE {sl_rpe} · {sl_load} AU{sl_partial}",
+    "context": "History: message for · RPE {sl_rpe} · {sl_load} AU{sl_partial}",
+    "screen": "History",
+    "role": "message",
+    "examples": [
+      "{sl_rpe}",
+      "{sl_load}",
+      "{sl_partial}"
+    ]
+  },
+  "view_history.text.session_rpe_from_only_of_sets_the_rest_were_logg": {
+    "en": "* session RPE from only {Math_round_sl_coverage_100}% of sets — the rest were logged without one.",
+    "fi": "* Treenin RPE perustuu vain {Math_round_sl_coverage_100} %:iin sarjoista — muille ei kirjattu RPE:tä.",
+    "context": "History: text for * session RPE from only {Math_round_sl_coverage_100}% of sets — the rest were logged without one.",
+    "screen": "History",
+    "role": "text",
+    "examples": [
+      "{Math_round_sl_coverage_100}"
+    ]
+  },
+  "view_history.text.was": {
+    "en": "(was {e_swappedFrom})",
+    "fi": "(aiemmin {e_swappedFrom})",
+    "context": "History: text for (was {e_swappedFrom})",
+    "screen": "History",
+    "role": "text",
+    "examples": [
+      "{e_swappedFrom}"
+    ]
+  },
+  "view_history.message.cm_3": {
+    "en": "{x_heightCm} cm",
+    "fi": "{x_heightCm} cm",
+    "context": "History: message for {x_heightCm} cm",
+    "screen": "History",
+    "role": "message",
+    "examples": [
+      "{x_heightCm}"
+    ]
+  },
+  "view_history.text.w": {
+    "en": "w {txt}",
+    "fi": "L {txt}",
+    "context": "History: text for w {txt}",
+    "screen": "History",
+    "role": "text",
+    "examples": [
+      "{txt}"
+    ]
+  },
+  "view_history.text.delete_session": {
+    "en": "Delete session",
+    "fi": "Poista treeni",
+    "context": "History: text for Delete session",
+    "screen": "History",
+    "role": "text"
+  },
+  "view_history.text.sets": {
+    "en": "{fmtDate_s_date} · {fmtDur_s_durationMin} · {setCount} sets{sl_tr_view_history_message_r}",
+    "fi": "{fmtDate_s_date} · {fmtDur_s_durationMin} · {setCount} sarjaa{sl_tr_view_history_message_r}",
+    "context": "History: text for {fmtDate_s_date} · {fmtDur_s_durationMin} · {setCount} sets{sl_tr_view_history_message_r}",
+    "screen": "History",
+    "role": "text",
+    "examples": [
+      "{fmtDate_s_date}",
+      "{fmtDur_s_durationMin}",
+      "{setCount}",
+      "{sl_tr_view_history_message_r}"
+    ]
+  },
+  "view_history.text.no_sessions_yet": {
+    "en": "No sessions yet.",
+    "fi": "Ei vielä treenejä.",
+    "context": "History: text for No sessions yet.",
+    "screen": "History",
+    "role": "text"
+  },
+  "view_history.text.body_weight": {
+    "en": "Body weight",
+    "fi": "Kehonpaino",
+    "context": "History: text for Body weight",
+    "screen": "History",
+    "role": "text"
+  },
+  "view_history.text.log_today": {
+    "en": "Log today",
+    "fi": "Kirjaa tänään",
+    "context": "History: text for Log today",
+    "screen": "History",
+    "role": "text"
+  },
+  "view_history.text.exercise_progress": {
+    "en": "Exercise progress",
+    "fi": "Liikekohtainen kehitys",
+    "context": "History: text for Exercise progress",
+    "screen": "History",
+    "role": "text"
+  },
+  "view_history.text.sessions": {
+    "en": "Sessions ({sessions_length})",
+    "fi": "Treenit ({sessions_length})",
+    "context": "History: text for Sessions ({sessions_length})",
+    "screen": "History",
+    "role": "text",
+    "examples": [
+      "{sessions_length}"
+    ]
+  },
+  "merge_names_modal.text.no_other_exercise_names_in_your_history": {
+    "en": "No other exercise names in your history.",
+    "fi": "Historiassasi ei ole muita liikkeitä.",
+    "context": "History name merge: text for No other exercise names in your history.",
+    "screen": "History name merge",
+    "role": "text"
+  },
+  "merge_names_modal.text.remove": {
+    "en": "Remove",
+    "fi": "Poista",
+    "context": "History name merge: text for Remove",
+    "screen": "History name merge",
+    "role": "text"
+  },
+  "merge_names_modal.text.already_merged_into_this_name": {
+    "en": "Already merged into this name:",
+    "fi": "Tähän nimeen on jo yhdistetty:",
+    "context": "History name merge: text for Already merged into this name:",
+    "screen": "History name merge",
+    "role": "text"
+  },
+  "merge_names_modal.text.tick_names_that_are_really_the_same_exercise_as": {
+    "en": "Tick names that are really the same exercise as",
+    "fi": "Valitse nimet, jotka tarkoittavat samaa liikettä kuin",
+    "context": "History name merge: text for Tick names that are really the same exercise as",
+    "screen": "History name merge",
+    "role": "text"
+  },
+  "merge_names_modal.text.typos_abbreviations_their_history_shows_up_under": {
+    "en": "(typos, abbreviations). Their history shows up under this name — the original logs are untouched.",
+    "fi": "(kirjoitusvirheet, lyhenteet). Niiden historia näytetään tämän nimen alla — alkuperäiset kirjaukset säilyvät.",
+    "context": "History name merge: text for (typos, abbreviations). Their history shows up under this name — the original logs are untouched.",
+    "screen": "History name merge",
+    "role": "text"
+  },
+  "merge_names_modal.button.merge": {
+    "en": "Merge",
+    "fi": "Yhdistä",
+    "context": "History name merge: button for Merge",
+    "screen": "History name merge",
+    "role": "button"
+  },
+  "view_coach.text.share_with_ai": {
+    "en": "Share with AI",
+    "fi": "Jaa tekoälylle",
+    "context": "AI Coach: text for Share with AI",
+    "screen": "AI Coach",
+    "role": "text"
+  },
+  "view_coach.text.share_with_ai_2": {
+    "en": "Share with AI",
+    "fi": "Jaa tekoälylle",
+    "context": "AI Coach: text for Share with AI",
+    "screen": "AI Coach",
+    "role": "text"
+  },
+  "view_coach.text.copies_a_link_you_can_paste_into_claude_chatgpt_": {
+    "en": "Copies a link you can paste into Claude, ChatGPT, or Gemini. The AI fetches your latest training data automatically — ask it to review your training or write your next plan.",
+    "fi": "Kopioi linkin, jonka voit liittää Claudeen, ChatGPT:hen tai Geminiin. Tekoäly hakee uusimmat treenitietosi automaattisesti — pyydä sitä arvioimaan harjoitteluasi tai laatimaan seuraava ohjelmasi.",
+    "context": "AI Coach: text for Copies a link you can paste into Claude, ChatGPT, or Gemini. The AI fetches your latest training data automatically — ask it to review your training or write your next plan.",
+    "screen": "AI Coach",
+    "role": "text"
+  },
+  "view_coach.text.or_copy_your_data_directly": {
+    "en": "Or copy your data directly",
+    "fi": "Tai kopioi tiedot suoraan",
+    "context": "AI Coach: text for Or copy your data directly",
+    "screen": "AI Coach",
+    "role": "text"
+  },
+  "view_coach.text.copies_a_coaching_prompt_your_last_15_sessions_b": {
+    "en": "Copies a coaching prompt + your last 15 sessions, body weight and current plan. Paste it into any AI chat.",
+    "fi": "Kopioi valmennuspyynnön, 15 viimeisintä treeniäsi, kehonpainon ja nykyisen ohjelman. Liitä ne mihin tahansa tekoälykeskusteluun.",
+    "context": "AI Coach: text for Copies a coaching prompt + your last 15 sessions, body weight and current plan. Paste it into any AI chat.",
+    "screen": "AI Coach",
+    "role": "text"
+  },
+  "view_coach.text.copy_coaching_prompt_data": {
+    "en": "Copy coaching prompt + data",
+    "fi": "Kopioi valmennuspyyntö ja tiedot",
+    "context": "AI Coach: text for Copy coaching prompt + data",
+    "screen": "AI Coach",
+    "role": "text"
+  },
+  "view_coach.text.copy_raw_data_only": {
+    "en": "Copy raw data only",
+    "fi": "Kopioi vain tiedot",
+    "context": "AI Coach: text for Copy raw data only",
+    "screen": "AI Coach",
+    "role": "text"
+  },
+  "view_coach.text.import_a_plan": {
+    "en": "Import a plan",
+    "fi": "Tuo ohjelma",
+    "context": "AI Coach: text for Import a plan",
+    "screen": "AI Coach",
+    "role": "text"
+  },
+  "view_coach.text.import_plan": {
+    "en": "Import plan",
+    "fi": "Tuo ohjelma",
+    "context": "AI Coach: text for Import plan",
+    "screen": "AI Coach",
+    "role": "text"
+  },
+  "view_settings.message.on": {
+    "en": "On",
+    "fi": "Päällä",
+    "context": "Settings: message for On",
+    "screen": "Settings",
+    "role": "message"
+  },
+  "view_settings.message.off": {
+    "en": "Off",
+    "fi": "Pois",
+    "context": "Settings: message for Off",
+    "screen": "Settings",
+    "role": "message"
+  },
+  "view_settings.message.on_2": {
+    "en": "On",
+    "fi": "Päällä",
+    "context": "Settings: message for On",
+    "screen": "Settings",
+    "role": "message"
+  },
+  "view_settings.message.off_2": {
+    "en": "Off",
+    "fi": "Pois",
+    "context": "Settings: message for Off",
+    "screen": "Settings",
+    "role": "message"
+  },
+  "view_settings.text.not_supported_on_this_device": {
+    "en": "Not supported on this device",
+    "fi": "Tämä laite ei tue värinää",
+    "context": "Settings: text for Not supported on this device",
+    "screen": "Settings",
+    "role": "text"
+  },
+  "view_settings.message.on_3": {
+    "en": "On",
+    "fi": "Päällä",
+    "context": "Settings: message for On",
+    "screen": "Settings",
+    "role": "message"
+  },
+  "view_settings.message.off_3": {
+    "en": "Off",
+    "fi": "Pois",
+    "context": "Settings: message for Off",
+    "screen": "Settings",
+    "role": "message"
+  },
+  "view_settings.text.set": {
+    "en": "· set",
+    "fi": "· asetettu",
+    "context": "Settings: text for · set",
+    "screen": "Settings",
+    "role": "text"
+  },
+  "view_settings.text.not_set": {
+    "en": "· not set",
+    "fi": "· ei asetettu",
+    "context": "Settings: text for · not set",
+    "screen": "Settings",
+    "role": "text"
+  },
+  "view_settings.message.auto_synced_to_cloud": {
+    "en": "+ auto-synced to cloud",
+    "fi": "+ synkronoitu automaattisesti pilveen",
+    "context": "Settings: cloud sync control or status for + auto-synced to cloud",
+    "screen": "Settings",
+    "role": "cloud sync control or status"
+  },
+  "view_settings.aria-label.back": {
+    "en": "Back",
+    "fi": "Takaisin",
+    "context": "Settings: aria-label for Back",
+    "screen": "Settings",
+    "role": "aria-label"
+  },
+  "view_settings.placeholder.paste_your_backup_code_or_full_share_url": {
+    "en": "Paste your backup code or full share URL",
+    "fi": "Liitä varmuuskopiokoodisi tai koko jakolinkki",
+    "context": "Settings: placeholder for Paste your backup code or full share URL",
+    "screen": "Settings",
+    "role": "placeholder"
+  },
+  "view_settings.placeholder.paste_your_write_token": {
+    "en": "Paste your write token",
+    "fi": "Liitä kirjoitustunnuksesi",
+    "context": "Settings: cloud sync control or status for Paste your write token",
+    "screen": "Settings",
+    "role": "cloud sync control or status"
+  },
+  "view_settings.text.settings": {
+    "en": "Settings",
+    "fi": "Asetukset",
+    "context": "Settings: text for Settings",
+    "screen": "Settings",
+    "role": "text"
+  },
+  "view_settings.text.preferences": {
+    "en": "Preferences",
+    "fi": "Omat asetukset",
+    "context": "Settings: text for Preferences",
+    "screen": "Settings",
+    "role": "text"
+  },
+  "view_settings.text.weight_unit": {
+    "en": "Weight unit",
+    "fi": "Painoyksikkö",
+    "context": "Settings: unit or language setting for Weight unit",
+    "screen": "Settings",
+    "role": "unit or language setting"
+  },
+  "view_settings.text.rest_timer_sound": {
+    "en": "Rest-timer sound",
+    "fi": "Lepoajastimen ääni",
+    "context": "Settings: rest timer sound cue control for Rest-timer sound",
+    "screen": "Settings",
+    "role": "rest timer sound cue control"
+  },
+  "view_settings.text.vibration": {
+    "en": "Vibration",
+    "fi": "Värinä",
+    "context": "Settings: rest timer vibration cue control for Vibration",
+    "screen": "Settings",
+    "role": "rest timer vibration cue control"
+  },
+  "view_settings.text.test_the_rest_timer_sound": {
+    "en": "🔊 Test the rest-timer sound",
+    "fi": "🔊 Kokeile lepoajastimen ääntä",
+    "context": "Settings: rest timer sound cue control for 🔊 Test the rest-timer sound",
+    "screen": "Settings",
+    "role": "rest timer sound cue control"
+  },
+  "view_settings.text.cloud_sync": {
+    "en": "Cloud sync",
+    "fi": "Pilvisynkronointi",
+    "context": "Settings: cloud sync control or status for Cloud sync",
+    "screen": "Settings",
+    "role": "cloud sync control or status"
+  },
+  "view_settings.text.auto_sync": {
+    "en": "Auto-sync",
+    "fi": "Automaattinen synkronointi",
+    "context": "Settings: cloud sync control or status for Auto-sync",
+    "screen": "Settings",
+    "role": "cloud sync control or status"
+  },
+  "view_settings.text.syncs_automatically_after_every_workout_no_setup": {
+    "en": "Syncs automatically after every workout — no setup needed.",
+    "fi": "Synkronoi automaattisesti jokaisen treenin jälkeen — käyttöönottoa ei tarvita.",
+    "context": "Settings: cloud sync control or status for Syncs automatically after every workout — no setup needed.",
+    "screen": "Settings",
+    "role": "cloud sync control or status"
+  },
+  "view_settings.text.your_backup_code": {
+    "en": "Your backup code",
+    "fi": "Varmuuskopiokoodisi",
+    "context": "Settings: text for Your backup code",
+    "screen": "Settings",
+    "role": "text"
+  },
+  "view_settings.text.copy_backup_code": {
+    "en": "Copy backup code",
+    "fi": "Kopioi varmuuskopiokoodi",
+    "context": "Settings: text for Copy backup code",
+    "screen": "Settings",
+    "role": "text"
+  },
+  "view_settings.text.save_this_somewhere_safe_if_you_lose_your_phone_": {
+    "en": "Save this somewhere safe. If you lose your phone or clear the app, paste it into Restore below to recover all your data on a new device.",
+    "fi": "Tallenna koodi turvalliseen paikkaan. Jos kadotat puhelimesi tai tyhjennät sovelluksen, palauta kaikki tiedot uuteen laitteeseen liittämällä koodi alla olevaan kenttään.",
+    "context": "Settings: text for Save this somewhere safe. If you lose your phone or clear the app, paste it into Restore below to recover all your data on a new device.",
+    "screen": "Settings",
+    "role": "text"
+  },
+  "view_settings.text.restore_from_backup_code": {
+    "en": "Restore from backup code",
+    "fi": "Palauta varmuuskopiokoodilla",
+    "context": "Settings: text for Restore from backup code",
+    "screen": "Settings",
+    "role": "text"
+  },
+  "view_settings.text.write_token": {
+    "en": "Write token",
+    "fi": "Kirjoitustunnus",
+    "context": "Settings: cloud sync control or status for Write token",
+    "screen": "Settings",
+    "role": "cloud sync control or status"
+  },
+  "view_settings.text.save_write_token": {
+    "en": "Save write token",
+    "fi": "Tallenna kirjoitustunnus",
+    "context": "Settings: cloud sync control or status for Save write token",
+    "screen": "Settings",
+    "role": "cloud sync control or status"
+  },
+  "view_settings.text.backup": {
+    "en": "Backup",
+    "fi": "Varmuuskopiointi",
+    "context": "Settings: text for Backup",
+    "screen": "Settings",
+    "role": "text"
+  },
+  "view_settings.text.copy_full_backup": {
+    "en": "Copy full backup",
+    "fi": "Kopioi koko varmuuskopio",
+    "context": "Settings: text for Copy full backup",
+    "screen": "Settings",
+    "role": "text"
+  },
+  "view_settings.text.restore_backup": {
+    "en": "Restore backup",
+    "fi": "Palauta varmuuskopio",
+    "context": "Settings: text for Restore backup",
+    "screen": "Settings",
+    "role": "text"
+  },
+  "view_settings.text.reset_everything": {
+    "en": "Reset everything",
+    "fi": "Nollaa kaikki",
+    "context": "Settings: text for Reset everything",
+    "screen": "Settings",
+    "role": "text"
+  },
+  "view_settings.text.app_version": {
+    "en": "App version",
+    "fi": "Sovellusversio",
+    "context": "Settings: text for App version",
+    "screen": "Settings",
+    "role": "text"
+  },
+  "view_settings.text.updates_normally_appear_as_a_banner_at_the_top_u": {
+    "en": "Updates normally appear as a banner at the top. Use this if the banner never shows.",
+    "fi": "Päivitykset näkyvät yleensä ilmoituksena sivun yläreunassa. Käytä tätä, jos ilmoitusta ei näy.",
+    "context": "Settings: text for Updates normally appear as a banner at the top. Use this if the banner never shows.",
+    "screen": "Settings",
+    "role": "text"
+  },
+  "view_settings.text.gymtrack_v1_data_lives_on_this_device": {
+    "en": "GymTrack v1 · data lives on this device{settings_autoSync_tr_view_se}",
+    "fi": "GymTrack v1 · tiedot ovat tällä laitteella{settings_autoSync_tr_view_se}",
+    "context": "Settings: text for GymTrack v1 · data lives on this device{settings_autoSync_tr_view_se}",
+    "screen": "Settings",
+    "role": "text",
+    "examples": [
+      "{settings_autoSync_tr_view_se}"
+    ]
+  },
+  "ex_menu_modal.text.alternates": {
+    "en": "Alternates: {e_alternates_map_a_esc_a_nam}",
+    "fi": "Vaihtoehdot: {e_alternates_map_a_esc_a_nam}",
+    "context": "Exercise actions: text for Alternates: {e_alternates_map_a_esc_a_nam}",
+    "screen": "Exercise actions",
+    "role": "text",
+    "examples": [
+      "{e_alternates_map_a_esc_a_nam}"
+    ]
+  },
+  "ex_menu_modal.text.rest": {
+    "en": "{e_sets}×{e_reps} @ {e_weight}{unit}{e_targetRpe_tr_ex_menu_modal} · rest {fmtClock_e_restSeconds}",
+    "fi": "{e_sets}×{e_reps} @ {e_weight}{unit}{e_targetRpe_tr_ex_menu_modal} · lepo {fmtClock_e_restSeconds}",
+    "context": "Exercise actions: text for {e_sets}×{e_reps} @ {e_weight}{unit}{e_targetRpe_tr_ex_menu_modal} · rest {fmtClock_e_restSeconds}",
+    "screen": "Exercise actions",
+    "role": "text",
+    "examples": [
+      "{e_sets}",
+      "{e_reps}",
+      "{e_weight}",
+      "{unit}",
+      "{e_targetRpe_tr_ex_menu_modal}",
+      "{fmtClock_e_restSeconds}"
+    ]
+  },
+  "ex_menu_modal.button.edit": {
+    "en": "Edit",
+    "fi": "Muokkaa",
+    "context": "Exercise actions: button for Edit",
+    "screen": "Exercise actions",
+    "role": "button"
+  },
+  "ex_menu_modal.button.remove": {
+    "en": "Remove",
+    "fi": "Poista",
+    "context": "Exercise actions: button for Remove",
+    "screen": "Exercise actions",
+    "role": "button"
+  },
+  "ladder_hint.message.bodyweight_leave_at_0": {
+    "en": "bodyweight — leave at 0",
+    "fi": "kehonpaino — jätä arvoksi 0",
+    "context": "Workout input controls: message for bodyweight — leave at 0",
+    "screen": "Workout input controls",
+    "role": "message"
+  },
+  "ladder_hint.message.1_kg_steps_to_10_kg_then_2_kg": {
+    "en": "1 kg steps to 10 kg, then 2 kg",
+    "fi": "1 kg:n välein 10 kg:aan, sitten 2 kg:n välein",
+    "context": "Workout input controls: message for 1 kg steps to 10 kg, then 2 kg",
+    "screen": "Workout input controls",
+    "role": "message"
+  },
+  "ladder_hint.message.2_5_kg_steps_to_25_kg_then_5_kg": {
+    "en": "2.5 kg steps to 25 kg, then 5 kg",
+    "fi": "2,5 kg:n välein 25 kg:aan, sitten 5 kg:n välein",
+    "context": "Workout input controls: message for 2.5 kg steps to 25 kg, then 5 kg",
+    "screen": "Workout input controls",
+    "role": "message"
+  },
+  "ladder_hint.message.1_25_kg_steps_load_on_the_end": {
+    "en": "1.25 kg steps (load on the end)",
+    "fi": "1,25 kg:n välein (tangon päässä oleva kuorma)",
+    "context": "Workout input controls: message for 1.25 kg steps (load on the end)",
+    "screen": "Workout input controls",
+    "role": "message"
+  },
+  "ladder_hint.message.2_5_kg_steps_from_the_kg_bar": {
+    "en": "2.5 kg steps from the {resolvedBarWeight_equipment_} kg bar",
+    "fi": "2,5 kg:n välein {resolvedBarWeight_equipment_} kg:n tangosta alkaen",
+    "context": "Workout input controls: message for 2.5 kg steps from the {resolvedBarWeight_equipment_} kg bar",
+    "screen": "Workout input controls",
+    "role": "message",
+    "examples": [
+      "{resolvedBarWeight_equipment_}"
+    ]
+  },
+  "weight_validation_error.message.a_jump_height_exercise_carries_no_weight_set_it_": {
+    "en": "A jump-height exercise carries no weight — set it to 0 (box height goes in the description)",
+    "fi": "Hyppykorkeutta mittaavalla liikkeellä ei ole kuormaa — aseta painoksi 0 (laatikon korkeus merkitään kuvaukseen)",
+    "context": "Workout input validation: message for A jump-height exercise carries no weight — set it to 0 (box height goes in the description)",
+    "screen": "Workout input validation",
+    "role": "message"
+  },
+  "weight_validation_error.message.bodyweight_exercises_must_be_0": {
+    "en": "{weight}{unit} — bodyweight exercises must be 0{unit2}",
+    "fi": "{weight}{unit} — kehonpainoliikkeiden painon pitää olla 0{unit2}",
+    "context": "Workout input validation: message for {weight}{unit} — bodyweight exercises must be 0{unit2}",
+    "screen": "Workout input validation",
+    "role": "message",
+    "examples": [
+      "{weight}",
+      "{unit}",
+      "{unit2}"
+    ]
+  },
+  "weight_validation_error.message.is_not_loadable_on_a_try_or": {
+    "en": "{weight}{unit} is not loadable on a {EQUIPMENT_LABELS_equipment_t} — try {n_lo} or {n_hi}",
+    "fi": "{weight}{unit} ei ole mahdollinen tällä välineellä ({EQUIPMENT_LABELS_equipment_t}) — kokeile {n_lo} tai {n_hi}",
+    "context": "Workout input validation: message for {weight}{unit} is not loadable on a {EQUIPMENT_LABELS_equipment_t} — try {n_lo} or {n_hi}",
+    "screen": "Workout input validation",
+    "role": "message",
+    "examples": [
+      "{weight}",
+      "{unit}",
+      "{EQUIPMENT_LABELS_equipment_t}",
+      "{n_lo}",
+      "{n_hi}"
+    ]
+  },
+  "ex_edit_modal.message.edit_exercise": {
+    "en": "Edit exercise",
+    "fi": "Muokkaa liikettä",
+    "context": "Exercise editor: message for Edit exercise",
+    "screen": "Exercise editor",
+    "role": "message"
+  },
+  "ex_edit_modal.placeholder.same_as_above": {
+    "en": "same as above",
+    "fi": "sama kuin yllä",
+    "context": "Exercise editor: placeholder for same as above",
+    "screen": "Exercise editor",
+    "role": "placeholder"
+  },
+  "ex_edit_modal.placeholder.default": {
+    "en": "default {resolvedBarWeight_equipment_}",
+    "fi": "oletus {resolvedBarWeight_equipment_}",
+    "context": "Exercise editor: placeholder for default {resolvedBarWeight_equipment_}",
+    "screen": "Exercise editor",
+    "role": "placeholder",
+    "examples": [
+      "{resolvedBarWeight_equipment_}"
+    ]
+  },
+  "ex_edit_modal.text.warm_up_sets": {
+    "en": "Warm-up sets",
+    "fi": "Lämmittelysarjat",
+    "context": "Exercise editor: text for Warm-up sets",
+    "screen": "Exercise editor",
+    "role": "text"
+  },
+  "ex_edit_modal.text.extra_ramp_rows_seeded_from_the_working_weight": {
+    "en": "extra ramp rows, seeded from the working weight",
+    "fi": "lisäsarjat, joiden painot lasketaan työsarjan painosta",
+    "context": "Exercise editor: text for extra ramp rows, seeded from the working weight",
+    "screen": "Exercise editor",
+    "role": "text"
+  },
+  "ex_edit_modal.text.target_rpe": {
+    "en": "Target RPE",
+    "fi": "Tavoite-RPE",
+    "context": "Exercise editor: text for Target RPE",
+    "screen": "Exercise editor",
+    "role": "text"
+  },
+  "ex_edit_modal.text.rest_between_sets_sec": {
+    "en": "Rest between sets (sec)",
+    "fi": "Palautus sarjojen välissä (s)",
+    "context": "Exercise editor: text for Rest between sets (sec)",
+    "screen": "Exercise editor",
+    "role": "text"
+  },
+  "ex_edit_modal.text.rest_before_next_movement_sec_optional": {
+    "en": "Rest before next movement (sec, optional)",
+    "fi": "Palautus ennen seuraavaa liikettä (s, valinnainen)",
+    "context": "Exercise editor: text for Rest before next movement (sec, optional)",
+    "screen": "Exercise editor",
+    "role": "text"
+  },
+  "ex_edit_modal.text.bar_weight": {
+    "en": "Bar weight ({unit})",
+    "fi": "Tangon paino ({unit})",
+    "context": "Exercise editor: text for Bar weight ({unit})",
+    "screen": "Exercise editor",
+    "role": "text",
+    "examples": [
+      "{unit}"
+    ]
+  },
+  "ex_edit_modal.text.superset_group": {
+    "en": "Superset group",
+    "fi": "Supersarja",
+    "context": "Exercise editor: text for Superset group",
+    "screen": "Exercise editor",
+    "role": "text"
+  },
+  "ex_edit_modal.text.none": {
+    "en": "None",
+    "fi": "Ei supersarjaa",
+    "context": "Exercise editor: text for None",
+    "screen": "Exercise editor",
+    "role": "text"
+  },
+  "ex_edit_modal.text.members_must_sit_next_to_each_other_in_the_day_u": {
+    "en": "Members must sit next to each other in the day — use the ↑↓ buttons on the day list.",
+    "fi": "Supersarjan liikkeiden on oltava peräkkäin. Siirrä niitä päivän listan ↑↓-painikkeilla.",
+    "context": "Exercise editor: text for Members must sit next to each other in the day — use the ↑↓ buttons on the day list.",
+    "screen": "Exercise editor",
+    "role": "text"
+  },
+  "ex_edit_modal.text.how_to_description_optional": {
+    "en": "How-to / description (optional)",
+    "fi": "Suoritusohje / kuvaus (valinnainen)",
+    "context": "Exercise editor: text for How-to / description (optional)",
+    "screen": "Exercise editor",
+    "role": "text"
+  },
+  "ex_edit_modal.message.superset_would_be_split_across_the_day_move_its_": {
+    "en": "Superset {ssVal} would be split across the day — move its members next to each other with the ↑↓ buttons first",
+    "fi": "Supersarjan {ssVal} liikkeet eivät olisi peräkkäin — siirrä ne ensin vierekkäin ↑↓-painikkeilla",
+    "context": "Exercise editor: message for Superset {ssVal} would be split across the day — move its members next to each other with the ↑↓ buttons first",
+    "screen": "Exercise editor",
+    "role": "message",
+    "examples": [
+      "{ssVal}"
+    ]
+  },
+  "ex_edit_modal.message.a_jump_exercise_has_no_load_to_ramp_mark_a_warm_": {
+    "en": "A jump exercise has no load to ramp — mark a warm-up attempt by tapping its row number during the session",
+    "fi": "Hyppyliikkeelle ei lasketa lämmittelypainoja. Merkitse lämmittely-yritys napauttamalla sen rivinumeroa treenin aikana.",
+    "context": "Exercise editor: message for A jump exercise has no load to ramp — mark a warm-up attempt by tapping its row number during the session",
+    "screen": "Exercise editor",
+    "role": "message"
+  },
+  "day_warmup_modal.placeholder.bike_5_min_easy_10_band_pull_apart_20_10_empty_b": {
+    "en": "Bike — 5 min easy\nBand pull-apart × 20\nEmpty bar bench × 10",
+    "fi": "Pyöräily — 5 min kevyesti&#10;Kuminauhan levitys × 20&#10;Penkkipunnerrus tyhjällä tangolla × 10",
+    "context": "Warm-up editor: placeholder for Bike — 5 min easy\nBand pull-apart × 20\nEmpty bar bench × 10",
+    "screen": "Warm-up editor",
+    "role": "placeholder"
+  },
+  "day_warmup_modal.text.one_item_per_line_anything_after_a_dash_becomes_": {
+    "en": "One item per line. Anything after a dash becomes a note.",
+    "fi": "Yksi kohta riville. Viivan jälkeinen teksti tallennetaan lisätiedoksi.",
+    "context": "Warm-up editor: text for One item per line. Anything after a dash becomes a note.",
+    "screen": "Warm-up editor",
+    "role": "text"
+  },
+  "session_swap_modal.text.no_alternates_in_the_plan_for_this_one": {
+    "en": "No alternates in the plan for this one.",
+    "fi": "Suunnitelmassa ei ole tälle liikkeelle vaihtoehtoja.",
+    "context": "Session exercise swap: text for No alternates in the plan for this one.",
+    "screen": "Session exercise swap",
+    "role": "text"
+  },
+  "session_swap_modal.placeholder.e_g_machine_chest_press": {
+    "en": "e.g. Machine Chest Press",
+    "fi": "esim. Rintapunnerrus laitteessa",
+    "context": "Session exercise swap: placeholder for e.g. Machine Chest Press",
+    "screen": "Session exercise swap",
+    "role": "placeholder"
+  },
+  "session_swap_modal.text.or_type_any_exercise": {
+    "en": "…or type any exercise",
+    "fi": "…tai kirjoita liikkeen nimi",
+    "context": "Session exercise swap: text for …or type any exercise",
+    "screen": "Session exercise swap",
+    "role": "text"
+  },
+  "session_swap_modal.text.equipment_for_the_typed_exercise": {
+    "en": "Equipment for the typed exercise",
+    "fi": "Kirjoitetun liikkeen väline",
+    "context": "Session exercise swap: text for Equipment for the typed exercise",
+    "screen": "Session exercise swap",
+    "role": "text"
+  },
+  "session_swap_modal.button.use_typed_exercise": {
+    "en": "Use typed exercise",
+    "fi": "Käytä kirjoitettua liikettä",
+    "context": "Session exercise swap: button for Use typed exercise",
+    "screen": "Session exercise swap",
+    "role": "button"
+  },
+  "session_swap_modal.message.type_a_name_first": {
+    "en": "Type a name first",
+    "fi": "Kirjoita ensin nimi",
+    "context": "Session exercise swap: message for Type a name first",
+    "screen": "Session exercise swap",
+    "role": "message"
+  },
+  "do_session_swap.message.weight_reps": {
+    "en": "weight × reps",
+    "fi": "paino × toistot",
+    "context": "Workout action: message for weight × reps",
+    "screen": "Workout action",
+    "role": "message"
+  },
+  "do_session_swap.message.is_logged_as_swap_it_before_logging_sets_not_aft": {
+    "en": "{alt_name} is logged as {newMetric_height_jump_height} — swap it before logging sets, not after",
+    "fi": "Liikkeen {alt_name} mittaustapa on {newMetric_height_jump_height}. Vaihda liike ennen sarjojen kirjaamista.",
+    "context": "Workout action: message for {alt_name} is logged as {newMetric_height_jump_height} — swap it before logging sets, not after",
+    "screen": "Workout action",
+    "role": "message",
+    "examples": [
+      "{alt_name}",
+      "{newMetric_height_jump_height}"
+    ]
+  },
+  "session_add_exercise_modal.placeholder.e_g_face_pull": {
+    "en": "e.g. Face Pull",
+    "fi": "esim. Kasvoveto taljassa",
+    "context": "Add exercise: placeholder for e.g. Face Pull",
+    "screen": "Add exercise",
+    "role": "placeholder"
+  },
+  "session_add_exercise_modal.text.logged_in_this_session_only_unless_you_tick_the_": {
+    "en": "Logged in this session only, unless you tick the box below.",
+    "fi": "Liike tallennetaan vain tähän treeniin, ellet valitse alla olevaa ruutua.",
+    "context": "Add exercise: text for Logged in this session only, unless you tick the box below.",
+    "screen": "Add exercise",
+    "role": "text"
+  },
+  "session_add_exercise_modal.text.rest_sec": {
+    "en": "Rest (sec)",
+    "fi": "Palautus (s)",
+    "context": "Add exercise: text for Rest (sec)",
+    "screen": "Add exercise",
+    "role": "text"
+  },
+  "session_add_exercise_modal.message.is_already_in_this_session_give_it_a_distinct_na": {
+    "en": "\"{name}\" is already in this session — give it a distinct name",
+    "fi": "\"{name}\" on jo tässä treenissä — anna liikkeelle eri nimi",
+    "context": "Add exercise: message for \"{name}\" is already in this session — give it a distinct name",
+    "screen": "Add exercise",
+    "role": "message",
+    "examples": [
+      "{name}"
+    ]
+  },
+  "session_add_exercise_modal.message.already_exists_in_your_plan_history_is_keyed_on_": {
+    "en": "\"{name}\" already exists in your plan — history is keyed on name, so give it a distinct one",
+    "fi": "\"{name}\" on jo suunnitelmassasi. Historia yhdistetään nimen perusteella, joten anna eri nimi.",
+    "context": "Add exercise: message for \"{name}\" already exists in your plan — history is keyed on name, so give it a distinct one",
+    "screen": "Add exercise",
+    "role": "message",
+    "examples": [
+      "{name}"
+    ]
+  },
+  "session_add_exercise_modal.message.added_also_saved_to": {
+    "en": "Added {name} — also saved to {day_name}",
+    "fi": "Lisättiin {name} ja tallennettiin myös päivään {day_name}",
+    "context": "Add exercise: message for Added {name} — also saved to {day_name}",
+    "screen": "Add exercise",
+    "role": "message",
+    "examples": [
+      "{name}",
+      "{day_name}"
+    ]
+  },
+  "session_add_exercise_modal.message.added_for_today": {
+    "en": "Added {name} for today",
+    "fi": "Lisättiin {name} tähän treeniin",
+    "context": "Add exercise: message for Added {name} for today",
+    "screen": "Add exercise",
+    "role": "message",
+    "examples": [
+      "{name}"
+    ]
+  },
+  "ex_info_modal.message.no_description_available_ask_your_ai_coach_to_in": {
+    "en": "No description available — ask your AI coach to include a \"description\" for each exercise in your next plan.",
+    "fi": "Suoritusohje puuttuu. Pyydä tekoälyvalmentajaa lisäämään jokaiseen liikkeeseen description-kenttä seuraavassa suunnitelmassa.",
+    "context": "Exercise information: message for No description available — ask your AI coach to include a \"description\" for each exercise in your next plan.",
+    "screen": "Exercise information",
+    "role": "message"
+  },
+  "ex_info_modal.message.attempt": {
+    "en": "Attempts: {e_plannedSets}",
+    "fi": "Yrityksiä: {e_plannedSets}",
+    "context": "Exercise information: message for Attempts: {e_plannedSets}",
+    "screen": "Exercise information",
+    "role": "message",
+    "examples": [
+      "{e_plannedSets}"
+    ]
+  },
+  "ex_info_modal.text.target": {
+    "en": "Target: {target}",
+    "fi": "Tavoite: {target}",
+    "context": "Exercise information: text for Target: {target}",
+    "screen": "Exercise information",
+    "role": "text",
+    "examples": [
+      "{target}"
+    ]
+  },
+  "show_plate_calculator.message.warm_up": {
+    "en": "warm-up {lbl_label_slice_1}",
+    "fi": "lämmittely {lbl_label_slice_1}",
+    "context": "Plate calculator: message for warm-up {lbl_label_slice_1}",
+    "screen": "Plate calculator",
+    "role": "message",
+    "examples": [
+      "{lbl_label_slice_1}"
+    ]
+  },
+  "show_plate_calculator.message.set": {
+    "en": "set {lbl_label}",
+    "fi": "sarja {lbl_label}",
+    "context": "Plate calculator: message for set {lbl_label}",
+    "screen": "Plate calculator",
+    "role": "message",
+    "examples": [
+      "{lbl_label}"
+    ]
+  },
+  "show_plate_calculator.text.strip_everything_down_from": {
+    "en": "Strip everything — down from {prev}{unit}.",
+    "fi": "Poista kaikki levyt — aiempi paino {prev}{unit}.",
+    "context": "Plate calculator: text for Strip everything — down from {prev}{unit}.",
+    "screen": "Plate calculator",
+    "role": "text",
+    "examples": [
+      "{prev}",
+      "{unit}"
+    ]
+  },
+  "show_plate_calculator.text.is_at_or_below_the_bar_no_plates_needed": {
+    "en": "{weight}{unit} is at or below the bar ({barWeight}{unit2}) — no plates needed.",
+    "fi": "{weight}{unit} on enintään tangon paino ({barWeight}{unit2}) — levyjä ei tarvita.",
+    "context": "Plate calculator: text for {weight}{unit} is at or below the bar ({barWeight}{unit2}) — no plates needed.",
+    "screen": "Plate calculator",
+    "role": "text",
+    "examples": [
+      "{weight}",
+      "{unit}",
+      "{barWeight}",
+      "{unit2}"
+    ]
+  },
+  "show_plate_calculator.message.load_on_the_landmine_end": {
+    "en": "Load on the landmine end",
+    "fi": "Levyt landmine-tangon päähän",
+    "context": "Plate calculator: message for Load on the landmine end",
+    "screen": "Plate calculator",
+    "role": "message"
+  },
+  "show_plate_calculator.message.bar_per_side": {
+    "en": "Bar {barWeight}{unit} · {weight_barWeight_sides_toFix}{unit2} per side",
+    "fi": "Tanko {barWeight}{unit} · {weight_barWeight_sides_toFix}{unit2} kummallekin puolelle",
+    "context": "Plate calculator: message for Bar {barWeight}{unit} · {weight_barWeight_sides_toFix}{unit2} per side",
+    "screen": "Plate calculator",
+    "role": "message",
+    "examples": [
+      "{barWeight}",
+      "{unit}",
+      "{weight_barWeight_sides_toFix}",
+      "{unit2}"
+    ]
+  },
+  "show_plate_calculator.text.just_the_bar": {
+    "en": "Just the bar.",
+    "fi": "Pelkkä tanko.",
+    "context": "Plate calculator: text for Just the bar.",
+    "screen": "Plate calculator",
+    "role": "text"
+  },
+  "ex_note_modal.placeholder.e_g_felt_heavy_slight_knee_pain_used_safety_bar": {
+    "en": "e.g. felt heavy, slight knee pain, used safety bar…",
+    "fi": "esim. tuntui raskaalta, polvessa lievää kipua, käytin turvatankoa…",
+    "context": "Exercise notes: placeholder for e.g. felt heavy, slight knee pain, used safety bar…",
+    "screen": "Exercise notes",
+    "role": "placeholder"
+  },
+  "app.message.max_effort_nothing_left": {
+    "en": "Max effort — nothing left",
+    "fi": "Maksimisuoritus — ei toistoja varastossa",
+    "context": "Application: message for Max effort — nothing left",
+    "screen": "Application",
+    "role": "message"
+  },
+  "app.message.maybe_half_a_rep_left": {
+    "en": "Maybe half a rep left",
+    "fi": "Ehkä puoli toistoa varastossa",
+    "context": "Application: message for Maybe half a rep left",
+    "screen": "Application",
+    "role": "message"
+  },
+  "app.message.could_have_done_1_more_rep": {
+    "en": "Could have done 1 more rep",
+    "fi": "1 toisto varastossa",
+    "context": "Application: message for Could have done 1 more rep",
+    "screen": "Application",
+    "role": "message"
+  },
+  "app.message.1_2_reps_left": {
+    "en": "1–2 reps left",
+    "fi": "1–2 toistoa varastossa",
+    "context": "Application: message for 1–2 reps left",
+    "screen": "Application",
+    "role": "message"
+  },
+  "app.message.2_reps_left": {
+    "en": "2 reps left",
+    "fi": "2 toistoa varastossa",
+    "context": "Application: message for 2 reps left",
+    "screen": "Application",
+    "role": "message"
+  },
+  "app.message.2_3_reps_left": {
+    "en": "2–3 reps left",
+    "fi": "2–3 toistoa varastossa",
+    "context": "Application: message for 2–3 reps left",
+    "screen": "Application",
+    "role": "message"
+  },
+  "app.message.3_reps_left_bar_still_fast": {
+    "en": "3 reps left — bar still fast",
+    "fi": "3 toistoa varastossa — tanko liikkuu vielä nopeasti",
+    "context": "Application: message for 3 reps left — bar still fast",
+    "screen": "Application",
+    "role": "message"
+  },
+  "app.message.3_4_reps_left": {
+    "en": "3–4 reps left",
+    "fi": "3–4 toistoa varastossa",
+    "context": "Application: message for 3–4 reps left",
+    "screen": "Application",
+    "role": "message"
+  },
+  "app.message.4_reps_left": {
+    "en": "4 reps left",
+    "fi": "4 toistoa varastossa",
+    "context": "Application: message for 4 reps left",
+    "screen": "Application",
+    "role": "message"
+  },
+  "app.message.4_5_reps_left": {
+    "en": "4–5 reps left",
+    "fi": "4–5 toistoa varastossa",
+    "context": "Application: message for 4–5 reps left",
+    "screen": "Application",
+    "role": "message"
+  },
+  "app.message.5_reps_left_easy": {
+    "en": "5+ reps left — easy",
+    "fi": "Vähintään 5 toistoa varastossa — kevyttä",
+    "context": "Application: message for 5+ reps left — easy",
+    "screen": "Application",
+    "role": "message"
+  },
+  "show_rpe_picker.message.how_hard_was_that_set": {
+    "en": "How hard was that set?",
+    "fi": "Kuinka raskas sarja oli?",
+    "context": "RPE picker: message for How hard was that set?",
+    "screen": "RPE picker",
+    "role": "message"
+  },
+  "show_rpe_picker.text.clear_skip": {
+    "en": "Clear / skip",
+    "fi": "Tyhjennä / ohita",
+    "context": "RPE picker: text for Clear / skip",
+    "screen": "RPE picker",
+    "role": "text"
+  },
+  "stepper_info.button.reps": {
+    "en": "reps",
+    "fi": "toistoa",
+    "context": "Workout input controls: button for reps",
+    "screen": "Workout input controls",
+    "role": "button"
+  },
+  "stepper_info.button.cm": {
+    "en": "cm",
+    "fi": "cm",
+    "context": "Workout input controls: button for cm",
+    "screen": "Workout input controls",
+    "role": "button"
+  },
+  "cmj_video_modal.message.measure_cmj_via_video": {
+    "en": "Measure CMJ via video",
+    "fi": "Mittaa kevennyshyppy videolta",
+    "context": "Jump measurement: message for Measure CMJ via video",
+    "screen": "Jump measurement",
+    "role": "message"
+  },
+  "cmj_video_modal.text.fps": {
+    "en": "{f} fps",
+    "fi": "{f} kuvaa/s",
+    "context": "Jump measurement: text for {f} fps",
+    "screen": "Jump measurement",
+    "role": "text",
+    "examples": [
+      "{f}"
+    ]
+  },
+  "cmj_video_modal.message.normal": {
+    "en": "Normal",
+    "fi": "Normaali",
+    "context": "Jump measurement: message for Normal",
+    "screen": "Jump measurement",
+    "role": "message"
+  },
+  "cmj_video_modal.text.how_to_record_for_accurate_results": {
+    "en": "How to record for accurate results",
+    "fi": "Näin kuvaat tarkan mittauksen",
+    "context": "Jump measurement: text for How to record for accurate results",
+    "screen": "Jump measurement",
+    "role": "text"
+  },
+  "cmj_video_modal.text.film_side_on_whole_body_in_frame_feet_clearly_vi": {
+    "en": "Film side-on, whole body in frame, feet clearly visible, phone steady.",
+    "fi": "Kuvaa sivulta niin, että koko vartalo ja jalat näkyvät selvästi. Pidä puhelin paikallaan.",
+    "context": "Jump measurement: text for Film side-on, whole body in frame, feet clearly visible, phone steady.",
+    "screen": "Jump measurement",
+    "role": "text"
+  },
+  "cmj_video_modal.text.filmed_at_your_camera_app_setting": {
+    "en": "Filmed at (your Camera app setting)",
+    "fi": "Kuvausnopeus (Kamera-appin asetus)",
+    "context": "Jump measurement: text for Filmed at (your Camera app setting)",
+    "screen": "Jump measurement",
+    "role": "text"
+  },
+  "cmj_video_modal.text.slow_motion_in_the_clip": {
+    "en": "Slow motion in the clip",
+    "fi": "Videon hidastus",
+    "context": "Jump measurement: text for Slow motion in the clip",
+    "screen": "Jump measurement",
+    "role": "text"
+  },
+  "cmj_video_modal.text.frame": {
+    "en": "◀ frame",
+    "fi": "◀ ruutu",
+    "context": "Jump measurement: text for ◀ frame",
+    "screen": "Jump measurement",
+    "role": "text"
+  },
+  "cmj_video_modal.text.0_00_000_frame_0": {
+    "en": "0:00.000 · frame 0",
+    "fi": "0:00.000 · ruutu 0",
+    "context": "Jump measurement: text for 0:00.000 · frame 0",
+    "screen": "Jump measurement",
+    "role": "text"
+  },
+  "cmj_video_modal.text.frame_2": {
+    "en": "frame ▶",
+    "fi": "ruutu ▶",
+    "context": "Jump measurement: text for frame ▶",
+    "screen": "Jump measurement",
+    "role": "text"
+  },
+  "cmj_video_modal.text.last_frame_on_ground": {
+    "en": "Last frame on ground",
+    "fi": "Viimeinen ruutu maassa",
+    "context": "Jump measurement: text for Last frame on ground",
+    "screen": "Jump measurement",
+    "role": "text"
+  },
+  "cmj_video_modal.text.first_frame_back_down": {
+    "en": "First frame back down",
+    "fi": "Ensimmäinen ruutu takaisin maassa",
+    "context": "Jump measurement: text for First frame back down",
+    "screen": "Jump measurement",
+    "role": "text"
+  },
+  "cmj_video_modal.text.add_attempt": {
+    "en": "Add attempt",
+    "fi": "Lisää yritys",
+    "context": "Jump measurement: text for Add attempt",
+    "screen": "Jump measurement",
+    "role": "text"
+  },
+  "cmj_init_listeners.message.could_not_load_this_video": {
+    "en": "Could not load this video",
+    "fi": "Videon lataaminen epäonnistui",
+    "context": "Jump measurement: message for Could not load this video",
+    "screen": "Jump measurement",
+    "role": "message"
+  },
+  "cmj_render_duration_check.text.if_that_real_duration_doesn_t_match_what_you_fil": {
+    "en": "If that real duration doesn't match what you filmed, change the slow-motion factor.",
+    "fi": "Jos todellinen kesto ei vastaa kuvausaikaa, muuta hidastuskerrointa.",
+    "context": "Jump measurement: text for If that real duration doesn't match what you filmed, change the slow-motion factor.",
+    "screen": "Jump measurement",
+    "role": "text"
+  },
+  "cmj_auto_detect_fps.message.detecting_frame_rate": {
+    "en": "Detecting frame rate…",
+    "fi": "Tunnistetaan kuvataajuutta…",
+    "context": "Jump measurement: message for Detecting frame rate…",
+    "screen": "Jump measurement",
+    "role": "message"
+  },
+  "restore.text.measured_fps_in_this_clip_but_the_settings_above": {
+    "en": "Measured ~{snapped} fps in this clip, but the settings above imply a {Math_round_derived} fps timeline — check them.",
+    "fi": "Videosta mitattiin noin {snapped} fps, mutta yllä olevat asetukset vastaavat {Math_round_derived} fps:n aikajanaa. Tarkista asetukset.",
+    "context": "Backup restore: text for Measured ~{snapped} fps in this clip, but the settings above imply a {Math_round_derived} fps timeline — check them.",
+    "screen": "Backup restore",
+    "role": "text",
+    "examples": [
+      "{snapped}",
+      "{Math_round_derived}"
+    ]
+  },
+  "restore.text.measured_fps_rough_the_decoder_skips_frames_on_h": {
+    "en": "Measured ~{snapped} fps (rough — the decoder skips frames on high-rate clips, so this is a hint, not the truth).",
+    "fi": "Mitattu noin {snapped} fps. Arvio on karkea, koska videon purku ohittaa ruutuja suurilla kuvataajuuksilla. Käytä arvoa suuntaa antavana.",
+    "context": "Backup restore: text for Measured ~{snapped} fps (rough — the decoder skips frames on high-rate clips, so this is a hint, not the truth).",
+    "screen": "Backup restore",
+    "role": "text",
+    "examples": [
+      "{snapped}"
+    ]
+  },
+  "cmj_draw_frame.message.s_frame": {
+    "en": "{lastMediaTime_toFixed_3}s · frame {Math_round_lastMediaTime_cmj}",
+    "fi": "{lastMediaTime_toFixed_3} s · ruutu {Math_round_lastMediaTime_cmj}",
+    "context": "Jump measurement: message for {lastMediaTime_toFixed_3}s · frame {Math_round_lastMediaTime_cmj}",
+    "screen": "Jump measurement",
+    "role": "message",
+    "examples": [
+      "{lastMediaTime_toFixed_3}",
+      "{Math_round_lastMediaTime_cmj}"
+    ]
+  },
+  "cmj_render_attempts.text.attempts": {
+    "en": "Attempts",
+    "fi": "Yritykset",
+    "context": "Jump measurement: text for Attempts",
+    "screen": "Jump measurement",
+    "role": "text"
+  },
+  "cmj_render_attempts.aria-label.remove_attempt": {
+    "en": "Remove attempt {i_1}",
+    "fi": "Poista yritys {i_1}",
+    "context": "Jump measurement: aria-label for Remove attempt {i_1}",
+    "screen": "Jump measurement",
+    "role": "aria-label",
+    "examples": [
+      "{i_1}"
+    ]
+  },
+  "cmj_render_attempts.text.cm": {
+    "en": "{a_heightCm_toFixed_1} cm",
+    "fi": "{a_heightCm_toFixed_1} cm",
+    "context": "Jump measurement: text for {a_heightCm_toFixed_1} cm",
+    "screen": "Jump measurement",
+    "role": "text",
+    "examples": [
+      "{a_heightCm_toFixed_1}"
+    ]
+  },
+  "cmj_render_attempts.text.ms_fps": {
+    "en": "±{a_precisionCm_toFixed_1} · {a_flightTimeMs} ms · {a_effectiveFps} fps",
+    "fi": "±{a_precisionCm_toFixed_1} · {a_flightTimeMs} ms · {a_effectiveFps} fps",
+    "context": "Jump measurement: text for ±{a_precisionCm_toFixed_1} · {a_flightTimeMs} ms · {a_effectiveFps} fps",
+    "screen": "Jump measurement",
+    "role": "text",
+    "examples": [
+      "{a_precisionCm_toFixed_1}",
+      "{a_flightTimeMs}",
+      "{a_effectiveFps}"
+    ]
+  },
+  "fmt.message.s_frame": {
+    "en": "{t_toFixed_3}s (frame {Math_round_t_pf})",
+    "fi": "{t_toFixed_3} s (ruutu {Math_round_t_pf})",
+    "context": "Application: message for {t_toFixed_3}s (frame {Math_round_t_pf})",
+    "screen": "Application",
+    "role": "message",
+    "examples": [
+      "{t_toFixed_3}",
+      "{Math_round_t_pf}"
+    ]
+  },
+  "cmj_update_result_ui.message.last_on_ground_nbsp_nbsp_first_back_down": {
+    "en": "Last on ground: {fmt_takeoffTime}  ·  First back down: {fmt_landingTime}",
+    "fi": "Viimeinen maassa: {fmt_takeoffTime} · Ensimmäinen takaisin maassa: {fmt_landingTime}",
+    "context": "Jump measurement: message for Last on ground: {fmt_takeoffTime}  ·  First back down: {fmt_landingTime}",
+    "screen": "Jump measurement",
+    "role": "message",
+    "examples": [
+      "{fmt_takeoffTime}",
+      "{fmt_landingTime}"
+    ]
+  },
+  "cmj_update_result_ui.message.save_best": {
+    "en": "Save best ({n})",
+    "fi": "Tallenna paras ({n})",
+    "context": "Jump measurement: message for Save best ({n})",
+    "screen": "Jump measurement",
+    "role": "message",
+    "examples": [
+      "{n}"
+    ]
+  },
+  "cmj_update_result_ui.text.no_flight_time_from_those_frames_the_first_back_": {
+    "en": "No flight time from those frames — the first-back-down frame must be at least two frames after the last-on-ground frame.",
+    "fi": "Näistä ruuduista ei saada lentoaikaa. Ensimmäisen laskeutumisruudun on oltava vähintään kaksi ruutua viimeisen maakosketusruudun jälkeen.",
+    "context": "Jump measurement: text for No flight time from those frames — the first-back-down frame must be at least two frames after the last-on-ground frame.",
+    "screen": "Jump measurement",
+    "role": "text"
+  },
+  "cmj_update_result_ui.text.fps_filmed_at_fps_timeline": {
+    "en": "{cmjState_captureFps} fps filmed at {factor}× → {Math_round_cmjPlaybackFps} fps timeline",
+    "fi": "Kuvattu {cmjState_captureFps} fps, hidastus {factor}× → aikajana {Math_round_cmjPlaybackFps} fps",
+    "context": "Jump measurement: text for {cmjState_captureFps} fps filmed at {factor}× → {Math_round_cmjPlaybackFps} fps timeline",
+    "screen": "Jump measurement",
+    "role": "text",
+    "examples": [
+      "{cmjState_captureFps}",
+      "{factor}",
+      "{Math_round_cmjPlaybackFps}"
+    ]
+  },
+  "cmj_update_result_ui.text.only_cm_at_fps_record_in_slo_mo_at_240_fps_for_0": {
+    "en": "Only ±{result_precisionCm_toFixed_1} cm at {result_effectiveFps} fps. Record in Slo-Mo at 240 fps for ~±0.3 cm — see “How to record” at the top.",
+    "fi": "Tarkkuus on vain ±{result_precisionCm_toFixed_1} cm nopeudella {result_effectiveFps} fps. Kuvaa hidastuksella 240 fps noin ±0,3 cm:n tarkkuuteen. Katso ”Kuvausohjeet” ylhäältä.",
+    "context": "Jump measurement: text for Only ±{result_precisionCm_toFixed_1} cm at {result_effectiveFps} fps. Record in Slo-Mo at 240 fps for ~±0.3 cm — see “How to record” at the top.",
+    "screen": "Jump measurement",
+    "role": "text",
+    "examples": [
+      "{result_precisionCm_toFixed_1}",
+      "{result_effectiveFps}"
+    ]
+  },
+  "cmj_update_result_ui.text.that_seems_unusually_low_high_double_check_your_": {
+    "en": "That seems unusually low/high — double check your markers.",
+    "fi": "Tulos näyttää poikkeuksellisen pieneltä tai suurelta. Tarkista merkitsemäsi ruudut.",
+    "context": "Jump measurement: text for That seems unusually low/high — double check your markers.",
+    "screen": "Jump measurement",
+    "role": "text"
+  },
+  "cmj_update_result_ui.text.cm": {
+    "en": "{result_heightCm_toFixed_1} cm",
+    "fi": "{result_heightCm_toFixed_1} cm",
+    "context": "Jump measurement: text for {result_heightCm_toFixed_1} cm",
+    "screen": "Jump measurement",
+    "role": "text",
+    "examples": [
+      "{result_heightCm_toFixed_1}"
+    ]
+  },
+  "cmj_update_result_ui.text.cm_flight_ms_fps_effective": {
+    "en": "± {result_precisionCm_toFixed_1} cm · flight {result_flightTimeMs} ms · {result_effectiveFps} fps effective",
+    "fi": "± {result_precisionCm_toFixed_1} cm · lentoaika {result_flightTimeMs} ms · tehollinen kuvataajuus {result_effectiveFps} fps",
+    "context": "Jump measurement: text for ± {result_precisionCm_toFixed_1} cm · flight {result_flightTimeMs} ms · {result_effectiveFps} fps effective",
+    "screen": "Jump measurement",
+    "role": "text",
+    "examples": [
+      "{result_precisionCm_toFixed_1}",
+      "{result_flightTimeMs}",
+      "{result_effectiveFps}"
+    ]
+  },
+  "cmj_update_result_ui.text.1_frame_applied_half_frame_midpoint_correction_a": {
+    "en": "−1 frame applied (half-frame midpoint correction at each end)",
+    "fi": "Vähennetty 1 ruutu (puolen ruudun keskikohtakorjaus molemmissa päissä)",
+    "context": "Jump measurement: text for −1 frame applied (half-frame midpoint correction at each end)",
+    "screen": "Jump measurement",
+    "role": "text"
+  },
+  "cmj_accept.message.cm_logged_to": {
+    "en": "{heightCm} cm logged to {targetEx_name} ✓",
+    "fi": "{heightCm} cm kirjattu liikkeelle {targetEx_name} ✓",
+    "context": "Jump measurement: message for {heightCm} cm logged to {targetEx_name} ✓",
+    "screen": "Jump measurement",
+    "role": "message",
+    "examples": [
+      "{heightCm}",
+      "{targetEx_name}"
+    ]
+  },
+  "cmj_accept.message.cmj_cm_best_of": {
+    "en": "CMJ {heightCm} cm — best of {list_length} ✓",
+    "fi": "Kevennyshyppy {heightCm} cm — paras {list_length} yrityksestä ✓",
+    "context": "Jump measurement: message for CMJ {heightCm} cm — best of {list_length} ✓",
+    "screen": "Jump measurement",
+    "role": "message",
+    "examples": [
+      "{heightCm}",
+      "{list_length}"
+    ]
+  },
+  "cmj_accept.message.cmj_height_set_from_video": {
+    "en": "CMJ height set from video ✓",
+    "fi": "Kevennyshypyn korkeus asetettu videosta ✓",
+    "context": "Jump measurement: message for CMJ height set from video ✓",
+    "screen": "Jump measurement",
+    "role": "message"
+  },
+  "cmj_accept.message.best_cm_of_not_saved_start_a_session_first": {
+    "en": "Best {heightCm} cm of {list_length} — not saved, start a session first",
+    "fi": "Paras {heightCm} cm / {list_length} yritystä. Tulosta ei tallennettu: aloita ensin treeni.",
+    "context": "Jump measurement: message for Best {heightCm} cm of {list_length} — not saved, start a session first",
+    "screen": "Jump measurement",
+    "role": "message",
+    "examples": [
+      "{heightCm}",
+      "{list_length}"
+    ]
+  },
+  "action_confirm-finish.message.finish_workout": {
+    "en": "Finish workout?",
+    "fi": "Päätetäänkö treeni?",
+    "context": "Confirmation dialog: message for Finish workout?",
+    "screen": "Confirmation dialog",
+    "role": "message"
+  },
+  "action_confirm-finish.text.sets_logged_in": {
+    "en": "{done} sets logged in {fmtClock_Date_now_active_sta}.",
+    "fi": "{done} sarjaa kirjattu ajassa {fmtClock_Date_now_active_sta}.",
+    "context": "Confirmation dialog: text for {done} sets logged in {fmtClock_Date_now_active_sta}.",
+    "screen": "Confirmation dialog",
+    "role": "text",
+    "examples": [
+      "{done}",
+      "{fmtClock_Date_now_active_sta}"
+    ]
+  },
+  "action_confirm-finish.button.finish_save": {
+    "en": "Finish & save",
+    "fi": "Päätä ja tallenna",
+    "context": "Confirmation dialog: button for Finish & save",
+    "screen": "Confirmation dialog",
+    "role": "button"
+  },
+  "action_confirm-discard.message.discard_session": {
+    "en": "Discard session?",
+    "fi": "Hylätäänkö treeni?",
+    "context": "Confirmation dialog: message for Discard session?",
+    "screen": "Confirmation dialog",
+    "role": "message"
+  },
+  "action_confirm-discard.text.all_logged_sets_from_this_session_will_be_lost": {
+    "en": "All logged sets from this session will be lost.",
+    "fi": "Kaikki tämän treenin kirjatut sarjat menetetään.",
+    "context": "Confirmation dialog: text for All logged sets from this session will be lost.",
+    "screen": "Confirmation dialog",
+    "role": "text"
+  },
+  "action_confirm-discard.button.discard": {
+    "en": "Discard",
+    "fi": "Hylkää",
+    "context": "Confirmation dialog: button for Discard",
+    "screen": "Confirmation dialog",
+    "role": "button"
+  },
+  "action_confirm-discard.message.session_discarded": {
+    "en": "Session discarded",
+    "fi": "Treeni hylätty",
+    "context": "Confirmation dialog: message for Session discarded",
+    "screen": "Confirmation dialog",
+    "role": "message"
+  },
+  "action_edit-rpe-pick.message.target_rpe": {
+    "en": "Target RPE",
+    "fi": "RPE-tavoite",
+    "context": "Confirmation or editor: message for Target RPE",
+    "screen": "Confirmation or editor",
+    "role": "message"
+  },
+  "action_plan-rename.message.rename_plan": {
+    "en": "Rename plan",
+    "fi": "Nimeä ohjelma uudelleen",
+    "context": "Plan editor: message for Rename plan",
+    "screen": "Plan editor",
+    "role": "message"
+  },
+  "action_plan-rename.text.plan_name": {
+    "en": "Plan name",
+    "fi": "Ohjelman nimi",
+    "context": "Plan editor: text for Plan name",
+    "screen": "Plan editor",
+    "role": "text"
+  },
+  "action_day-add.message.add_day": {
+    "en": "Add day",
+    "fi": "Lisää päivä",
+    "context": "Plan editor: message for Add day",
+    "screen": "Plan editor",
+    "role": "message"
+  },
+  "action_day-add.placeholder.day_d_upper": {
+    "en": "Day D — Upper",
+    "fi": "Päivä D — Ylävartalo",
+    "context": "Plan editor: placeholder for Day D — Upper",
+    "screen": "Plan editor",
+    "role": "placeholder"
+  },
+  "action_day-rename.message.rename_day": {
+    "en": "Rename day",
+    "fi": "Nimeä päivä uudelleen",
+    "context": "Plan editor: message for Rename day",
+    "screen": "Plan editor",
+    "role": "message"
+  },
+  "action_day-delete.text.the_day_and_its_exercises_are_removed_from_the_p": {
+    "en": "The day and its exercises are removed from the plan. Past sessions are kept.",
+    "fi": "Päivä ja sen liikkeet poistetaan ohjelmasta. Aiemmat treenit säilyvät.",
+    "context": "Plan editor: text for The day and its exercises are removed from the plan. Past sessions are kept.",
+    "screen": "Plan editor",
+    "role": "text"
+  },
+  "action_session-delete.message.delete_this_session": {
+    "en": "Delete this session?",
+    "fi": "Poistetaanko tämä treeni?",
+    "context": "Confirmation dialog: message for Delete this session?",
+    "screen": "Confirmation dialog",
+    "role": "message"
+  },
+  "action_session-delete.text.this_permanently_removes_it_from_your_history_an": {
+    "en": "This permanently removes it from your history and AI exports.",
+    "fi": "Treeni poistetaan pysyvästi historiastasi ja tekoälylle vietävistä tiedoista.",
+    "context": "Confirmation dialog: text for This permanently removes it from your history and AI exports.",
+    "screen": "Confirmation dialog",
+    "role": "text"
+  },
+  "action_bw-add.message.enter_a_weight_first": {
+    "en": "Enter a weight first",
+    "fi": "Anna ensin paino",
+    "context": "Confirmation or editor: message for Enter a weight first",
+    "screen": "Confirmation or editor",
+    "role": "message"
+  },
+  "action_bw-add.message.body_weight_logged": {
+    "en": "Body weight logged ✓",
+    "fi": "Kehonpaino kirjattu ✓",
+    "context": "Confirmation or editor: message for Body weight logged ✓",
+    "screen": "Confirmation or editor",
+    "role": "message"
+  },
+  "action_copy-coach.message.coaching_prompt_copied_paste_it_to_claude": {
+    "en": "Coaching prompt copied — paste it to Claude",
+    "fi": "Valmennuskehote kopioitu — liitä se Claudeen",
+    "context": "Confirmation or editor: message for Coaching prompt copied — paste it to Claude",
+    "screen": "Confirmation or editor",
+    "role": "message"
+  },
+  "action_copy-data.message.data_copied": {
+    "en": "Data copied",
+    "fi": "Tiedot kopioitu",
+    "context": "Confirmation or editor: message for Data copied",
+    "screen": "Confirmation or editor",
+    "role": "message"
+  },
+  "action_import-plan.message.paste_the_plan_json_first": {
+    "en": "Paste the plan JSON first",
+    "fi": "Liitä ensin ohjelman JSON",
+    "context": "Confirmation or editor: message for Paste the plan JSON first",
+    "screen": "Confirmation or editor",
+    "role": "message"
+  },
+  "action_import-plan.text.days_exercises_your_current_plan_is_replaced_wor": {
+    "en": "{newPlan_days_length} days, {newPlan_days_reduce_n_d_n_d_} exercises. Your current plan is replaced; workout history is kept.",
+    "fi": "{newPlan_days_length} päivää, {newPlan_days_reduce_n_d_n_d_} liikettä. Nykyinen ohjelma korvataan ja treenihistoria säilytetään.",
+    "context": "Confirmation or editor: text for {newPlan_days_length} days, {newPlan_days_reduce_n_d_n_d_} exercises. Your current plan is replaced; workout history is kept.",
+    "screen": "Confirmation or editor",
+    "role": "text",
+    "examples": [
+      "{newPlan_days_length}",
+      "{newPlan_days_reduce_n_d_n_d_}"
+    ]
+  },
+  "action_import-plan.button.import": {
+    "en": "Import",
+    "fi": "Tuo",
+    "context": "Confirmation or editor: button for Import",
+    "screen": "Confirmation or editor",
+    "role": "button"
+  },
+  "action_import-plan.message.plan_imported": {
+    "en": "Plan imported ✓",
+    "fi": "Ohjelma tuotu ✓",
+    "context": "Confirmation or editor: message for Plan imported ✓",
+    "screen": "Confirmation or editor",
+    "role": "message"
+  },
+  "action_share-ai.message.link_copied_paste_into_any_ai_chat": {
+    "en": "Link copied — paste into any AI chat",
+    "fi": "Linkki kopioitu — liitä se tekoälykeskusteluun",
+    "context": "Confirmation or editor: message for Link copied — paste into any AI chat",
+    "screen": "Confirmation or editor",
+    "role": "message"
+  },
+  "action_copy-uuid.message.backup_code_copied": {
+    "en": "Backup code copied",
+    "fi": "Varmuuskopiokoodi kopioitu",
+    "context": "Confirmation or editor: message for Backup code copied",
+    "screen": "Confirmation or editor",
+    "role": "message"
+  },
+  "action_test-sound.message.that_s_the_rest_timer_cue": {
+    "en": "That's the rest-timer cue",
+    "fi": "Tämä on palautusajastimen merkkiääni",
+    "context": "Settings: rest timer sound test feedback for That's the rest-timer cue",
+    "screen": "Settings",
+    "role": "rest timer sound test feedback"
+  },
+  "action_test-sound.message.audio_context_is_sound_may_not_fire_tap_anywhere": {
+    "en": "Audio context is \"{st}\" — sound may not fire. Tap anywhere and retry.",
+    "fi": "Äänijärjestelmän tila on ”{st}”. Ääni ei ehkä toistu. Napauta näyttöä ja yritä uudelleen.",
+    "context": "Settings: rest timer sound test feedback for Audio context is \"{st}\" — sound may not fire. Tap anywhere and retry.",
+    "screen": "Settings",
+    "role": "rest timer sound test feedback",
+    "examples": [
+      "{st}"
+    ]
+  },
+  "action_backup-copy.message.backup_copied_store_it_somewhere_safe": {
+    "en": "Backup copied — store it somewhere safe",
+    "fi": "Varmuuskopio kopioitu — säilytä se turvallisessa paikassa",
+    "context": "Backup: message for Backup copied — store it somewhere safe",
+    "screen": "Backup",
+    "role": "message"
+  },
+  "action_backup-restore.message.restore_backup": {
+    "en": "Restore backup",
+    "fi": "Palauta varmuuskopio",
+    "context": "Backup: message for Restore backup",
+    "screen": "Backup",
+    "role": "message"
+  },
+  "action_backup-restore.text.paste_a_backup_json_this_replaces_everything_on_": {
+    "en": "Paste a backup JSON. This replaces everything on this device.",
+    "fi": "Liitä varmuuskopion JSON. Se korvaa kaikki tämän laitteen tiedot.",
+    "context": "Backup: text for Paste a backup JSON. This replaces everything on this device.",
+    "screen": "Backup",
+    "role": "text"
+  },
+  "action_backup-restore.message.backup_restored": {
+    "en": "Backup restored ✓",
+    "fi": "Varmuuskopio palautettu ✓",
+    "context": "Backup: message for Backup restored ✓",
+    "screen": "Backup",
+    "role": "message"
+  },
+  "action_reset-all.message.reset_everything": {
+    "en": "Reset everything?",
+    "fi": "Nollataanko kaikki?",
+    "context": "Reset confirmation: message for Reset everything?",
+    "screen": "Reset confirmation",
+    "role": "message"
+  },
+  "action_reset-all.text.deletes_your_plan_all_sessions_body_weight_log_a": {
+    "en": "Deletes your plan, all sessions, body weight log and settings from this device. Consider copying a backup first.",
+    "fi": "Ohjelma, kaikki treenit, kehonpainohistoria ja asetukset poistetaan tältä laitteelta. Kannattaa kopioida varmuuskopio ensin.",
+    "context": "Reset confirmation: text for Deletes your plan, all sessions, body weight log and settings from this device. Consider copying a backup first.",
+    "screen": "Reset confirmation",
+    "role": "text"
+  },
+  "action_reset-all.button.reset": {
+    "en": "Reset",
+    "fi": "Nollaa",
+    "context": "Reset confirmation: button for Reset",
+    "screen": "Reset confirmation",
+    "role": "button"
+  },
+  "action_reset-all.message.fresh_start": {
+    "en": "Fresh start",
+    "fi": "Aloitetaan alusta",
+    "context": "Reset confirmation: message for Fresh start",
+    "screen": "Reset confirmation",
+    "role": "message"
+  },
+  "settings.language.label": {
+    "en": "Language",
+    "fi": "Kieli",
+    "context": "Settings: form label for Language",
+    "screen": "Settings",
+    "role": "form label"
+  },
+  "settings.language.english": {
+    "en": "English",
+    "fi": "Englanti",
+    "context": "Settings: option for English",
+    "screen": "Settings",
+    "role": "option"
+  },
+  "settings.language.finnish": {
+    "en": "Finnish",
+    "fi": "Suomi",
+    "context": "Settings: option for Finnish",
+    "screen": "Settings",
+    "role": "option"
+  },
+  "exercise.edit.translated_name": {
+    "en": "Display name: {name} (the original name identifies your history)",
+    "fi": "Näyttönimi: {name} (alkuperäinen nimi yhdistää historiatiedot)",
+    "context": "Exercise display: message for Display name: {name} (the original name identifies your history)",
+    "screen": "Exercise display",
+    "role": "message",
+    "examples": [
+      "{name}"
+    ]
+  },
+  "sync.time.now": {
+    "en": "just now",
+    "fi": "juuri nyt",
+    "context": "Cloud sync: message for just now",
+    "screen": "Cloud sync",
+    "role": "message"
+  },
+  "exercise.weight.unchecked": {
+    "en": "increments not checked",
+    "fi": "painovälejä ei tarkisteta",
+    "context": "Exercise display: message for increments not checked",
+    "screen": "Exercise display",
+    "role": "message"
+  },
+  "workout.superset.complete": {
+    "en": "complete",
+    "fi": "valmis",
+    "context": "Workout: message for complete",
+    "screen": "Workout",
+    "role": "message"
+  },
+  "history.weight.example": {
+    "en": "e.g. 80",
+    "fi": "esim. 80",
+    "context": "History: message for e.g. 80",
+    "screen": "History",
+    "role": "message"
+  },
+  "workout.swap.height": {
+    "en": "jump height",
+    "fi": "hyppykorkeus",
+    "context": "Workout: message for jump height",
+    "screen": "Workout",
+    "role": "message"
+  },
+  "cmj.attempt.best": {
+    "en": " best",
+    "fi": " paras",
+    "context": "Jump measurement: message for  best",
+    "screen": "Jump measurement",
+    "role": "message"
+  },
+  "sync.time.seconds": {
+    "en": "{count} sec ago",
+    "fi": "{count} s sitten",
+    "context": "Cloud sync: message for {count} sec ago",
+    "screen": "Cloud sync",
+    "role": "message",
+    "examples": [
+      "{count}"
+    ]
+  },
+  "sync.time.minutes": {
+    "en": "{count} min ago",
+    "fi": "{count} min sitten",
+    "context": "Cloud sync: message for {count} min ago",
+    "screen": "Cloud sync",
+    "role": "message",
+    "examples": [
+      "{count}"
+    ]
+  },
+  "sync.time.hours": {
+    "en": "{count} h ago",
+    "fi": "{count} h sitten",
+    "context": "Cloud sync: message for {count} h ago",
+    "screen": "Cloud sync",
+    "role": "message",
+    "examples": [
+      "{count}"
+    ]
+  },
+  "sync.time.days": {
+    "en": "{count} d ago",
+    "fi": "{count} pv sitten",
+    "context": "Cloud sync: message for {count} d ago",
+    "screen": "Cloud sync",
+    "role": "message",
+    "examples": [
+      "{count}"
+    ]
+  },
+  "settings.exercise_review.none": {
+    "en": "No unfamiliar exercises or instructions are waiting for review.",
+    "fi": "Tuntemattomia liikkeitä tai suoritusohjeita ei odota tarkistusta.",
+    "context": "Settings: status for No unfamiliar exercises or instructions are waiting for review.",
+    "screen": "Settings",
+    "role": "status"
+  },
+  "settings.exercise_review.pending": {
+    "en": "{count} unfamiliar exercise name or instruction is waiting for review.",
+    "fi": "{count} tuntematonta liikettä tai suoritusohjetta odottaa tarkistusta.",
+    "context": "Settings: status for {count} unfamiliar exercise name or instruction is waiting for review.",
+    "screen": "Settings",
+    "role": "status",
+    "examples": [
+      "{count}"
+    ]
+  },
+  "settings.exercise_review.download": {
+    "en": "Download items for exercise review",
+    "fi": "Lataa liiketiedot tarkistettavaksi",
+    "context": "Settings: button for Download items for exercise review",
+    "screen": "Settings",
+    "role": "button"
+  },
+  "navigation.settings": {
+    "en": "Settings",
+    "fi": "Asetukset",
+    "context": "Navigation: navigation for Settings",
+    "screen": "Navigation",
+    "role": "navigation"
+  },
+  "navigation.workout": {
+    "en": "Workout",
+    "fi": "Treeni",
+    "context": "Navigation: navigation for Workout",
+    "screen": "Navigation",
+    "role": "navigation"
+  },
+  "navigation.plan": {
+    "en": "Plan",
+    "fi": "Ohjelma",
+    "context": "Navigation: navigation for Plan",
+    "screen": "Navigation",
+    "role": "navigation"
+  },
+  "navigation.history": {
+    "en": "History",
+    "fi": "Historia",
+    "context": "Navigation: navigation for History",
+    "screen": "Navigation",
+    "role": "navigation"
+  },
+  "navigation.coach": {
+    "en": "AI Coach",
+    "fi": "Tekoälyvalmentaja",
+    "context": "Navigation: navigation for AI Coach",
+    "screen": "Navigation",
+    "role": "navigation"
+  },
+  "coach_prompt.copy_data": {
+    "en": "You are my strength coach. Below is my recent GymTrack training data (JSON). Review my actual sets, reps, weights, RPE, notes and body weight, then write my next workout plan.\n\nOutput ONLY a JSON code block matching this exact schema (weights in {unit}):\n{schema}\n\nRules: progress weights from logged RPE (at or below target: increase; above target: hold or reduce). Always include 1–2 alternates per exercise for busy equipment and a short description for every exercise and alternate. Keep rest realistic. Set restSecondsNext only when rest before changing movements differs from between-set rest. Set equipment accurately because it controls the plate calculator and bodyweight weight field. Use metric \"height\" only for jump-height tests logged in cm, with bodyweight and weight 0. Use the same superset tag only for adjacent exercises that form one alternating superset. Preserve canonical exercise names where supplied so history matches; descriptions may be in the selected language. Do not translate or alter user notes.\n\nMy data:\n",
+    "fi": "Olet voimavalmentajani. Alla ovat GymTrackista viedyt viimeisimmät harjoittelutietoni (JSON). Arvioi toteutuneet sarjat, toistot, painot, RPE:t, muistiinpanot ja kehonpaino, ja laadi seuraava harjoitteluohjelmani.\n\nVastaa VAIN JSON-koodilohkolla, joka noudattaa täsmälleen tätä rakennetta (painot yksikössä {unit}):\n{schema}\n\nSäännöt: säädä painoja kirjatun RPE:n perusteella (tavoite-RPE tai alle: lisää painoa; yli tavoitteen: pidä ennallaan tai vähennä). Lisää aina 1–2 vaihtoehtoista liikettä ruuhkaisia välineitä varten sekä lyhyt suoritusohje jokaiselle liikkeelle ja vaihtoehdolle. Pidä palautusajat liikkeeseen sopivina. Aseta restSecondsNext vain, kun palautus ennen seuraavaan liikkeeseen siirtymistä eroaa sarjojen välisestä palautuksesta. Aseta equipment oikein, koska se ohjaa levypainolaskuria ja kehonpainoliikkeiden painokenttää. Käytä metric-arvoa \"height\" vain senttimetreinä kirjattaville hyppykorkeustesteille sekä silloin equipment-arvoa \"bodyweight\" ja weight-arvoa 0. Käytä samaa superset-tunnistetta vain peräkkäisille liikkeille, jotka kirjataan yhtenä vuorottelevana supersarjana. Säilytä annetut liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja.\n\nTietoni:\n",
+    "context": "Copied coaching prompt for locally exported training data. Schema is injected as plain technical JSON; user data follows unchanged.",
+    "screen": "AI Coach",
+    "role": "coaching instruction"
+  },
+  "coach_prompt.share_url": {
+    "en": "You are my strength coach. Fetch my latest GymTrack training data from this URL (JSON):\n{url}\n\nIt contains recent sessions, notes, body weight and my current plan. Review it, then write my next workout plan. Reply ONLY with a JSON code block of type \"workout-plan\" using the same plan field structure: days and exercises with name, sets, reps, weight, targetRpe, restSeconds, optional restSecondsNext, equipment, optional barWeight, optional metric, optional adjacent superset tag, description, and 1–2 alternates. Weights use {unit}. Progress weight from RPE (at or under target: increase; over: hold or reduce). Keep canonical exercise names from the data so history matches; descriptions may be in the selected language. Do not translate or alter user notes. I will paste your JSON back into the app.",
+    "fi": "Olet voimavalmentajani. Hae uusimmat GymTrack-harjoittelutietoni tästä URL-osoitteesta (JSON):\n{url}\n\nTiedot sisältävät viimeisimmät treenit, muistiinpanot, kehonpainon ja nykyisen ohjelman. Arvioi ne ja laadi seuraava harjoitteluohjelmani. Vastaa VAIN \"workout-plan\"-tyyppisellä JSON-koodilohkolla, joka käyttää samaa ohjelmarakennetta: päivät ja liikkeet sisältävät nimen, sarjat, toistot, painon, tavoite-RPE:n, palautusajan, valinnaisen restSecondsNext-arvon, välineen, valinnaisen tangon painon, valinnaisen mittarin, valinnaisen peräkkäisten liikkeiden supersarjatunnisteen, suoritusohjeen ja 1–2 vaihtoehtoa. Painoyksikkö on {unit}. Säädä painoa RPE:n perusteella (tavoite tai alle: lisää; yli tavoitteen: pidä ennallaan tai vähennä). Säilytä tiedoissa olevat liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja. Liitän JSONisi takaisin sovellukseen.",
+    "context": "Copied coaching prompt for a shared URL. URL is inserted as plain text; remote user data remains unchanged.",
+    "screen": "AI Coach",
+    "role": "coaching instruction"
+  },
+  "common.action.cancel": {
+    "en": "Cancel",
+    "fi": "Peruuta",
+    "context": "Cancels or dismisses the current modal without applying its primary action.",
+    "screen": "Dialog actions",
+    "role": "button"
+  },
+  "common.action.save": {
+    "en": "Save",
+    "fi": "Tallenna",
+    "context": "Saves the values entered in the current editor.",
+    "screen": "Dialog actions",
+    "role": "button"
+  },
+  "common.error.copy_failed": {
+    "en": "Copy failed",
+    "fi": "Kopiointi epäonnistui",
+    "context": "Shown when any app copy-to-clipboard action fails.",
+    "screen": "Copy actions",
+    "role": "error"
+  },
+  "common.action.close": {
+    "en": "Close",
+    "fi": "Sulje",
+    "context": "Closes the current informational or action dialog.",
+    "screen": "Dialog actions",
+    "role": "button"
+  },
+  "common.action.restore": {
+    "en": "Restore",
+    "fi": "Palauta",
+    "context": "Starts restoration from the supplied backup source.",
+    "screen": "Backup restore",
+    "role": "button"
+  },
+  "common.action.delete": {
+    "en": "Delete",
+    "fi": "Poista",
+    "context": "Deletes the item named by the surrounding confirmation or action menu.",
+    "screen": "Destructive actions",
+    "role": "button"
+  },
+  "updates.action.check": {
+    "en": "Check for updates",
+    "fi": "Tarkista päivitykset",
+    "context": "Checks whether a newer app version is available.",
+    "screen": "Settings",
+    "role": "button"
+  },
+  "warmup_card.heading": {
+    "en": "Warm-up",
+    "fi": "Lämmittely",
+    "context": "Heading for the general warm-up card, both expanded and collapsed.",
+    "screen": "Active workout",
+    "role": "heading"
+  },
+  "superset_card.heading": {
+    "en": "Superset {group_tag}",
+    "fi": "Supersarja {group_tag}",
+    "context": "Heading for a superset card, both expanded and collapsed.",
+    "screen": "Active workout",
+    "role": "heading",
+    "examples": [
+      "{group_tag}"
+    ]
+  },
+  "common.action.collapse": {
+    "en": "Collapse",
+    "fi": "Pienennä",
+    "context": "Collapses an expanded workout or superset card.",
+    "screen": "Workout cards",
+    "role": "accessibility label"
+  },
+  "exercise_card.action.mark_warmup": {
+    "en": "Mark as warm-up",
+    "fi": "Merkitse lämmittelysarjaksi",
+    "context": "Marks a set row as a warm-up set in either load or jump layouts.",
+    "screen": "Active workout",
+    "role": "accessibility label"
+  },
+  "common.action.swap": {
+    "en": "Swap",
+    "fi": "Vaihda",
+    "context": "Opens the available exercise substitutions.",
+    "screen": "Exercise actions",
+    "role": "button or accessibility label"
+  },
+  "exercise.add.title": {
+    "en": "Add exercise",
+    "fi": "Lisää liike",
+    "context": "Heading when adding an exercise from either the plan or an active session.",
+    "screen": "Exercise editor",
+    "role": "heading"
+  },
+  "exercise.form.name": {
+    "en": "Name",
+    "fi": "Nimi",
+    "context": "Label for an exercise name field.",
+    "screen": "Exercise editor",
+    "role": "field label"
+  },
+  "exercise.form.sets": {
+    "en": "Sets",
+    "fi": "Sarjat",
+    "context": "Label for the number of exercise sets.",
+    "screen": "Exercise editor",
+    "role": "field label"
+  },
+  "exercise.form.reps": {
+    "en": "Reps",
+    "fi": "Toistot",
+    "context": "Label for the prescribed repetitions.",
+    "screen": "Exercise editor",
+    "role": "field label"
+  },
+  "exercise.form.weight": {
+    "en": "Weight ({unit})",
+    "fi": "Paino ({unit})",
+    "context": "Label for exercise weight in the selected unit.",
+    "screen": "Exercise editor",
+    "role": "field label",
+    "examples": [
+      "{unit}"
+    ]
+  },
+  "exercise.form.equipment": {
+    "en": "Equipment",
+    "fi": "Väline",
+    "context": "Label for the exercise equipment selector.",
+    "screen": "Exercise editor",
+    "role": "field label"
+  },
+  "exercise.form.measurement": {
+    "en": "What the sets measure",
+    "fi": "Sarjojen mittaustapa",
+    "context": "Label for choosing whether sets record load or jump height.",
+    "screen": "Exercise editor",
+    "role": "field label"
+  },
+  "exercise.form.measurement.load": {
+    "en": "Weight × reps (normal lift)",
+    "fi": "Paino × toistot (voimaliike)",
+    "context": "Option describing normal load-and-repetitions tracking.",
+    "screen": "Exercise editor",
+    "role": "option"
+  },
+  "exercise.form.measurement.height": {
+    "en": "Jump height in cm (one attempt per set)",
+    "fi": "Hypyn korkeus senttimetreinä (yksi yritys sarjassa)",
+    "context": "Option describing jump-height tracking.",
+    "screen": "Exercise editor",
+    "role": "option"
+  },
+  "exercise.validation.name_required": {
+    "en": "Name is required",
+    "fi": "Kirjoita liikkeen nimi",
+    "context": "Shown when either exercise editor is saved without a name.",
+    "screen": "Exercise editor",
+    "role": "validation error"
+  },
+  "common.action.add": {
+    "en": "Add",
+    "fi": "Lisää",
+    "context": "Adds the item configured in the current add dialog.",
+    "screen": "Editor actions",
+    "role": "button"
+  },
+  "plate_calculator.title": {
+    "en": "Plate calculator",
+    "fi": "Levylaskuri",
+    "context": "Title of the plate calculator for both empty-bar and loaded-bar results.",
+    "screen": "Plate calculator",
+    "role": "heading"
+  },
+  "cmj.action.save_best": {
+    "en": "Save best",
+    "fi": "Tallenna paras",
+    "context": "Saves the best available jump when exactly one result is available.",
+    "screen": "Jump measurement",
+    "role": "button"
+  },
+  "workout.action.keep_going": {
+    "en": "Keep going",
+    "fi": "Jatka treeniä",
+    "context": "Returns from a finish or discard confirmation to the active workout.",
+    "screen": "Workout confirmation",
+    "role": "button"
+  },
+  "plan.form.day_name": {
+    "en": "Day name",
+    "fi": "Päivän nimi",
+    "context": "Label for a day name when adding or renaming a training day.",
+    "screen": "Plan editor",
+    "role": "field label"
+  },
+  "format.rpe_suffix": {
+    "en": " · RPE ",
+    "fi": "· RPE",
+    "context": "Technical RPE suffix appended to a weight or prescription.",
+    "screen": "Exercise summaries",
+    "role": "formatted metric"
+  },
+  "equipment.name.barbell": {
+    "en": "Barbell",
+    "fi": "Levytanko",
+    "context": "Controlled equipment name used consistently in chips, editors, substitutions and validation messages.",
+    "screen": "Exercise equipment",
+    "role": "controlled vocabulary label"
+  },
+  "equipment.name.trap-bar": {
+    "en": "Trap bar",
+    "fi": "Trap-tanko",
+    "context": "Controlled equipment name used consistently in chips, editors, substitutions and validation messages.",
+    "screen": "Exercise equipment",
+    "role": "controlled vocabulary label"
+  },
+  "equipment.name.landmine": {
+    "en": "Landmine",
+    "fi": "Kulmatanko",
+    "context": "Controlled equipment name used consistently in chips, editors, substitutions and validation messages.",
+    "screen": "Exercise equipment",
+    "role": "controlled vocabulary label"
+  },
+  "equipment.name.training-bar": {
+    "en": "Training bar",
+    "fi": "Harjoitustanko",
+    "context": "Controlled equipment name used consistently in chips, editors, substitutions and validation messages.",
+    "screen": "Exercise equipment",
+    "role": "controlled vocabulary label"
+  },
+  "equipment.name.dumbbell": {
+    "en": "Dumbbell",
+    "fi": "Käsipaino",
+    "context": "Controlled equipment name used consistently in chips, editors, substitutions and validation messages.",
+    "screen": "Exercise equipment",
+    "role": "controlled vocabulary label"
+  },
+  "equipment.name.machine": {
+    "en": "Machine",
+    "fi": "Laite",
+    "context": "Controlled equipment name used consistently in chips, editors, substitutions and validation messages.",
+    "screen": "Exercise equipment",
+    "role": "controlled vocabulary label"
+  },
+  "equipment.name.cable": {
+    "en": "Cable",
+    "fi": "Talja",
+    "context": "Controlled equipment name used consistently in chips, editors, substitutions and validation messages.",
+    "screen": "Exercise equipment",
+    "role": "controlled vocabulary label"
+  },
+  "equipment.name.bodyweight": {
+    "en": "Bodyweight",
+    "fi": "Kehonpaino",
+    "context": "Controlled equipment name used consistently in chips, editors, substitutions and validation messages.",
+    "screen": "Exercise equipment",
+    "role": "controlled vocabulary label"
+  },
+  "equipment.name.other": {
+    "en": "Other",
+    "fi": "Muu",
+    "context": "Controlled equipment name used consistently in chips, editors, substitutions and validation messages.",
+    "screen": "Exercise equipment",
+    "role": "controlled vocabulary label"
+  },
+  "workout.rest.for_exercise": {
+    "en": "Rest — {exercise}",
+    "fi": "Lepo — {exercise}",
+    "context": "Rest timer label naming the exercise that follows the rest period.",
+    "screen": "Rest timer",
+    "role": "message",
+    "examples": {
+      "exercise": "Penkkipunnerrus"
+    }
+  },
+  "cloud_sync.error.push": {
+    "en": "Sync failed: {error}",
+    "fi": "Synkronointi epäonnistui: {error}",
+    "context": "Cloud upload failure with the underlying error appended.",
+    "screen": "Cloud sync",
+    "role": "error",
+    "examples": {
+      "error": "Verkkovirhe"
+    }
+  },
+  "backup.error.restore": {
+    "en": "Restore failed: {error}",
+    "fi": "Palautus epäonnistui: {error}",
+    "context": "Backup restoration failure from either a backup code or pasted backup, with its error.",
+    "screen": "Backup restore",
+    "role": "error",
+    "examples": {
+      "error": "Tietoja ei löytynyt"
+    }
+  },
+  "updates.status.latest": {
+    "en": "You’re on the latest version ✓",
+    "fi": "Käytössäsi on uusin versio ✓",
+    "context": "Result shown when either update-check path confirms no newer app version.",
+    "screen": "App updates",
+    "role": "status"
+  },
+  "view_coach.import.instructions": {
+    "en": "Paste the workout-plan JSON code block from your AI coach. It replaces your current plan; your history is kept.",
+    "fi": "Liitä tekoälyvalmentajasi antama workout-plan-JSON-koodilohko. Se korvaa nykyisen ohjelmasi, mutta historia säilyy.",
+    "context": "Complete instruction above the workout-plan import field.",
+    "screen": "AI Coach",
+    "role": "instruction"
+  },
+  "settings.write_token.explanation": {
+    "en": "Your backup code is shareable and read-only. The write token lets this device save data to the cloud. Keep it out of share links and set it once on each device.",
+    "fi": "Varmuuskopiokoodin voi jakaa, ja sillä voi vain lukea tietoja. Kirjoitustunnuksella tämä laite voi tallentaa tiedot pilveen. Älä sisällytä tunnusta jakolinkkiin. Aseta se kerran kullakin laitteella.",
+    "context": "Complete explanation of the backup code and confidential write token.",
+    "screen": "Settings",
+    "role": "instruction"
+  },
+  "weight_validation.error.below_empty_equipment": {
+    "en": "{weight}{unit} is below the empty {equipment} ({bar}{unit}) — is the Equipment field wrong? A dumbbell, cable or machine movement this light usually is not a barbell movement.",
+    "fi": "{weight}{unit} alittaa tyhjän {equipment}-välineen painon ({bar}{unit}). Tarkista Väline-kenttä: näin kevyt liike tehdään yleensä käsipainolla, taljassa tai laitteessa, ei levytangolla.",
+    "context": "Complete validation error for a target below the empty bar or implement weight.",
+    "screen": "Exercise editor",
+    "role": "validation error",
+    "examples": {
+      "weight": "10",
+      "unit": "kg",
+      "equipment": "levytanko",
+      "bar": "20"
+    }
+  },
+  "exercise.swap.success": {
+    "en": "Swapped to {exercise}",
+    "fi": "Liikkeeksi vaihdettiin {exercise}",
+    "context": "Confirmation after changing an exercise in the plan or active session.",
+    "screen": "Exercise actions",
+    "role": "status",
+    "examples": {
+      "exercise": "Rintapunnerrus laitteessa"
+    }
+  },
+  "exercise.swap.title": {
+    "en": "Swap {exercise}",
+    "fi": "Vaihda liike: {exercise}",
+    "context": "Dialog title for choosing an alternative to the named exercise.",
+    "screen": "Exercise actions",
+    "role": "heading",
+    "examples": {
+      "exercise": "Penkkipunnerrus"
+    }
+  },
+  "session_add_exercise_modal.option.add_to_plan": {
+    "en": "Also add to {day} in my plan",
+    "fi": "Lisää myös ohjelmani päivään {day}",
+    "context": "Checkbox label for saving a session-only exercise into the current plan day.",
+    "screen": "Add exercise",
+    "role": "checkbox label",
+    "examples": {
+      "day": "Päivä A"
+    }
+  },
+  "exercise.note.title": {
+    "en": "Note — {exercise}",
+    "fi": "Muistiinpano — {exercise}",
+    "context": "Exercise-note editor title naming the exercise.",
+    "screen": "Exercise notes",
+    "role": "heading",
+    "examples": {
+      "exercise": "Penkkipunnerrus"
+    }
+  },
+  "cmj_video_modal.tip.frame_rate_accuracy": {
+    "en": "Frame rate determines accuracy. At a flight time of about 500 ms, one frame is worth about 5 cm at 24 fps but only about 0.5 cm at 240 fps.",
+    "fi": "Kuvataajuus määrittää mittauksen tarkkuuden. Noin 500 ms:n lentoajalla yksi ruutu vastaa noin 5 cm:ä nopeudella 24 fps mutta vain noin 0,5 cm:ä nopeudella 240 fps.",
+    "context": "Complete explanation of why frame rate matters for jump measurement.",
+    "screen": "Jump measurement",
+    "role": "instruction"
+  },
+  "cmj_video_modal.tip.avoid_web_camera": {
+    "en": "Do not use “Take Video” here. The camera opened by iOS from a web page only records standard video: Slo-Mo is unavailable, resulting in 24–30 fps and an unusably imprecise measurement.",
+    "fi": "Älä käytä tässä ”Ota video” -toimintoa. iOS:n verkkosivulta avaama kamera kuvaa vain tavallista videota: hidastusta ei voi valita, joten kuvataajuus on 24–30 fps ja mittaus liian epätarkka.",
+    "context": "Complete warning against recording through the web file picker.",
+    "screen": "Jump measurement",
+    "role": "instruction"
+  },
+  "cmj_video_modal.tip.record_slow_motion": {
+    "en": "Record in the Camera app first using Slo-Mo (1080p/240 fps under Settings › Camera › Record Slo-mo). Then return here and choose the video from Photo Library.",
+    "fi": "Kuvaa ensin Kamera-apin Hidastus-tilassa (1080p/240 fps: Asetukset › Kamera › Tallenna hidastettua). Palaa sitten tänne ja valitse video Kuvakirjastosta.",
+    "context": "Complete instruction for recording and selecting a slow-motion video.",
+    "screen": "Jump measurement",
+    "role": "instruction"
+  },
+  "cmj_video_modal.tip.keep_clip_short": {
+    "en": "Keep the clip short: 3–4 seconds. Start recording, jump and stop. An iPhone slows only part of a long clip and leaves the rest at normal speed; mixed frame rates make every timing measurement wrong.",
+    "fi": "Pidä video lyhyenä: 3–4 sekuntia. Aloita kuvaus, hyppää ja lopeta. iPhone hidastaa pitkästä videosta vain osan ja jättää muun normaalinopeudelle; eri nopeudet vääristävät kaikki aikamittaukset.",
+    "context": "Complete instruction explaining why a jump clip must be short.",
+    "screen": "Jump measurement",
+    "role": "instruction"
+  },
+  "cmj_video_modal.tip.match_capture_settings": {
+    "en": "Set “Filmed at” to the Camera setting (240 fps) and set the slow-motion factor to match the clip. An iPhone places 240 fps Slo-Mo on a 60 fps timeline, so the factor is 4×. Check that “→ Xs real” matches how long you actually filmed; otherwise change the factor.",
+    "fi": "Aseta ”Kuvausnopeus” Kamera-apin asetuksen mukaiseksi (240 fps) ja valitse videota vastaava hidastuskerroin. iPhone sijoittaa 240 fps:n hidastuksen 60 fps:n aikajanalle, joten kerroin on 4×. Tarkista, että ”→ X s todellista aikaa” vastaa todellista kuvausaikaa; muussa tapauksessa vaihda kerrointa.",
+    "context": "Complete instruction for capture speed, slow-motion factor and duration check.",
+    "screen": "Jump measurement",
+    "role": "instruction"
+  },
+  "cmj.duration.played_as_filmed": {
+    "en": "Clip: {fileSeconds} s, played as filmed · {effectiveFps} fps effective (≈±{precisionCm} cm)",
+    "fi": "Video: {fileSeconds} s, toisto kuvausnopeudella · tehollinen kuvataajuus {effectiveFps} fps (≈±{precisionCm} cm)",
+    "context": "Complete duration and precision summary for a normal-speed clip.",
+    "screen": "Jump measurement",
+    "role": "status",
+    "examples": {
+      "fileSeconds": "3,20",
+      "effectiveFps": "240",
+      "precisionCm": "0,5"
+    }
+  },
+  "cmj.duration.slow_motion": {
+    "en": "File: {fileSeconds} s → {realSeconds} s real at {factor}× · timeline {timelineFps} fps · {effectiveFps} fps effective (≈±{precisionCm} cm)",
+    "fi": "Tiedosto: {fileSeconds} s → {realSeconds} s todellista aikaa kertoimella {factor}× · aikajana {timelineFps} fps · tehollinen kuvataajuus {effectiveFps} fps (≈±{precisionCm} cm)",
+    "context": "Complete duration and precision summary for a slow-motion clip.",
+    "screen": "Jump measurement",
+    "role": "status",
+    "examples": {
+      "fileSeconds": "12,80",
+      "realSeconds": "3,20",
+      "factor": "4",
+      "timelineFps": "60",
+      "effectiveFps": "240",
+      "precisionCm": "0,5"
+    }
+  },
+  "plates.delta.replace.side": {
+    "en": "{sign}{difference}{unit} from {previous}{unit} — remove {remove}, then add {add} per side.",
+    "fi": "Muutos {sign}{difference}{unit}, aiempi paino {previous}{unit} — poista {remove} ja lisää sitten {add} kummallekin puolelle.",
+    "context": "Complete per-side plate change requiring both removal and addition.",
+    "screen": "Plate calculator",
+    "role": "instruction",
+    "examples": {
+      "sign": "+",
+      "difference": "5",
+      "unit": "kg",
+      "previous": "80",
+      "remove": "1 × 1,25kg",
+      "add": "1 × 2,5kg"
+    }
+  },
+  "plates.delta.replace.end": {
+    "en": "{sign}{difference}{unit} from {previous}{unit} — remove {remove}, then add {add} on the landmine end.",
+    "fi": "Muutos {sign}{difference}{unit}, aiempi paino {previous}{unit} — poista tangon päästä {remove} ja lisää sitten {add}.",
+    "context": "Complete landmine-end plate change requiring both removal and addition.",
+    "screen": "Plate calculator",
+    "role": "instruction",
+    "examples": {
+      "sign": "+",
+      "difference": "5",
+      "unit": "kg",
+      "previous": "40",
+      "remove": "1 × 1,25kg",
+      "add": "1 × 5kg"
+    }
+  },
+  "plates.delta.remove.side": {
+    "en": "{sign}{difference}{unit} from {previous}{unit} — remove {remove} per side.",
+    "fi": "Muutos {sign}{difference}{unit}, aiempi paino {previous}{unit} — poista {remove} kummaltakin puolelta.",
+    "context": "Complete per-side plate removal instruction.",
+    "screen": "Plate calculator",
+    "role": "instruction",
+    "examples": {
+      "sign": "−",
+      "difference": "5",
+      "unit": "kg",
+      "previous": "80",
+      "remove": "1 × 2,5kg"
+    }
+  },
+  "plates.delta.remove.end": {
+    "en": "{sign}{difference}{unit} from {previous}{unit} — remove {remove} from the landmine end.",
+    "fi": "Muutos {sign}{difference}{unit}, aiempi paino {previous}{unit} — poista tangon päästä {remove}.",
+    "context": "Complete landmine-end plate removal instruction.",
+    "screen": "Plate calculator",
+    "role": "instruction",
+    "examples": {
+      "sign": "−",
+      "difference": "5",
+      "unit": "kg",
+      "previous": "40",
+      "remove": "1 × 5kg"
+    }
+  },
+  "plates.delta.add.side": {
+    "en": "{sign}{difference}{unit} from {previous}{unit} — add {add} per side.",
+    "fi": "Muutos {sign}{difference}{unit}, aiempi paino {previous}{unit} — lisää {add} kummallekin puolelle.",
+    "context": "Complete per-side plate addition instruction.",
+    "screen": "Plate calculator",
+    "role": "instruction",
+    "examples": {
+      "sign": "+",
+      "difference": "5",
+      "unit": "kg",
+      "previous": "80",
+      "add": "1 × 2,5kg"
+    }
+  },
+  "plates.delta.add.end": {
+    "en": "{sign}{difference}{unit} from {previous}{unit} — add {add} on the landmine end.",
+    "fi": "Muutos {sign}{difference}{unit}, aiempi paino {previous}{unit} — lisää tangon päähän {add}.",
+    "context": "Complete landmine-end plate addition instruction.",
+    "screen": "Plate calculator",
+    "role": "instruction",
+    "examples": {
+      "sign": "+",
+      "difference": "5",
+      "unit": "kg",
+      "previous": "40",
+      "add": "1 × 5kg"
+    }
+  },
+  "plates.delta.unavailable": {
+    "en": "{sign}{difference}{unit} from {previous}{unit} — no plate change is possible with the available plates.",
+    "fi": "Muutos {sign}{difference}{unit}, aiempi paino {previous}{unit} — muutosta ei voi tehdä käytettävissä olevilla levyillä.",
+    "context": "Complete message when the requested change cannot be composed from available plates.",
+    "screen": "Plate calculator",
+    "role": "status",
+    "examples": {
+      "sign": "+",
+      "difference": "1",
+      "unit": "kg",
+      "previous": "80"
+    }
+  },
+  "plates.row.side": {
+    "en": "× {count} per side",
+    "fi": "× {count} kummallekin puolelle",
+    "context": "Quantity of one plate size loaded on each side of a bar.",
+    "screen": "Plate calculator",
+    "role": "label",
+    "examples": {
+      "count": "1"
+    }
+  },
+  "plates.row.end": {
+    "en": "× {count} on the end",
+    "fi": "× {count} tangon päähän",
+    "context": "Quantity of one plate size loaded on a landmine end.",
+    "screen": "Plate calculator",
+    "role": "label",
+    "examples": {
+      "count": "1"
+    }
+  },
+  "plates.unavailable.side": {
+    "en": "{remainder}{unit} per side cannot be made with these plates.",
+    "fi": "Näillä levyillä ei saa lisättyä {remainder}{unit} kummallekin puolelle.",
+    "context": "Per-side remainder that cannot be composed from available plates.",
+    "screen": "Plate calculator",
+    "role": "status",
+    "examples": {
+      "remainder": "0,5",
+      "unit": "kg"
+    }
+  },
+  "plates.unavailable.end": {
+    "en": "{remainder}{unit} on the end cannot be made with these plates.",
+    "fi": "Näillä levyillä ei saa lisättyä {remainder}{unit} tangon päähän.",
+    "context": "Landmine-end remainder that cannot be composed from available plates.",
+    "screen": "Plate calculator",
+    "role": "status",
+    "examples": {
+      "remainder": "0,5",
+      "unit": "kg"
+    }
+  },
+  "plan_import.error.invalid": {
+    "en": "Invalid plan: {error}",
+    "fi": "Virheellinen ohjelma: {error}",
+    "context": "Plan import failure including the specific validation or parsing error.",
+    "screen": "Plan import",
+    "role": "error",
+    "examples": {
+      "error": "Liikkeen nimi puuttuu"
+    }
+  },
+  "settings.unit.changed": {
+    "en": "Unit set to {unit}; existing numbers were not converted.",
+    "fi": "Yksiköksi asetettiin {unit}; aiempia lukuja ei muunnettu.",
+    "context": "Confirmation after changing the display unit without converting stored values.",
+    "screen": "Settings",
+    "role": "status",
+    "examples": {
+      "unit": "kg"
+    }
+  },
+  "history.week.summary": {
+    "en": "This week: {sessions} sessions · {sets} sets · {volume} {unit} lifted",
+    "fi": "Tällä viikolla: treenejä {sessions} · sarjoja {sets} · nostettu {volume} {unit}",
+    "context": "Complete current-week training summary.",
+    "screen": "History",
+    "role": "summary",
+    "examples": {
+      "sessions": "3",
+      "sets": "42",
+      "volume": "12 450",
+      "unit": "kg"
+    }
+  },
+  "history.body_weight.latest": {
+    "en": "Latest: {weight} {unit} on {date} · {entries} entries",
+    "fi": "Viimeisin: {weight} {unit}, {date} · kirjauksia {entries}",
+    "context": "Complete latest body-weight summary.",
+    "screen": "History",
+    "role": "summary",
+    "examples": {
+      "weight": "80,5",
+      "unit": "kg",
+      "date": "6.9.",
+      "entries": "12"
+    }
+  },
+  "sync.status.synced_at": {
+    "en": "✓ Synced {time}",
+    "fi": "✓ Synkronoitu {time}",
+    "context": "Cloud sync status followed by a localized relative time.",
+    "screen": "Cloud sync",
+    "role": "status",
+    "examples": {
+      "time": "juuri nyt"
+    }
+  },
+  "cloud_sync.error.status": {
+    "en": "Sync error: {status}",
+    "fi": "Synkronointivirhe: {status}",
+    "context": "Cloud upload error containing an HTTP status code.",
+    "screen": "Cloud sync",
+    "role": "error",
+    "examples": {
+      "status": "500"
+    }
+  },
+  "cloud_fetch.error.status": {
+    "en": "Fetch error: {status}",
+    "fi": "Noutovirhe: {status}",
+    "context": "Cloud download error containing an HTTP status code.",
+    "screen": "Cloud sync",
+    "role": "error",
+    "examples": {
+      "status": "500"
+    }
+  },
+  "history.merge.title": {
+    "en": "Merge into “{exercise}”",
+    "fi": "Yhdistä nimeen ”{exercise}”",
+    "context": "Dialog title naming the canonical exercise that selected aliases will merge into.",
+    "screen": "History",
+    "role": "heading",
+    "examples": {
+      "exercise": "Penkkipunnerrus"
+    }
+  },
+  "history.merge.success": {
+    "en": "Merged under {exercise} ✓",
+    "fi": "Yhdistetty nimeen {exercise} ✓",
+    "context": "Confirmation after exercise aliases are merged under the named exercise.",
+    "screen": "History",
+    "role": "status",
+    "examples": {
+      "exercise": "Penkkipunnerrus"
+    }
+  },
+  "warmup_editor.title": {
+    "en": "Warm-up — {day}",
+    "fi": "Lämmittely — {day}",
+    "context": "Warm-up editor title naming the plan day being edited.",
+    "screen": "Plan editor",
+    "role": "heading",
+    "examples": {
+      "day": "Päivä A"
+    }
+  },
+  "plan.day.delete.title": {
+    "en": "Delete {day}?",
+    "fi": "Poistetaanko {day}?",
+    "context": "Confirmation title naming the plan day that will be deleted.",
+    "screen": "Plan editor",
+    "role": "heading",
+    "examples": {
+      "day": "Päivä A"
+    }
+  },
+  "plan.import.title": {
+    "en": "Import “{plan}”?",
+    "fi": "Tuodaanko ”{plan}”?",
+    "context": "Confirmation title naming the workout plan to import.",
+    "screen": "Plan import",
+    "role": "heading",
+    "examples": {
+      "plan": "Voimaohjelma"
+    }
+  }
+}

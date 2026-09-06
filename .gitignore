@@ -20,3 +20,6 @@ desktop.ini
 # Logs / temp
 *.log
 tmp/
+
+# Local translation reviewer session lock
+locales/.review.lock

@@ -1,0 +1,78 @@
+import { createHash } from 'node:crypto';
+import { readFile, writeFile, rename, mkdir, readdir } from 'node:fs/promises';
+import path from 'node:path';
+export const hash = value => createHash('sha256').update(typeof value === 'string' ? value : JSON.stringify(value)).digest('hex').slice(0, 20);
+export const placeholders = text => [...new Set([...text.matchAll(/\{([a-zA-Z][\w]*)\}/g)].map(m => m[1]))].sort();
+export const revision = entry => hash({en:entry.en,context:entry.context,screen:entry.screen,role:entry.role,placeholders:entry.placeholders || placeholders(entry.en)});
+export async function json(file, fallback) { try { return JSON.parse(await readFile(file, 'utf8')); } catch (e) { if(e.code === 'ENOENT' && fallback !== undefined) return fallback; throw e; } }
+export async function atomic(file, content) { await mkdir(path.dirname(file), {recursive:true}); const tmp = `${file}.${process.pid}.tmp`; await writeFile(tmp, content); await rename(tmp, file); }
+export async function load(root) {
+  const source = {}; const dir = path.join(root,'locales/source');
+  for(const file of (await readdir(dir)).filter(f=>f.endsWith('.json')).sort()) {
+    const entries = await json(path.join(dir,file));
+    for(const [key,e] of Object.entries(entries)) {
+      if(Object.hasOwn(source,key)) throw Error(`Duplicate key: ${key}`);
+      // Segments may contain hyphens because source keys mirror DOM/data names
+      // (for example action_confirm-finish.button.cancel and trap-bar).
+      if(!/^[a-zA-Z][\w-]*(?:\.[\w-]+)+$/.test(key)) throw Error(`Invalid contextual key: ${key}`);
+      for(const field of ['en','context','screen','role']) if(typeof e[field] !== 'string' || !e[field].trim()) throw Error(`${key}: missing ${field}`);
+      source[key]=e;
+    }
+  }
+  if(!Object.keys(source).length) throw Error('Source catalogue is empty');
+  return {source, review:await json(path.join(root,'locales/fi.review.json'),{schemaVersion:1,entries:{}})};
+}
+export function validate(entry, fi, key='Translation') {
+  if(typeof fi !== 'string' || !fi.trim()) throw Error(`${key}: Finnish is missing; add a draft or run generate`);
+  if(fi.length > 12000) throw Error(`${key}: translation is too long`);
+  if(JSON.stringify(placeholders(entry.en)) !== JSON.stringify(placeholders(fi))) throw Error(`${key}: placeholders must match English`);
+  if(/<\/?[a-z][^>]*>/i.test(fi)) throw Error(`${key}: translations must be plain text, without HTML`);
+}
+function snapshot(record, action) {
+  return {action,at:new Date().toISOString(),revision:record.revision,source:record.source,fi:record.fi,status:record.status,origin:record.origin};
+}
+export function reconcile(source, input) {
+  const review = structuredClone(input); review.schemaVersion=1; review.entries ||= {};
+  for(const [key,entry] of Object.entries(source)) {
+    const rev=revision(entry); let r=review.entries[key];
+    if(!r) r=review.entries[key]={revision:rev,source:entry,fi:entry.fi || '',status:entry.fi?'draft':'missing',origin:'source',history:[]};
+    else if(r.revision !== rev) {
+      r.history.push(snapshot(r,'source-changed'));
+      const fresh = entry.fi && entry.fi !== r.source.fi;
+      Object.assign(r,{revision:rev,source:entry,fi:fresh?entry.fi:'',status:fresh?'needs-review':'missing',origin:'source'});
+      delete r.suggestion;
+    } else {
+      if(r.status === 'retired') r.status = r.fi?'needs-review':'missing';
+      if(r.origin === 'source' && r.source.fi !== entry.fi) { r.history.push(snapshot(r,'source-draft-updated')); r.fi=entry.fi || '';r.status=r.fi?'draft':'missing'; }
+      r.source=entry;
+    }
+  }
+  for(const [key,r] of Object.entries(review.entries)) if(!Object.hasOwn(source,key) && r.status!=='retired') {r.history.push(snapshot(r,'retired'));r.status='retired';}
+  return review;
+}
+export const recordVersion = r => hash(r);
+export function edit(source, input, {key,fi,version,sourceRevision,action='draft',historyIndex}) {
+  const review=reconcile(source,input);const r=review.entries[key];
+  if(!Object.hasOwn(source,key)||!r) throw Error('Unknown or retired entry');
+  if(version!==recordVersion(r)||sourceRevision!==r.revision) {const e=Error('This entry changed. Reload it before saving; your text is still in the editor.');e.status=409;throw e;}
+  if(!['draft','approve','undo'].includes(action)) throw Error('Unknown action');
+  if(action==='undo') { const old=r.history[historyIndex]; if(!old) throw Error('Unknown history entry'); fi=old.fi; }
+  validate(source[key],fi,key); r.history.push(snapshot(r,action));
+  Object.assign(r,{fi,status:action==='approve'?'approved':'draft',origin:'manual'});
+  return review;
+}
+export function catalog(source, review) {
+  const entries={};
+  for(const key of Object.keys(source).sort()) {const r=review.entries[key];if(r.revision!==revision(source[key])) throw Error(`${key}: stale Finnish`); validate(source[key],r.fi,key);entries[key]={en:source[key].en,fi:r.fi};}
+  const payload={entries,version:hash(entries)};
+  return `// Generated by tools/i18n/cli.mjs build. Do not edit.\nglobalThis.GYM_I18N_CATALOG = ${JSON.stringify(payload,null,2).replace(/</g,'\\u003c')};\n`;
+}
+export async function save(root,review) {await atomic(path.join(root,'locales/fi.review.json'),JSON.stringify(review,null,2)+'\n');}
+export async function build(root, {check=false}={}) {
+  const {source,review:old}=await load(root);const review=reconcile(source,old);
+  if(!check) await save(root,review);
+  const result=catalog(source,review);const out=path.join(root,'locales/catalog.js');
+  if(check) { if(JSON.stringify(review)!==JSON.stringify(old)) throw Error('Review queue is out of date: run build');if(await readFile(out,'utf8').catch(()=>null)!==result) throw Error('Runtime catalogue is out of date: run build'); }
+  else await atomic(out,result);
+  return {source,review};
+}

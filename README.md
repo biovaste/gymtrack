@@ -208,6 +208,15 @@ you a note underneath.
 
 ## Development & updates
 
+### English and Finnish
+
+Choose English or Suomi in Settings. Finnish drafts are available before review;
+exercise display names are translated without changing stored history identities.
+Run `node tools/i18n/cli.mjs review` to edit and approve wording in the local browser
+reviewer. After app or translation changes, run `node tools/i18n/cli.mjs build`
+and `node tools/i18n/cli.mjs check` before releasing. See
+[the localization guide](docs/localization.md) for the workflow and recurring checks.
+
 The app is hosted on **Cloudflare Pages** at `https://gymtrack.hithitpull.fi`.
 The sync API runs as a **Cloudflare Worker** at `https://api.gymtrack.hithitpull.fi`.
 

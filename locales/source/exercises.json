@@ -1,0 +1,1266 @@
+{
+  "exercises.bench_press.name": {
+    "en": "Bench Press",
+    "fi": "Penkkipunnerrus",
+    "context": "Display name for the Bench Press movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.incline_bench_press.name": {
+    "en": "Incline Bench Press",
+    "fi": "Vinopenkkipunnerrus",
+    "context": "Display name for the Incline Bench Press movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.dumbbell_bench_press.name": {
+    "en": "Dumbbell Bench Press",
+    "fi": "Penkkipunnerrus käsipainoilla",
+    "context": "Display name for the Dumbbell Bench Press movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.squat.name": {
+    "en": "Squat",
+    "fi": "Kyykky",
+    "context": "Display name for the Squat movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.front_squat.name": {
+    "en": "Front Squat",
+    "fi": "Etukyykky",
+    "context": "Display name for the Front Squat movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.deadlift.name": {
+    "en": "Deadlift",
+    "fi": "Maastaveto",
+    "context": "Display name for the Deadlift movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.romanian_deadlift.name": {
+    "en": "Romanian Deadlift",
+    "fi": "Romanialainen maastaveto",
+    "context": "Display name for the Romanian Deadlift movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.overhead_press.name": {
+    "en": "Overhead Press",
+    "fi": "Pystypunnerrus",
+    "context": "Display name for the Overhead Press movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.barbell_row.name": {
+    "en": "Barbell Row",
+    "fi": "Kulmasoutu tangolla",
+    "context": "Display name for the Barbell Row movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.dumbbell_row.name": {
+    "en": "Dumbbell Row",
+    "fi": "Kulmasoutu käsipainolla",
+    "context": "Display name for the Dumbbell Row movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.cable_row.name": {
+    "en": "Cable Row",
+    "fi": "Alataljasoutu",
+    "context": "Display name for the Cable Row movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.pull_up.name": {
+    "en": "Pull-Up",
+    "fi": "Leuanveto myötäotteella",
+    "context": "Display name for the Pull-Up movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.chin_up.name": {
+    "en": "Chin-Up",
+    "fi": "Leuanveto vastaotteella",
+    "context": "Display name for the Chin-Up movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.lat_pulldown.name": {
+    "en": "Lat Pulldown",
+    "fi": "Ylätalja",
+    "context": "Display name for the Lat Pulldown movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.dip.name": {
+    "en": "Dip",
+    "fi": "Dippi",
+    "context": "Display name for the Dip movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.lateral_raise.name": {
+    "en": "Lateral Raise",
+    "fi": "Vipunosto sivulle",
+    "context": "Display name for the Lateral Raise movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.face_pull.name": {
+    "en": "Face Pull",
+    "fi": "Face pull",
+    "context": "Display name for the Face Pull movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.rear_delt_fly.name": {
+    "en": "Rear Delt Fly",
+    "fi": "Vipunosto takaolkapäille",
+    "context": "Display name for the Rear Delt Fly movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.bicep_curl.name": {
+    "en": "Bicep Curl",
+    "fi": "Hauiskääntö",
+    "context": "Display name for the Bicep Curl movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.hammer_curl.name": {
+    "en": "Hammer Curl",
+    "fi": "Hammer-hauiskääntö",
+    "context": "Display name for the Hammer Curl movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.triceps_pushdown.name": {
+    "en": "Triceps Pushdown",
+    "fi": "Ojentajapunnerrus taljassa",
+    "context": "Display name for the Triceps Pushdown movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.skull_crusher.name": {
+    "en": "Skull Crusher",
+    "fi": "Ranskalainen punnerrus maaten",
+    "context": "Display name for the Skull Crusher movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.leg_press.name": {
+    "en": "Leg Press",
+    "fi": "Jalkaprässi",
+    "context": "Display name for the Leg Press movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.leg_extension.name": {
+    "en": "Leg Extension",
+    "fi": "Reidenojennus",
+    "context": "Display name for the Leg Extension movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.leg_curl.name": {
+    "en": "Leg Curl",
+    "fi": "Reidenkoukistus",
+    "context": "Display name for the Leg Curl movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.calf_raise.name": {
+    "en": "Calf Raise",
+    "fi": "Pohjenousu",
+    "context": "Display name for the Calf Raise movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.hip_thrust.name": {
+    "en": "Hip Thrust",
+    "fi": "Lantionnosto penkkiä vasten",
+    "context": "Display name for the Hip Thrust movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.lunge.name": {
+    "en": "Lunge",
+    "fi": "Askelkyykky",
+    "context": "Display name for the Lunge movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.bulgarian_split_squat.name": {
+    "en": "Bulgarian Split Squat",
+    "fi": "Bulgarialainen askelkyykky",
+    "context": "Display name for the Bulgarian Split Squat movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.shrug.name": {
+    "en": "Shrug",
+    "fi": "Hartioiden kohautus",
+    "context": "Display name for the Shrug movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.plank.name": {
+    "en": "Plank",
+    "fi": "Lankku",
+    "context": "Display name for the Plank movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.chest_fly.name": {
+    "en": "Chest Fly",
+    "fi": "Rintavipunosto",
+    "context": "Display name for the Chest Fly movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.good_morning.name": {
+    "en": "Good Morning",
+    "fi": "Hyvää huomenta -liike",
+    "context": "Display name for the Good Morning movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.pullover.name": {
+    "en": "Pullover",
+    "fi": "Pullover",
+    "context": "Display name for the Pullover movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.machine_chest_press.name": {
+    "en": "Machine Chest Press",
+    "fi": "Rintapunnerrus laitteessa",
+    "context": "Display name for the Machine Chest Press movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.seated_dumbbell_press.name": {
+    "en": "Seated Dumbbell Press",
+    "fi": "Pystypunnerrus käsipainoilla istuen",
+    "context": "Display name for the Seated Dumbbell Press movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.incline_dumbbell_press.name": {
+    "en": "Incline Dumbbell Press",
+    "fi": "Vinopenkkipunnerrus käsipainoilla",
+    "context": "Display name for the Incline Dumbbell Press movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.cable_lateral_raise.name": {
+    "en": "Cable Lateral Raise",
+    "fi": "Vipunosto sivulle taljassa",
+    "context": "Display name for the Cable Lateral Raise movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.back_squat.name": {
+    "en": "Back Squat",
+    "fi": "Takakyykky",
+    "context": "Display name for the Back Squat movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.hack_squat.name": {
+    "en": "Hack Squat",
+    "fi": "Hack-kyykky",
+    "context": "Display name for the Hack Squat movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.goblet_squat.name": {
+    "en": "Goblet Squat",
+    "fi": "Goblet-kyykky",
+    "context": "Display name for the Goblet Squat movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.split_squat.name": {
+    "en": "Split Squat",
+    "fi": "Askelkyykky paikallaan",
+    "context": "Display name for the Split Squat movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.sumo_deadlift.name": {
+    "en": "Sumo Deadlift",
+    "fi": "Sumomaastaveto",
+    "context": "Display name for the Sumo Deadlift movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.trap_bar_deadlift.name": {
+    "en": "Trap Bar Deadlift",
+    "fi": "Maastaveto trap-tangolla",
+    "context": "Display name for the Trap Bar Deadlift movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.stiff_leg_deadlift.name": {
+    "en": "Stiff Leg Deadlift",
+    "fi": "Suorin jaloin maastaveto",
+    "context": "Display name for the Stiff Leg Deadlift movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.chest_press.name": {
+    "en": "Chest Press",
+    "fi": "Rintapunnerrus",
+    "context": "Display name for the Chest Press movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.shoulder_press.name": {
+    "en": "Shoulder Press",
+    "fi": "Olkapääpunnerrus",
+    "context": "Display name for the Shoulder Press movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.arnold_press.name": {
+    "en": "Arnold Press",
+    "fi": "Arnold-punnerrus",
+    "context": "Display name for the Arnold Press movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.push_press.name": {
+    "en": "Push Press",
+    "fi": "Vauhtipunnerrus",
+    "context": "Display name for the Push Press movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.seated_row.name": {
+    "en": "Seated Row",
+    "fi": "Soutu istuen",
+    "context": "Display name for the Seated Row movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.t_bar_row.name": {
+    "en": "T Bar Row",
+    "fi": "T-kulmasoutu",
+    "context": "Display name for the T Bar Row movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.pendlay_row.name": {
+    "en": "Pendlay Row",
+    "fi": "Pendlay-soutu",
+    "context": "Display name for the Pendlay Row movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.upright_row.name": {
+    "en": "Upright Row",
+    "fi": "Pystysoutu",
+    "context": "Display name for the Upright Row movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.inverted_row.name": {
+    "en": "Inverted Row",
+    "fi": "Käänteinen soutu",
+    "context": "Display name for the Inverted Row movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.triceps_extension.name": {
+    "en": "Triceps Extension",
+    "fi": "Ojentajapunnerrus",
+    "context": "Display name for the Triceps Extension movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.overhead_triceps_extension.name": {
+    "en": "Overhead Triceps Extension",
+    "fi": "Ojentajapunnerrus pään yli",
+    "context": "Display name for the Overhead Triceps Extension movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.preacher_curl.name": {
+    "en": "Preacher Curl",
+    "fi": "Scott-hauiskääntö",
+    "context": "Display name for the Preacher Curl movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.concentration_curl.name": {
+    "en": "Concentration Curl",
+    "fi": "Keskitetty hauiskääntö",
+    "context": "Display name for the Concentration Curl movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.reverse_curl.name": {
+    "en": "Reverse Curl",
+    "fi": "Hauiskääntö myötäotteella",
+    "context": "Display name for the Reverse Curl movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.reverse_fly.name": {
+    "en": "Reverse Fly",
+    "fi": "Käänteinen vipunosto",
+    "context": "Display name for the Reverse Fly movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.pec_deck.name": {
+    "en": "Pec Deck",
+    "fi": "Pec deck",
+    "context": "Display name for the Pec Deck movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.reverse_pec_deck.name": {
+    "en": "Reverse Pec Deck",
+    "fi": "Käänteinen pec deck",
+    "context": "Display name for the Reverse Pec Deck movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.cable_crossover.name": {
+    "en": "Cable Crossover",
+    "fi": "Ristikkäistalja",
+    "context": "Display name for the Cable Crossover movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.seated_leg_curl.name": {
+    "en": "Seated Leg Curl",
+    "fi": "Reidenkoukistus istuen",
+    "context": "Display name for the Seated Leg Curl movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.lying_leg_curl.name": {
+    "en": "Lying Leg Curl",
+    "fi": "Reidenkoukistus maaten",
+    "context": "Display name for the Lying Leg Curl movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.standing_calf_raise.name": {
+    "en": "Standing Calf Raise",
+    "fi": "Pohjenousu seisten",
+    "context": "Display name for the Standing Calf Raise movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.seated_calf_raise.name": {
+    "en": "Seated Calf Raise",
+    "fi": "Pohjenousu istuen",
+    "context": "Display name for the Seated Calf Raise movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.reverse_lunge.name": {
+    "en": "Reverse Lunge",
+    "fi": "Askelkyykky taakse",
+    "context": "Display name for the Reverse Lunge movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.walking_lunge.name": {
+    "en": "Walking Lunge",
+    "fi": "Kävelyaskelkyykky",
+    "context": "Display name for the Walking Lunge movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.step_up.name": {
+    "en": "Step Up",
+    "fi": "Nousu korokkeelle",
+    "context": "Display name for the Step Up movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.glute_bridge.name": {
+    "en": "Glute Bridge",
+    "fi": "Lantionnosto lattialla",
+    "context": "Display name for the Glute Bridge movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.back_extension.name": {
+    "en": "Back Extension",
+    "fi": "Selänojennus",
+    "context": "Display name for the Back Extension movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.hip_abduction.name": {
+    "en": "Hip Abduction",
+    "fi": "Lonkan loitonnus",
+    "context": "Display name for the Hip Abduction movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.hip_adduction.name": {
+    "en": "Hip Adduction",
+    "fi": "Lonkan lähennys",
+    "context": "Display name for the Hip Adduction movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.cable_kickback.name": {
+    "en": "Cable Kickback",
+    "fi": "Potku taakse taljassa",
+    "context": "Display name for the Cable Kickback movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.glute_kickback.name": {
+    "en": "Glute Kickback",
+    "fi": "Pakarapotku",
+    "context": "Display name for the Glute Kickback movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.push_up.name": {
+    "en": "Push-Up",
+    "fi": "Etunojapunnerrus",
+    "context": "Display name for the Push-Up movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.sit_up.name": {
+    "en": "Sit-Up",
+    "fi": "Istumaannousu",
+    "context": "Display name for the Sit-Up movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.crunch.name": {
+    "en": "Crunch",
+    "fi": "Vatsarutistus",
+    "context": "Display name for the Crunch movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.cable_crunch.name": {
+    "en": "Cable Crunch",
+    "fi": "Vatsarutistus taljassa",
+    "context": "Display name for the Cable Crunch movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.hanging_leg_raise.name": {
+    "en": "Hanging Leg Raise",
+    "fi": "Jalkojen nosto roikkuen",
+    "context": "Display name for the Hanging Leg Raise movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.knee_raise.name": {
+    "en": "Knee Raise",
+    "fi": "Polvien nosto",
+    "context": "Display name for the Knee Raise movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.ab_wheel_rollout.name": {
+    "en": "Ab Wheel Rollout",
+    "fi": "Vatsarullaus",
+    "context": "Display name for the Ab Wheel Rollout movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.russian_twist.name": {
+    "en": "Russian Twist",
+    "fi": "Vartalon kierto istuen",
+    "context": "Display name for the Russian Twist movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.side_plank.name": {
+    "en": "Side Plank",
+    "fi": "Sivulankku",
+    "context": "Display name for the Side Plank movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.pallof_press.name": {
+    "en": "Pallof Press",
+    "fi": "Pallof-punnerrus",
+    "context": "Display name for the Pallof Press movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.dead_bug.name": {
+    "en": "Dead Bug",
+    "fi": "Dead bug",
+    "context": "Display name for the Dead Bug movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.bird_dog.name": {
+    "en": "Bird Dog",
+    "fi": "Bird dog",
+    "context": "Display name for the Bird Dog movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.box_jump.name": {
+    "en": "Box Jump",
+    "fi": "Boksihyppy",
+    "context": "Display name for the Box Jump movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.countermovement_jump.name": {
+    "en": "Countermovement Jump",
+    "fi": "Kevennyshyppy",
+    "context": "Display name for the Countermovement Jump movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.squat_jump.name": {
+    "en": "Squat Jump",
+    "fi": "Staattinen kyykkyhyppy",
+    "context": "Display name for the Squat Jump movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.broad_jump.name": {
+    "en": "Broad Jump",
+    "fi": "Vauhditon pituushyppy",
+    "context": "Display name for the Broad Jump movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.depth_jump.name": {
+    "en": "Depth Jump",
+    "fi": "Pudotushyppy",
+    "context": "Display name for the Depth Jump movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.kettlebell_swing.name": {
+    "en": "Kettlebell Swing",
+    "fi": "Kahvakuulaheilautus",
+    "context": "Display name for the Kettlebell Swing movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.farmer_carry.name": {
+    "en": "Farmer Carry",
+    "fi": "Farmarikävely",
+    "context": "Display name for the Farmer Carry movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.clean.name": {
+    "en": "Clean",
+    "fi": "Rinnalleveto",
+    "context": "Display name for the Clean movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.power_clean.name": {
+    "en": "Power Clean",
+    "fi": "Raaka rinnalleveto",
+    "context": "Display name for the Power Clean movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.snatch.name": {
+    "en": "Snatch",
+    "fi": "Tempaus",
+    "context": "Display name for the Snatch movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.burpee.name": {
+    "en": "Burpee",
+    "fi": "Burpee",
+    "context": "Display name for the Burpee movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.bike.name": {
+    "en": "Bike",
+    "fi": "Kuntopyörä",
+    "context": "Display name for the Bike movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.treadmill.name": {
+    "en": "Treadmill",
+    "fi": "Juoksumatto",
+    "context": "Display name for the Treadmill movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.rowing_machine.name": {
+    "en": "Rowing Machine",
+    "fi": "Soutulaite",
+    "context": "Display name for the Rowing Machine movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.elliptical.name": {
+    "en": "Elliptical",
+    "fi": "Crosstrainer",
+    "context": "Display name for the Elliptical movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.jump_rope.name": {
+    "en": "Jump Rope",
+    "fi": "Hyppynaru",
+    "context": "Display name for the Jump Rope movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.walking.name": {
+    "en": "Walking",
+    "fi": "Kävely",
+    "context": "Display name for the Walking movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.running.name": {
+    "en": "Running",
+    "fi": "Juoksu",
+    "context": "Display name for the Running movement. Keep separate from other movements; never use translated text as a saved exercise identity.",
+    "screen": "Exercise cards, plan, history, alternates and exercise information",
+    "role": "exercise name"
+  },
+  "exercises.modifier_single_arm.name": {
+    "en": "Single Arm",
+    "fi": "yhdellä kädellä",
+    "context": "Qualifier appended to a recognized exercise movement, describing single arm.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_one_arm.name": {
+    "en": "One Arm",
+    "fi": "yhdellä kädellä",
+    "context": "Qualifier appended to a recognized exercise movement, describing one arm.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_two_arm.name": {
+    "en": "Two Arm",
+    "fi": "kahdella kädellä",
+    "context": "Qualifier appended to a recognized exercise movement, describing two arm.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_single_leg.name": {
+    "en": "Single Leg",
+    "fi": "yhdellä jalalla",
+    "context": "Qualifier appended to a recognized exercise movement, describing single leg.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_one_leg.name": {
+    "en": "One Leg",
+    "fi": "yhdellä jalalla",
+    "context": "Qualifier appended to a recognized exercise movement, describing one leg.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_two_leg.name": {
+    "en": "Two Leg",
+    "fi": "kahdella jalalla",
+    "context": "Qualifier appended to a recognized exercise movement, describing two leg.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_double_leg.name": {
+    "en": "Double Leg",
+    "fi": "kahdella jalalla",
+    "context": "Qualifier appended to a recognized exercise movement, describing double leg.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_chest_supported.name": {
+    "en": "Chest Supported",
+    "fi": "rintatuella",
+    "context": "Qualifier appended to a recognized exercise movement, describing chest supported.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_close_grip.name": {
+    "en": "Close Grip",
+    "fi": "kapealla otteella",
+    "context": "Qualifier appended to a recognized exercise movement, describing close grip.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_wide_grip.name": {
+    "en": "Wide Grip",
+    "fi": "leveällä otteella",
+    "context": "Qualifier appended to a recognized exercise movement, describing wide grip.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_neutral_grip.name": {
+    "en": "Neutral Grip",
+    "fi": "neutraalilla otteella",
+    "context": "Qualifier appended to a recognized exercise movement, describing neutral grip.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_underhand_grip.name": {
+    "en": "Underhand Grip",
+    "fi": "vastaotteella",
+    "context": "Qualifier appended to a recognized exercise movement, describing underhand grip.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_overhand_grip.name": {
+    "en": "Overhand Grip",
+    "fi": "myötäotteella",
+    "context": "Qualifier appended to a recognized exercise movement, describing overhand grip.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_dumbbell.name": {
+    "en": "Dumbbell",
+    "fi": "käsipainoilla",
+    "context": "Qualifier appended to a recognized exercise movement, describing dumbbell.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_barbell.name": {
+    "en": "Barbell",
+    "fi": "tangolla",
+    "context": "Qualifier appended to a recognized exercise movement, describing barbell.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_cable.name": {
+    "en": "Cable",
+    "fi": "taljassa",
+    "context": "Qualifier appended to a recognized exercise movement, describing cable.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_machine.name": {
+    "en": "Machine",
+    "fi": "laitteessa",
+    "context": "Qualifier appended to a recognized exercise movement, describing machine.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_bodyweight.name": {
+    "en": "Bodyweight",
+    "fi": "kehonpainolla",
+    "context": "Qualifier appended to a recognized exercise movement, describing bodyweight.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_kettlebell.name": {
+    "en": "Kettlebell",
+    "fi": "kahvakuulalla",
+    "context": "Qualifier appended to a recognized exercise movement, describing kettlebell.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_smith_machine.name": {
+    "en": "Smith Machine",
+    "fi": "Smith-laitteessa",
+    "context": "Qualifier appended to a recognized exercise movement, describing smith machine.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_resistance_band.name": {
+    "en": "Resistance Band",
+    "fi": "vastuskuminauhalla",
+    "context": "Qualifier appended to a recognized exercise movement, describing resistance band.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_banded.name": {
+    "en": "Banded",
+    "fi": "kuminauhalla",
+    "context": "Qualifier appended to a recognized exercise movement, describing banded.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_weighted.name": {
+    "en": "Weighted",
+    "fi": "lisäpainolla",
+    "context": "Qualifier appended to a recognized exercise movement, describing weighted.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_assisted.name": {
+    "en": "Assisted",
+    "fi": "avustettuna",
+    "context": "Qualifier appended to a recognized exercise movement, describing assisted.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_incline.name": {
+    "en": "Incline",
+    "fi": "vinopenkissä",
+    "context": "Qualifier appended to a recognized exercise movement, describing incline.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_decline.name": {
+    "en": "Decline",
+    "fi": "alaviistopenkissä",
+    "context": "Qualifier appended to a recognized exercise movement, describing decline.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_flat.name": {
+    "en": "Flat",
+    "fi": "tasapenkissä",
+    "context": "Qualifier appended to a recognized exercise movement, describing flat.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_seated.name": {
+    "en": "Seated",
+    "fi": "istuen",
+    "context": "Qualifier appended to a recognized exercise movement, describing seated.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_standing.name": {
+    "en": "Standing",
+    "fi": "seisten",
+    "context": "Qualifier appended to a recognized exercise movement, describing standing.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_lying.name": {
+    "en": "Lying",
+    "fi": "maaten",
+    "context": "Qualifier appended to a recognized exercise movement, describing lying.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_alternating.name": {
+    "en": "Alternating",
+    "fi": "vuorotellen",
+    "context": "Qualifier appended to a recognized exercise movement, describing alternating.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_unilateral.name": {
+    "en": "Unilateral",
+    "fi": "yksipuolisesti",
+    "context": "Qualifier appended to a recognized exercise movement, describing unilateral.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_bilateral.name": {
+    "en": "Bilateral",
+    "fi": "molemmin puolin",
+    "context": "Qualifier appended to a recognized exercise movement, describing bilateral.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_rope.name": {
+    "en": "Rope",
+    "fi": "köydellä",
+    "context": "Qualifier appended to a recognized exercise movement, describing rope.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_paused.name": {
+    "en": "Paused",
+    "fi": "pysäytyksellä",
+    "context": "Qualifier appended to a recognized exercise movement, describing paused.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_tempo.name": {
+    "en": "Tempo",
+    "fi": "tempolla",
+    "context": "Qualifier appended to a recognized exercise movement, describing tempo.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_deficit.name": {
+    "en": "Deficit",
+    "fi": "korokkeelta",
+    "context": "Qualifier appended to a recognized exercise movement, describing deficit.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_elevated.name": {
+    "en": "Elevated",
+    "fi": "korotettuna",
+    "context": "Qualifier appended to a recognized exercise movement, describing elevated.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.modifier_bent_over.name": {
+    "en": "Bent Over",
+    "fi": "etukumarassa",
+    "context": "Qualifier appended to a recognized exercise movement, describing bent over.",
+    "screen": "Imported exercise names",
+    "role": "exercise modifier"
+  },
+  "exercises.variant.name": {
+    "en": "{movement} — {modifiers}",
+    "fi": "{movement} — {modifiers}",
+    "context": "Display-only composition of a fully recognized exercise movement and all of its qualifiers. Modifiers are comma-separated Finnish phrases.",
+    "screen": "Imported exercise names",
+    "role": "exercise name template",
+    "examples": {
+      "movement": "Ylätalja",
+      "modifiers": "yhdellä kädellä"
+    }
+  },
+  "exercises.bench_press.description": {
+    "en": "Lie on a flat bench, grip the bar slightly wider than shoulder width, lower it to mid-chest with elbows ~45–70°, press back up. Keep shoulder blades pinched and feet planted.",
+    "fi": "Makaa tasapenkillä ja ota tangosta hieman hartioita leveämpi ote. Laske tanko rinnan keskiosaan kyynärpäät noin 45–70 asteen kulmassa vartaloon nähden ja punnerra takaisin ylös. Pidä lapaluut yhdessä ja jalat tukevasti maassa.",
+    "context": "Built-in technique explanation for bench press. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.incline_bench_press.description": {
+    "en": "Bench press on a 30–45° incline bench. Targets the upper chest and front delts. Lower the bar to the upper chest, just below the collarbones.",
+    "fi": "Tee penkkipunnerrus 30–45 asteen vinopenkillä. Liike kuormittaa erityisesti rinnan yläosaa ja etuolkapäitä. Laske tanko rinnan yläosaan juuri solisluiden alapuolelle.",
+    "context": "Built-in technique explanation for incline bench press. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.dumbbell_bench_press.description": {
+    "en": "Like the bench press but with dumbbells — greater range of motion and each side works independently. Lower until elbows are just below the bench.",
+    "fi": "Tee penkkipunnerrus käsipainoilla. Liikerata on laajempi ja kumpikin puoli työskentelee itsenäisesti. Laske painoja, kunnes kyynärpäät ovat hieman penkin tason alapuolella.",
+    "context": "Built-in technique explanation for dumbbell bench press. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.squat.description": {
+    "en": "Bar on upper back, feet shoulder width, brace your core, sit down between your hips until thighs are at least parallel, drive back up through mid-foot. Keep knees tracking over toes.",
+    "fi": "Aseta tanko yläselälle ja jalat hartioiden leveydelle. Jännitä keskivartalo ja laskeudu lantion väliin, kunnes reidet ovat vähintään vaakatasossa. Nouse ylös paino jalkaterän keskiosalla. Pidä polvet varpaiden suuntaisina.",
+    "context": "Built-in technique explanation for squat. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.front_squat.description": {
+    "en": "Bar racked on the front delts with elbows high. More upright torso than a back squat — emphasizes quads and upper back.",
+    "fi": "Pidä tanko etuolkapäillä ja kyynärpäät korkealla. Vartalo pysyy pystymmässä kuin takakyykyssä, mikä painottaa etureisiä ja yläselkää.",
+    "context": "Built-in technique explanation for front squat. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.deadlift.description": {
+    "en": "Bar over mid-foot, hinge down with a flat back, grip just outside the legs, push the floor away and stand tall. The bar stays in contact with the legs the whole way.",
+    "fi": "Aseta tanko jalkaterän keskiosan päälle. Taivuta lantiosta selkä neutraalina ja ota tangosta kiinni jalkojen ulkopuolelta. Työnnä lattiaa poispäin ja nouse suoraksi. Pidä tanko kiinni jaloissa koko liikkeen ajan.",
+    "context": "Built-in technique explanation for deadlift. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.romanian_deadlift.description": {
+    "en": "From standing, push hips back with a slight knee bend, lowering the bar along the thighs until you feel a hamstring stretch (~mid-shin), then drive hips forward. No floor touch.",
+    "fi": "Aloita seisten, työnnä lantiota taakse ja pidä polvet hieman koukussa. Laske tankoa reisiä pitkin, kunnes tunnet venytyksen takareisissä, yleensä noin säären puolivälissä. Työnnä lantio takaisin eteen. Tanko ei kosketa lattiaa.",
+    "context": "Built-in technique explanation for romanian deadlift. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.overhead_press.description": {
+    "en": "Standing, bar at the front delts, brace glutes and core, press straight overhead until elbows lock, head moves slightly \"through\" at the top.",
+    "fi": "Seiso tanko etuolkapäillä. Jännitä pakarat ja keskivartalo ja punnerra tanko suoraan pään yläpuolelle, kunnes kyynärpäät suoristuvat. Vie pää lopussa hieman käsien väliin.",
+    "context": "Built-in technique explanation for overhead press. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.barbell_row.description": {
+    "en": "Hinge to ~45°, flat back, pull the bar to the lower ribs/upper abdomen, squeeze the shoulder blades, lower under control.",
+    "fi": "Kallista vartaloa lantiosta noin 45 astetta ja pidä selkä neutraalina. Vedä tanko alimpien kylkiluiden tai ylävatsan kohdalle, purista lapaluut yhteen ja laske hallitusti.",
+    "context": "Built-in technique explanation for barbell row. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.dumbbell_row.description": {
+    "en": "One hand and knee on a bench, flat back, pull the dumbbell to your hip, elbow close to the body. Avoid twisting the torso.",
+    "fi": "Tue toinen käsi ja polvi penkille ja pidä selkä neutraalina. Vedä käsipaino kohti lantiota kyynärpää lähellä vartaloa. Vältä vartalon kiertämistä.",
+    "context": "Built-in technique explanation for dumbbell row. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.cable_row.description": {
+    "en": "Seated, chest tall, pull the handle to your abdomen while drawing shoulder blades back. Don't lean back excessively.",
+    "fi": "Istu rinta ryhdikkäänä. Vedä kahva vatsaa kohti ja lapaluut taakse. Vältä voimakasta taakse nojautumista.",
+    "context": "Built-in technique explanation for cable row. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.pull_up.description": {
+    "en": "Hang from a bar with an overhand grip, pull your chin over the bar by driving elbows down, lower fully. Add weight or use a band/machine to scale.",
+    "fi": "Roiku tangosta myötäotteella. Vedä leuka tangon yli suuntaamalla kyynärpäitä alas ja laskeudu kokonaan alas. Säädä kuormitusta lisäpainolla, kuminauhalla tai avustavalla laitteella.",
+    "context": "Built-in technique explanation for pull-up. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.chin_up.description": {
+    "en": "Pull-up with an underhand (supinated) grip — more biceps involvement.",
+    "fi": "Tee leuanveto vastaotteella eli kämmenet itseäsi kohti. Hauikset osallistuvat liikkeeseen enemmän kuin myötäotteella.",
+    "context": "Built-in technique explanation for chin-up. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.lat_pulldown.description": {
+    "en": "Seated at the cable station, pull the bar to the upper chest with a tall chest, control the way up. Think \"elbows to hips\".",
+    "fi": "Istu ylätaljassa rinta ryhdikkäänä. Vedä tanko rinnan yläosaan ja palauta hallitusti. Ajattele kyynärpäiden vetämistä kohti lantiota.",
+    "context": "Built-in technique explanation for lat pulldown. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.dip.description": {
+    "en": "On parallel bars, lower until shoulders are just below elbows with a slight forward lean, press back up. Forward lean = more chest, upright = more triceps.",
+    "fi": "Asetu nojapuille ja kallistu hieman eteen. Laskeudu, kunnes olkapäät ovat hieman kyynärpäitä alempana, ja punnerra ylös. Eteen kallistuminen painottaa rintaa, pystympi asento ojentajia.",
+    "context": "Built-in technique explanation for dip. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.lateral_raise.description": {
+    "en": "Standing with dumbbells at your sides, raise arms out to shoulder height with a soft elbow bend, lower slowly. Light weight, strict form.",
+    "fi": "Seiso käsipainot sivuilla. Nosta kädet sivuille hartioiden tasolle kyynärpäät hieman koukussa ja laske hitaasti. Käytä kevyttä painoa ja pidä liike hallittuna.",
+    "context": "Built-in technique explanation for lateral raise. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.face_pull.description": {
+    "en": "Rope at upper-chest height, pull toward your face while externally rotating so knuckles face the ceiling at the end. Great for rear delts and shoulder health.",
+    "fi": "Aseta taljan köysi rinnan yläosan korkeudelle. Vedä kohti kasvoja ja kierrä olkavarsia ulospäin niin, että rystyset osoittavat lopussa kattoon. Liike harjoittaa takaolkapäitä ja olkapään ulkokiertäjiä.",
+    "context": "Built-in technique explanation for face pull. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.rear_delt_fly.description": {
+    "en": "Hinged over (or chest on an incline bench), raise dumbbells out to the side with nearly straight arms, squeezing the rear delts.",
+    "fi": "Kallistu eteen tai tue rinta vinopenkkiin. Nosta käsipainot sivuille kädet lähes suorina ja jännitä takaolkapäitä.",
+    "context": "Built-in technique explanation for rear delt fly. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.bicep_curl.description": {
+    "en": "Elbows pinned at your sides, curl the weight up without swinging, lower slowly. Full stretch at the bottom.",
+    "fi": "Pidä kyynärpäät kyljissä. Koukista kädet heilauttamatta painoa ja laske hitaasti. Ojenna kädet liikkeen alaosassa täyteen venytykseen.",
+    "context": "Built-in technique explanation for bicep curl. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.hammer_curl.description": {
+    "en": "Curl with a neutral (thumbs-up) grip — hits the brachialis and forearms along with the biceps.",
+    "fi": "Tee hauiskääntö neutraalilla otteella eli peukalot ylöspäin. Liike harjoittaa hauisten lisäksi olkavarren lihasta ja kyynärvarsia.",
+    "context": "Built-in technique explanation for hammer curl. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.triceps_pushdown.description": {
+    "en": "At a cable with rope or bar, elbows pinned at your sides, extend the arms fully and squeeze, control the return.",
+    "fi": "Käytä taljassa köyttä tai tankoa. Pidä kyynärpäät kyljissä, ojenna kädet täysin ja jännitä ojentajia. Palauta hallitusti.",
+    "context": "Built-in technique explanation for triceps pushdown. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.skull_crusher.description": {
+    "en": "Lying on a bench, lower the bar/dumbbells to just above your forehead by bending only the elbows, then extend back up.",
+    "fi": "Makaa penkillä. Laske tanko tai käsipainot juuri otsan yläpuolelle koukistamalla vain kyynärpäitä ja ojenna kädet takaisin ylös.",
+    "context": "Built-in technique explanation for skull crusher. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.leg_press.description": {
+    "en": "Feet shoulder width on the platform, lower under control until knees are ~90° or slightly deeper, press without locking the knees harshly.",
+    "fi": "Aseta jalat hartioiden leveydelle levylle. Laske hallitusti, kunnes polvet ovat noin 90 asteen kulmassa tai hieman syvemmällä. Työnnä ylös lukitsematta polvia voimakkaasti.",
+    "context": "Built-in technique explanation for leg press. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.leg_extension.description": {
+    "en": "Seated machine, extend knees fully and squeeze the quads at the top, lower slowly.",
+    "fi": "Istu laitteessa, ojenna polvet täysin ja jännitä etureisiä yläasennossa. Laske hitaasti.",
+    "context": "Built-in technique explanation for leg extension. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.leg_curl.description": {
+    "en": "Machine curl for the hamstrings — flex the knees fully, control the return. Keep hips down (lying version).",
+    "fi": "Koukista polvet täysin takareisilaitteessa ja palauta hallitusti. Pidä lantio alustassa, jos teet liikkeen maaten.",
+    "context": "Built-in technique explanation for leg curl. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.calf_raise.description": {
+    "en": "Rise onto the balls of your feet as high as possible, pause, lower to a full stretch. Slow and controlled beats heavy and bouncy.",
+    "fi": "Nouse päkiöille mahdollisimman korkealle, pysähdy ja laske täyteen venytykseen. Tee liike hitaasti ja hallitusti ilman pomppimista.",
+    "context": "Built-in technique explanation for calf raise. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.hip_thrust.description": {
+    "en": "Upper back on a bench, bar over the hips, drive hips up until your torso is level, squeeze the glutes hard at the top, chin tucked.",
+    "fi": "Tue yläselkä penkkiin ja aseta tanko lantion päälle. Nosta lantio, kunnes vartalo on vaakatasossa, ja jännitä pakaroita yläasennossa. Pidä leuka hieman sisään vedettynä.",
+    "context": "Built-in technique explanation for hip thrust. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.lunge.description": {
+    "en": "Step forward (or backward for reverse lunge), lower the back knee toward the floor, push back up through the front heel. Torso tall.",
+    "fi": "Astu eteen tai taakse, jos teet liikkeen taaksepäin. Laske takapolvea kohti lattiaa ja ponnista ylös etujalan kantapään kautta. Pidä vartalo ryhdikkäänä.",
+    "context": "Built-in technique explanation for lunge. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.bulgarian_split_squat.description": {
+    "en": "Rear foot elevated on a bench, lower straight down on the front leg until the thigh is parallel, drive up. Brutal but effective for quads and glutes.",
+    "fi": "Nosta takajalka penkille. Laskeudu etujalan varassa suoraan alas, kunnes reisi on vaakatasossa, ja nouse ylös. Liike kuormittaa etureisiä ja pakaroita.",
+    "context": "Built-in technique explanation for bulgarian split squat. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.shrug.description": {
+    "en": "Holding a bar or dumbbells, lift your shoulders straight up toward your ears, pause, lower. No rolling.",
+    "fi": "Pidä tankoa tai käsipainoja käsissä. Nosta olkapäät suoraan kohti korvia, pysähdy ja laske. Älä pyöritä olkapäitä.",
+    "context": "Built-in technique explanation for shrug. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.plank.description": {
+    "en": "Forearms and toes, body in a straight line, glutes and core braced. Don't let the hips sag or pike.",
+    "fi": "Tukeudu kyynärvarsiin ja varpaisiin. Pidä vartalo suorassa sekä pakarat ja keskivartalo jännitettyinä. Älä päästä lantiota notkolle tai liian korkealle.",
+    "context": "Built-in technique explanation for plank. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.chest_fly.description": {
+    "en": "Slight elbow bend held constant, open the arms wide until you feel a chest stretch, bring them together in a hugging arc.",
+    "fi": "Pidä kyynärpäissä pieni, muuttumaton koukistus. Avaa kädet sivuille, kunnes tunnet venytyksen rinnassa, ja tuo kädet yhteen halaavalla kaarella.",
+    "context": "Built-in technique explanation for chest fly. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.good_morning.description": {
+    "en": "Bar on the back, hinge at the hips with a flat back until your torso nears parallel, return. Light weight — it's a hamstring/back builder, not an ego lift.",
+    "fi": "Aseta tanko selälle. Taivuta lantiosta selkä neutraalina, kunnes vartalo lähestyy vaakatasoa, ja palaa ylös. Käytä kevyttä painoa ja keskity takareisien ja selän hallittuun kuormittamiseen.",
+    "context": "Built-in technique explanation for good morning. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  },
+  "exercises.pullover.description": {
+    "en": "Lying across or on a bench, lower a dumbbell behind your head with slightly bent arms, feel the lat/chest stretch, pull back over the chest.",
+    "fi": "Makaa penkillä pitkittäin tai poikittain. Laske käsipaino pään taakse kädet hieman koukussa, tunne venytys leveissä selkälihaksissa ja rinnassa ja vedä paino takaisin rinnan yläpuolelle.",
+    "context": "Built-in technique explanation for pullover. Translate faithfully, preserving angles, sequence and movement distinctions. Custom coach instructions are separate content.",
+    "screen": "Exercise information",
+    "role": "exercise instructions"
+  }
+}
