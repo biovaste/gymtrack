@@ -287,7 +287,7 @@ test('sessionLoad weights each set RPE by its reps', () => {
   assert.equal(sessionLoad(rec([[2, 6], [10, 8]])).rpe, 7.7);
 });
 
-test('sessionLoad multiplies session RPE by duration for the AU load', () => {
+test('sessionLoad multiplies the set-RPE proxy by duration for the estimated AU load', () => {
   const out = sessionLoad(rec([[5, 7.5]], 62));
   assert.equal(out.rpe, 7.5);
   assert.equal(out.load, 465); // 7.5 * 62

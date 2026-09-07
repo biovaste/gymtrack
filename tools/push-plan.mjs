@@ -29,6 +29,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import WorkoutModel from '../workout-model.js';
 
 const WORKER_URL = 'https://api.gymtrack.hithitpull.fi';
 
@@ -184,12 +185,22 @@ function guessAlternateEquipment(name, parentEquipment) {
  */
 export function validatePlan(plan, { unit = 'kg' } = {}) {
   const errors = [], warnings = [];
+  for (const day of plan.days) for (const e of day.exercises || []) {
+    for (const x of [e, ...(e.alternates || [])]) {
+      const invalid = WorkoutModel.errors(x).filter(field => field !== 'metric'); // Metric errors below retain alternate context.
+      if (invalid.length) errors.push(`${day.name} → ${x.name}: invalid ${invalid.join(', ')}.`);
+      if (x.loadProfile && !invalid.includes('loadProfile') && x.weight &&
+          (x.loadProfile.unit !== unit || !WorkoutModel.loadable(x.loadProfile, x.weight))) errors.push(`${day.name} → ${x.name}: weight does not match loadProfile.`);
+    }
+    if (WorkoutModel.timed(e) && e.warmupSets) errors.push(`${day.name} → ${e.name}: timed/distance exercises cannot prescribe ramp warmupSets.`);
+  }
 
   const seen = new Map();
   for (const day of plan.days) {
     for (const e of day.exercises || []) {
       const key = String(e.name || '').trim().toLowerCase();
       if (!key) continue;
+      if (e.movementId) continue; // Explicit identities allow reuse across days and independent sides.
       if (seen.has(key)) {
         errors.push(
           `Duplicate exercise name "${e.name}" (${seen.get(key)} and ${day.name}). ` +
@@ -232,15 +243,15 @@ export function validatePlan(plan, { unit = 'kg' } = {}) {
   // run regardless of "kg" vs "lb" — unlike the weight-ladder checks below.
   for (const day of plan.days) {
     for (const e of day.exercises || []) {
-      if (e.metric != null && e.metric !== 'load' && e.metric !== 'height') {
-        errors.push(`${day.name} → ${e.name}: metric "${e.metric}" is not one of "load", "height".`);
+        if (e.metric != null && !WorkoutModel.metrics.includes(e.metric)) {
+          errors.push(`${day.name} → ${e.name}: metric "${e.metric}" is not one of ${WorkoutModel.metrics.join(', ')}.`);
       }
       if (e.metric === 'height' && e.weight) {
         errors.push(`${day.name} → ${e.name}: a height-metric exercise must have weight 0 — box height goes in "description".`);
       }
       for (const a of e.alternates || []) {
-        if (a.metric != null && a.metric !== 'load' && a.metric !== 'height') {
-          errors.push(`${day.name} → ${e.name} → alternate "${a.name}": metric "${a.metric}" is not one of "load", "height".`);
+        if (a.metric != null && !WorkoutModel.metrics.includes(a.metric)) {
+          errors.push(`${day.name} → ${e.name} → alternate "${a.name}": metric "${a.metric}" is not one of ${WorkoutModel.metrics.join(', ')}.`);
         }
       }
       if (e.warmupSets != null) {
@@ -283,7 +294,7 @@ export function validatePlan(plan, { unit = 'kg' } = {}) {
         // checked. `continue`-ing the whole exercise here used to skip them too, so a
         // height exercise carrying an unloadable alternate (e.g. a 22.5 kg dumbbell)
         // passed silently.
-        if (e.metric !== 'height') {
+        if (e.metric !== 'height' && !e.loadProfile && !(WorkoutModel.timed(e) && e.equipment === 'bodyweight')) {
           const p = weightProblem(e.equipment, e.weight, e.barWeight);
           if (p) errors.push(`${day.name} → ${e.name}: ${e.weight} kg ${p}`);
         }
@@ -307,6 +318,7 @@ export function validatePlan(plan, { unit = 'kg' } = {}) {
             continue;
           }
           if (!a.weight) continue; // 0 = bodyweight/interval alternate
+          if (a.loadProfile || (WorkoutModel.timed({ metric: a.metric || e.metric }) && (a.equipment || e.equipment) === 'bodyweight')) continue;
           if (a.equipment) {
             const ap = weightProblem(a.equipment, a.weight, a.barWeight);
             if (ap) errors.push(`${day.name} → ${e.name} → alternate "${a.name}": ${a.weight} kg ${ap}`);

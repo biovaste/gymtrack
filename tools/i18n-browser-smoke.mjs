@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { start } from './i18n/server.mjs';
+import { checkWorkoutModel } from './workout-browser-checks.mjs';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
@@ -17,7 +18,7 @@ const fixture = await mkdtemp(path.join(tmp, 'i18n-browser-'));
 await cp(path.join(root, 'locales'), path.join(fixture, 'locales'), {
   recursive: true, filter: src => !src.endsWith('.review.lock')
 });
-const files = ['index.html', 'app.js', 'styles.css', 'i18n.js', 'exercises.js', 'sw.js',
+const files = ['index.html', 'app.js', 'workout-model.js', 'styles.css', 'i18n.js', 'exercises.js', 'sw.js',
   'manifest.webmanifest', 'icon-180.png', 'icon-512.png', 'locales/catalog.js'];
 const server = createServer(async (req, res) => {
   const pathname = new URL(req.url, 'http://localhost').pathname;
@@ -43,8 +44,12 @@ try {
   });
   const page = await context.newPage();
   const errors = [];
-  page.on('pageerror', error => errors.push(error.message));
+  page.on('pageerror', error => { errors.push(error.message); console.error(error.stack); });
   await page.goto(origin);
+  // First installation claims the page and triggers the app's one-time reload.
+  // Begin interactions on a controlled load so that navigation cannot erase a click.
+  await page.waitForFunction(() => !!navigator.serviceWorker.controller);
+  await page.reload();
   await page.waitForSelector('[data-action="start-session"]');
   for (const language of ['en', 'fi']) {
     await page.click('[data-action="settings-open"]');
@@ -93,6 +98,8 @@ try {
   assert.deepEqual(await page.evaluate(() => I18n.missingKeys()), []);
   assert.deepEqual(errors, []);
   await context.setOffline(false);
+
+  await checkWorkoutModel(page, context);
 
   reviewer = await start(fixture, { port: 0, quiet: true });
   const reviewPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });

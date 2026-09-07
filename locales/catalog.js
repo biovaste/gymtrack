@@ -653,6 +653,110 @@ globalThis.GYM_I18N_CATALOG = {
       "en": "Weight ({unit})",
       "fi": "Paino ({unit})"
     },
+    "exercise.model.actual_required": {
+      "en": "Enter a positive duration or distance before completing this set.",
+      "fi": "Anna positiivinen kesto tai matka ennen sarjan merkitsemistä tehdyksi."
+    },
+    "exercise.model.bilateral": {
+      "en": "Both sides together",
+      "fi": "Molemmat puolet yhdessä"
+    },
+    "exercise.model.cardio": {
+      "en": "Time, distance and speed",
+      "fi": "Aika, matka ja nopeus"
+    },
+    "exercise.model.distance": {
+      "en": "Distance + optional load",
+      "fi": "Matka + valinnainen kuorma"
+    },
+    "exercise.model.distanceMeters": {
+      "en": "Distance (metres)",
+      "fi": "Matka (metriä)"
+    },
+    "exercise.model.duration": {
+      "en": "Duration + optional load",
+      "fi": "Kesto + valinnainen kuorma"
+    },
+    "exercise.model.durationSeconds": {
+      "en": "Duration (seconds)",
+      "fi": "Kesto (sekuntia)"
+    },
+    "exercise.model.height": {
+      "en": "Jump height",
+      "fi": "Hyppykorkeus"
+    },
+    "exercise.model.identity_hint": {
+      "en": "Use the same movement key across days to share history. Keep variants distinct. Blank keeps legacy name-based history; existing records are not reassigned.",
+      "fi": "Käytä samaa liiketunnistetta eri päivinä yhteistä historiaa varten. Erota liikeversiot. Tyhjä säilyttää nimipohjaisen historian; vanhoja kirjauksia ei siirretä."
+    },
+    "exercise.model.identity_setup": {
+      "en": "Movement history and equipment setup",
+      "fi": "Liikehistoria ja laiteasetukset"
+    },
+    "exercise.model.increment": {
+      "en": "Load increment",
+      "fi": "Kuorman korotusväli"
+    },
+    "exercise.model.invalid": {
+      "en": "Check these exercise fields: {fields}",
+      "fi": "Tarkista liikkeen kentät: {fields}"
+    },
+    "exercise.model.left": {
+      "en": "Left",
+      "fi": "Vasen"
+    },
+    "exercise.model.load": {
+      "en": "Weight × repetitions",
+      "fi": "Paino × toistot"
+    },
+    "exercise.model.loads": {
+      "en": "Available total loads (comma-separated)",
+      "fi": "Mahdolliset kokonaiskuormat (pilkuin eroteltuna)"
+    },
+    "exercise.model.measurement_hint": {
+      "en": "Targets are optional. Record actual results per set. Pace is calculated from speed, or actual distance and time when both are recorded.",
+      "fi": "Tavoitteet ovat valinnaisia. Kirjaa toteutuneet tulokset sarjoittain. Vauhti lasketaan nopeudesta tai toteutuneesta matkasta ja ajasta, kun molemmat on kirjattu."
+    },
+    "exercise.model.movementId": {
+      "en": "Movement key (reusable name)",
+      "fi": "Liiketunniste (uudelleenkäytettävä nimi)"
+    },
+    "exercise.model.offset": {
+      "en": "Empty equipment / carriage weight",
+      "fi": "Tyhjän laitteen / kelkan paino"
+    },
+    "exercise.model.pace": {
+      "en": "Pace (min:sec/km)",
+      "fi": "Vauhti (min:s/km)"
+    },
+    "exercise.model.profile_hint": {
+      "en": "Optional custom loads in your selected weight unit. Enter an empty-machine offset and increment, or a comma-separated list of total loads including the offset. Selecting a saved setup copies its profile.",
+      "fi": "Valinnaiset kuormat valitussa painoyksikössä. Anna tyhjän laitteen paino ja korotusväli tai pilkuin erotettu lista kokonaiskuormista. Tallennetun laiteasetuksen valinta kopioi sen kuormaprofiilin."
+    },
+    "exercise.model.right": {
+      "en": "Right",
+      "fi": "Oikea"
+    },
+    "exercise.model.setupId": {
+      "en": "Equipment setup (reusable name)",
+      "fi": "Laiteasetus (uudelleenkäytettävä nimi)"
+    },
+    "exercise.model.side": {
+      "en": "Side",
+      "fi": "Puoli"
+    },
+    "exercise.model.speedKph": {
+      "en": "Speed (km/h)",
+      "fi": "Nopeus (km/h)"
+    },
+    "exercise.model.swap_logged": {
+      "en": "Swap before logging sets. Logged sets belong to the original movement.",
+      "fi": "Vaihda liike ennen sarjojen kirjaamista. Kirjatut sarjat kuuluvat alkuperäiseen liikkeeseen."
+    },
+    "exercise.model.unspecified": {
+      "en": "Not specified",
+      "fi": "Ei määritetty"
+    },
     "exercise.note.title": {
       "en": "Note — {exercise}",
       "fi": "Muistiinpano — {exercise}"
@@ -1502,8 +1606,8 @@ globalThis.GYM_I18N_CATALOG = {
       "fi": "Tallennettu"
     },
     "finish_session.text.session_rpe": {
-      "en": "Session RPE",
-      "fi": "Treenin RPE"
+      "en": "Set-RPE average · load estimate",
+      "fi": "Sarja-RPE:n keskiarvo · kuormitusarvio"
     },
     "finish_session.text.working_set_in": {
       "en": "— working sets: {setCount}{warmCount_tr_finish_session_} · duration: {fmtDur_durationMin}.",
@@ -1969,6 +2073,14 @@ globalThis.GYM_I18N_CATALOG = {
       "en": "round {Math_min_doneRounds_1_rounds} of {rounds}",
       "fi": "kierros {Math_min_doneRounds_1_rounds}/{rounds}"
     },
+    "sync.retry": {
+      "en": "Retry sync",
+      "fi": "Yritä synkronointia uudelleen"
+    },
+    "sync.saved_locally": {
+      "en": "Workout saved on this device.",
+      "fi": "Treeni tallennettu tälle laitteelle."
+    },
     "sync.status.synced_at": {
       "en": "✓ Synced {time}",
       "fi": "✓ Synkronoitu {time}"
@@ -2150,8 +2262,8 @@ globalThis.GYM_I18N_CATALOG = {
       "fi": "arvioitu 1RM {r_e1rm}"
     },
     "view_history.message.rpe_au": {
-      "en": "· RPE {sl_rpe} · {sl_load} AU{sl_partial}",
-      "fi": "· RPE {sl_rpe} · {sl_load} AU{sl_partial}"
+      "en": "· Set-RPE average {sl_rpe} · estimated load {sl_load} AU{sl_partial}",
+      "fi": "· Sarja-RPE:n keskiarvo {sl_rpe} · kuormitusarvio {sl_load} AU{sl_partial}"
     },
     "view_history.text.best_est_1rm": {
       "en": "Best est. 1RM:",
@@ -2202,8 +2314,8 @@ globalThis.GYM_I18N_CATALOG = {
       "fi": "Ei vielä treenejä."
     },
     "view_history.text.session_rpe_from_only_of_sets_the_rest_were_logg": {
-      "en": "* session RPE from only {Math_round_sl_coverage_100}% of sets — the rest were logged without one.",
-      "fi": "* Treenin RPE perustuu vain {Math_round_sl_coverage_100} %:iin sarjoista — muille ei kirjattu RPE:tä."
+      "en": "* Set-RPE estimate from only {Math_round_sl_coverage_100}% of repetition sets. This is not a whole-session effort rating.",
+      "fi": "* Sarja-RPE:n arvio perustuu vain {Math_round_sl_coverage_100} %:iin toistosarjoista. Se ei ole koko treenin rasittavuusarvio."
     },
     "view_history.text.sessions": {
       "en": "Sessions ({sessions_length})",
@@ -2486,5 +2598,5 @@ globalThis.GYM_I18N_CATALOG = {
       "fi": "hyppykorkeus"
     }
   },
-  "version": "e1d7bb49a704b6774d21"
+  "version": "9976d900a535a69f4831"
 };

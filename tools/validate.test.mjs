@@ -95,7 +95,7 @@ expectError('a height exercise carrying weight is an error',
   planOf(day('Day A', [ex({ name: 'Box Jump', metric: 'height', equipment: 'bodyweight', weight: 40 })])),
   /must have weight 0/);
 expectError('an unknown metric is an error',
-  planOf(day('Day A', [ex({ metric: 'distance' })])), /is not one of/);
+  planOf(day('Day A', [ex({ metric: 'unknown' })])), /is not one of/);
 // Regression: `continue`-ing the whole exercise for a height metric used to skip
 // its alternates too, so a loaded alternate under a jump passed silently. An
 // alternate inherits `metric`, so this one is a height alternate carrying weight.
@@ -112,8 +112,8 @@ expectClean('a loadable alternate declaring metric "load" under a jump passes',
   planOf(day('Day A', [ex({ name: 'Box Jump', metric: 'height', equipment: 'bodyweight', weight: 0,
     alternates: [{ name: 'DB Step-Up', weight: 22, equipment: 'dumbbell', metric: 'load' }] })])));
 expectError('an unknown metric on an alternate is an error',
-  planOf(day('Day A', [ex({ alternates: [{ name: 'Alt', weight: 20, metric: 'distance' }] })])),
-  /alternate "Alt": metric "distance" is not one of/);
+  planOf(day('Day A', [ex({ alternates: [{ name: 'Alt', weight: 20, metric: 'unknown' }] })])),
+  /alternate "Alt": metric "unknown" is not one of/);
 expectWarning('an alternate with no declared equipment warns rather than errors',
   planOf(day('Day A', [ex({ alternates: [{ name: 'DB Bench', weight: 22.5 }] })])),
   /equipment inferred as "dumbbell"/);

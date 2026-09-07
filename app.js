@@ -127,6 +127,8 @@ function equipChip(e) {
   if (!eq) return '';
   let label = equipmentLabel(eq) || eq;
   if (BAR_WEIGHT_EQUIPMENT.has(eq) && e.barWeight != null) label += ` · ${e.barWeight}${unit()}`;
+  if (e.side && e.side !== 'unspecified') label += ` · ${modelLabel(e.side)}`;
+  if (e.setupId) label += ` · ${e.setupId}`;
   return `<span class="equip-chip">${esc(label)}</span>`;
 }
 
@@ -136,7 +138,7 @@ function equipChip(e) {
  * RPE at all — absent rather than zero, so nothing downstream mistakes a jump
  * for a 0 kg lift.
  */
-const EXERCISE_METRICS = ['load', 'height'];
+const EXERCISE_METRICS = WorkoutModel.metrics;
 const isJump = e => e.metric === 'height';
 /*
  * Warm-up sets are logged like any other set but must never reach a statistic:
@@ -566,7 +568,10 @@ function normalizePlan(raw) {
           : { name: String(w && w.name || '').trim(), detail: String(w && w.detail || '') })).filter(w => w.name) : [],
         exercises: d.exercises.map(e => {
           if (!e.name) throw new Error(tr("normalize_plan.message.every_exercise_needs_a_name"));
+          const problems = [e, ...(e.alternates || [])].flatMap(WorkoutModel.errors);
+          if (problems.length) throw new Error(tr('exercise.model.invalid', { fields: problems.join(', ') }));
           return {
+            ...WorkoutModel.metadata(e),
             id: e.id || uid(), name: String(e.name),
             sets: Math.max(1, parseInt(e.sets, 10) || 3),
             // Ramp-up sets prepended to the working sets. `sets` keeps meaning
@@ -590,6 +595,7 @@ function normalizePlan(raw) {
             description: String(e.description || ''),
             notes: String(e.notes || ''),
             alternates: Array.isArray(e.alternates) ? e.alternates.filter(a => a && a.name).map(a => ({
+              ...WorkoutModel.metadata(a),
               name: String(a.name), weight: parseFloat(a.weight) || 0, description: String(a.description || ''),
               // Omitted equipment means "same as the parent" — keep it absent rather than
               // defaulting to barbell, so a swap inherits instead of silently relabelling.
@@ -609,6 +615,68 @@ function normalizePlan(raw) {
 }
 
 /* ================= exercise name aliases ================= */
+function modelLabel(field) { return tr('exercise.model.' + field); }
+function modelOptions(metric) {
+  return EXERCISE_METRICS.map(m => `<option value="${m}" ${m === (metric || 'load') ? 'selected' : ''}>${esc(modelLabel(m))}</option>`).join('');
+}
+function modelFields(e, prefix) {
+  const all = [...plan.days.flatMap(d => d.exercises), ...sessions.flatMap(s => s.exercises)];
+  const movements = new Map(all.filter(x => x.movementId).map(x => [x.movementId, x.name]));
+  const setups = new Map(all.filter(x => x.setupId).map(x => [x.setupId, x]));
+  const input = (key, value, type = 'text') => `<label class="field" data-model-field="${key}" ${['durationSeconds', 'distanceMeters', 'speedKph'].includes(key) && !WorkoutModel.targetFields(e).includes(key) ? 'hidden' : ''}><span>${esc(modelLabel(key))}</span><input id="${prefix}-${key}" type="${type}" ${type === 'number' ? 'min="0" step="any"' : ''} value="${esc(value ?? '')}"></label>`;
+  return `<details class="mt8"><summary>${esc(modelLabel('identity_setup'))}</summary>
+    <p class="small muted">${esc(modelLabel('identity_hint'))}</p>
+    <label class="field"><span>${esc(modelLabel('movementId'))}</span><input id="${prefix}-movementId" list="${prefix}-movements" value="${esc(e.movementId || '')}"><datalist id="${prefix}-movements">${[...movements].map(([id, name]) => `<option value="${esc(id)}">${esc(name)}</option>`).join('')}</datalist></label>
+    <label class="field"><span>${esc(modelLabel('side'))}</span><select id="${prefix}-side">${WorkoutModel.sides.map(s => `<option value="${s}" ${s === (e.side || 'unspecified') ? 'selected' : ''}>${esc(modelLabel(s))}</option>`).join('')}</select></label>
+    <label class="field"><span>${esc(modelLabel('setupId'))}</span><input id="${prefix}-setupId" list="${prefix}-setups" data-bind="setup-profile" data-prefix="${prefix}" value="${esc(e.setupId || '')}"><datalist id="${prefix}-setups">${[...setups.keys()].map(id => `<option value="${esc(id)}"></option>`).join('')}</datalist></label>
+    <p class="small muted">${esc(modelLabel('profile_hint'))}</p>
+    <input id="${prefix}-profileUnit" type="hidden" value="${esc(e.loadProfile?.unit || unit())}">
+    ${input('offset', e.loadProfile?.offset, 'number')}${input('increment', e.loadProfile?.increment, 'number')}${input('loads', e.loadProfile?.loads?.join(', '))}
+    </details>
+    <div class="model-targets" data-prefix="${prefix}" ${WorkoutModel.timed(e) ? '' : 'hidden'}>
+    ${input('durationSeconds', e.durationSeconds, 'number')}${input('distanceMeters', e.distanceMeters, 'number')}${input('speedKph', e.speedKph, 'number')}
+    <label class="field" data-model-field="pace" ${e.metric === 'cardio' ? '' : 'hidden'}><span>${esc(modelLabel('pace'))}</span><input id="${prefix}-pace" placeholder="5:00" data-bind="target-pace" data-prefix="${prefix}"></label>
+    <p class="small muted">${esc(modelLabel('measurement_hint'))}</p></div>`;
+}
+function readModelFields(prefix, metric) {
+  const value = k => document.getElementById(`${prefix}-${k}`)?.value.trim() || '';
+  const out = { movementId: value('movementId') || undefined, side: value('side') || 'unspecified', setupId: value('setupId') || undefined, loadProfile: undefined,
+    durationSeconds: undefined, distanceMeters: undefined, speedKph: undefined };
+  if (value('offset') || value('increment') || value('loads')) {
+    out.loadProfile = { unit: value('profileUnit') || unit(), offset: Number(value('offset') || 0),
+      ...(value('loads') ? { loads: value('loads').split(',').map(v => Number(v.trim())) } : { increment: Number(value('increment')) }) };
+  }
+  if (WorkoutModel.timed({ metric })) {
+    for (const k of WorkoutModel.targetFields({ metric })) if (value(k)) out[k] = Number(value(k));
+  }
+  const errors = WorkoutModel.errors({ ...out, metric });
+  if (errors.length) throw new Error(tr('exercise.model.invalid', { fields: errors.join(', ') }));
+  return out;
+}
+function measurementText(e, s) {
+  if (e.metric === 'height') return `${s.heightCm ?? '—'} cm`;
+  if (!WorkoutModel.timed(e)) return `${s.weight ?? '—'}${unit()}×${s.reps ?? '—'}${s.rpe != null ? '@' + s.rpe : ''}`;
+  const parts = [];
+  if (s.weight) parts.push(`${s.weight}${unit()}`);
+  if (s.durationSeconds != null) parts.push(`${s.durationSeconds} s`);
+  if (s.distanceMeters != null) parts.push(`${s.distanceMeters} m`);
+  const speed = WorkoutModel.speed(s);
+  if (speed) parts.push(`${Math.round(speed * 100) / 100} km/h`, `${fmtClock(3600 / speed)} min/km`);
+  if (s.rpe != null) parts.push(`RPE ${s.rpe}`);
+  return parts.join(' · ') || '—';
+}
+function measurementGrid(e, ei) {
+  const fields = ['weight', ...(e.metric !== 'distance' ? ['durationSeconds'] : []), ...(e.metric !== 'duration' ? ['distanceMeters'] : []), ...(e.metric === 'cardio' ? ['speedKph'] : [])];
+  return e.sets.map((s, si) => `<div class="measurement-set mt8">
+    <div class="row between"><button class="set-no-btn" data-action="set-warmup" data-ei="${ei}" data-si="${si}">${s.warmup ? 'W' : ''}${si + 1}</button>
+    <button class="rpe-btn" data-action="rpe-pick" data-ei="${ei}" data-si="${si}">RPE ${s.rpe ?? '—'}</button>
+    <button class="set-done-btn ${s.done ? 'success' : ''}" data-action="set-done" data-ei="${ei}" data-si="${si}">${s.done ? '✓' : '○'}</button></div>
+    <div class="measurement-fields">${fields.map(f => `<label class="field"><span>${esc(f === 'weight' ? unit() : modelLabel(f))}</span><input type="number" min="0" step="any" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="${f}" value="${s[f] ?? ''}"></label>`).join('')}</div>
+    <div class="muted small" data-measurement-summary="${ei}-${si}">${esc(measurementText(e, s))}</div></div>`).join('');
+}
+function historyLabel(e) {
+  return [I18n.exercise(e.name), e.side && e.side !== 'unspecified' ? modelLabel(e.side) : '', e.setupId || '', modelLabel(e.metric || 'load')].filter(Boolean).join(' · ');
+}
 // Aliases merge name variants ("Bench Pres", "BB Bench") into one canonical
 // exercise at read time — session records themselves are never rewritten.
 function canonicalName(name) {
@@ -621,11 +689,11 @@ const sameExercise = (a, b) => canonicalName(a).toLowerCase() === canonicalName(
 function lastPerformance(name) {
   for (let i = sessions.length - 1; i >= 0; i--) {
     for (const e of sessions[i].exercises) {
-      if (!sameExercise(e.name, name)) continue;
+      if (typeof name === 'object' ? WorkoutModel.key(e, canonicalName) !== WorkoutModel.key(name, canonicalName) : !sameExercise(e.name, name)) continue;
       const ws = workingSets(e.sets); // "Last:" is a comparison line — ramp-ups aren't
       if (ws.length) {
         // Missing metric = pre-jump-feature record; treat as 'load' (backward compat).
-        return { date: sessions[i].date, sets: ws, jump: e.metric === 'height' };
+        return { date: sessions[i].date, sets: ws, jump: e.metric === 'height', metric: e.metric };
       }
     }
   }
@@ -721,6 +789,7 @@ function roundDownToRung(equipment, barWeight, weight) {
 }
 // The set rows a session starts with: warm-up rows first, then the working sets.
 function buildSetRows(e) {
+  if (WorkoutModel.timed(e)) return Array.from({ length: e.sets }, () => WorkoutModel.row(e));
   const jump = e.metric === 'height';
   const work = Array.from({ length: e.sets }, () => jump
     ? ({ heightCm: null, done: false })
@@ -731,7 +800,7 @@ function buildSetRows(e) {
   if (!n || jump) return work;
   const eq = e.equipment || 'barbell';
   const warm = warmupRamp(n).map(f => ({
-    weight: roundDownToRung(eq, e.barWeight, e.weight * f),
+    weight: e.loadProfile ? WorkoutModel.nextLoad(e.loadProfile, e.weight * f + 1e-6, -1) : roundDownToRung(eq, e.barWeight, e.weight * f),
     reps: parseRepsLow(e.reps), rpe: null, warmup: true, done: false
   }));
   return warm.concat(work);
@@ -747,11 +816,12 @@ function startSession(dayId) {
     readiness: {},
     warmup: (day.warmup || []).map(w => ({ name: w.name, detail: w.detail || '', done: false })),
     exercises: day.exercises.map(e => ({
+      ...WorkoutModel.metadata(e),
       name: e.name, planId: e.id, swappedFrom: null,
       plannedSets: e.sets, plannedReps: e.reps, plannedWeight: e.weight,
       targetRpe: e.targetRpe, restSeconds: e.restSeconds, restSecondsNext: e.restSecondsNext,
       equipment: e.equipment || 'barbell', barWeight: e.barWeight,
-      metric: e.metric === 'height' ? 'height' : 'load', superset: e.superset || null,
+      metric: e.metric || 'load', superset: e.superset || null,
       description: e.description, alternates: e.alternates, notes: '',
       sets: buildSetRows(e)
     }))
@@ -781,15 +851,13 @@ function finishSession() {
     id: active.id, date: new Date(active.startedAt).toISOString(), dayName: active.dayName,
     durationMin, notes: active.notes,
     exercises: active.exercises
-      .map(e => ({ name: e.name, plannedSets: e.plannedSets, plannedReps: e.plannedReps,
+      .map(e => ({ ...WorkoutModel.metadata(e), name: e.name, plannedSets: e.plannedSets, plannedReps: e.plannedReps,
         plannedWeight: e.plannedWeight, targetRpe: e.targetRpe,
-        equipment: e.equipment, barWeight: e.barWeight, metric: e.metric === 'height' ? 'height' : 'load',
+        equipment: e.equipment, barWeight: e.barWeight, metric: e.metric || 'load',
         superset: e.superset || null,
         swappedFrom: e.swappedFrom, notes: e.notes,
         sets: e.sets.filter(s => s.done).map(s => {
-          const rec = e.metric === 'height'
-            ? { heightCm: s.heightCm }
-            : { weight: s.weight, reps: s.reps, rpe: s.rpe };
+          const rec = WorkoutModel.recordSet(e, s);
           if (s.warmup) rec.warmup = true; // omitted when false — old records keep their exact shape
           return rec;
         }) }))
@@ -811,7 +879,7 @@ function finishSession() {
   if (sl) html += `<p class="mt8">${esc(tr("finish_session.text.session_rpe"))} <b>${sl.rpe}</b> · <b>${sl.load}</b> AU${sl.partial ? ` <span class="muted small">${esc(tr("finish_session.text.only_of_sets_had_an_rpe", { Math_round_sl_coverage_100: Math.round(sl.coverage * 100) }))}</span>` : ''}</p>`;
   if (prs.length) html += `<p class="mt8">${esc(tr("finish_session.text.new_prs"))} ${prs.map(p => `<span class="pr-badge">${esc(I18n.exercise(p))}</span>`).join(' ')}</p>`;
   const syncing = settings.autoSync;
-  html += `<p class="muted small mt8">${syncing ? tr("finish_session.message.syncing_to_the_cloud_for_your_ai_coach") : tr("finish_session.message.head_to_the_ai_coach_tab_to_export_this_for_your")}</p>`;
+  html += `<p class="muted small mt8">${esc(tr('sync.saved_locally'))}</p><div id="completion-sync-status">${syncing ? syncStatusHtml() : esc(tr("finish_session.message.head_to_the_ai_coach_tab_to_export_this_for_your"))}</div>`;
   // Explicit action rather than the implicit "Close" default: the way out of this
   // sheet should be obvious, and it lands you back on the day list.
   showModal(tr("finish_session.message.workout_complete"), html, [{ label: tr("finish_session.button.done"), cls: 'primary',
@@ -820,7 +888,7 @@ function finishSession() {
   if (syncing) workerPush({ silent: true }); // push the finished session right away
 }
 /*
- * Session load (Foster's sRPE method), derived on read and never stored.
+ * Legacy set-RPE-derived load estimate, not a whole-session rating.
  * Keeping it out of the session record means old sessions and the sync payload
  * stay byte-identical, and a fix to this formula retroactively fixes history.
  *
@@ -837,7 +905,7 @@ const RPE_COVERAGE_MIN = 0.6;
 function sessionLoad(record) {
   let weighted = 0, weight = 0, withRpe = 0, total = 0;
   for (const e of record.exercises || []) {
-    if (e.metric === 'height') continue;
+    if (e.metric && e.metric !== 'load') continue;
     for (const s of workingSets(e.sets || [])) {
       total++;
       if (s.rpe == null) continue;
@@ -855,6 +923,7 @@ function sessionLoad(record) {
 function detectPRs(record) {
   const prs = [];
   for (const e of record.exercises) {
+    if (e.metric && e.metric !== 'load' && e.metric !== 'height') continue;
     const jump = e.metric === 'height';
     // Warm-ups are excluded on both sides — a ramp-up single can't be a PR, and
     // an old record full of them must not lower the bar a new session clears.
@@ -867,7 +936,7 @@ function detectPRs(record) {
     let oldBest = 0;
     for (const s of sessions) for (const ex of s.exercises) {
       // Compare like with like: a height PR must not be measured against loads.
-      if (sameExercise(ex.name, e.name) && (ex.metric === 'height') === jump) {
+      if (WorkoutModel.key(ex, canonicalName) === WorkoutModel.key(e, canonicalName) && (ex.metric === 'height') === jump) {
         oldBest = Math.max(oldBest, score(ex));
       }
     }
@@ -921,6 +990,7 @@ function completeSet(ei, si) {
 function buildExport() {
   return JSON.stringify({
     type: 'workout-log', version: 1, exportedAt: new Date().toISOString(), unit: unit(),
+    measurementNotes: 'movementId + side + setupId + metric identify comparable history. durationSeconds and distanceMeters are actual set measurements, never repetitions. The derived rep-weighted set-RPE load estimate is not a whole-session RPE rating.',
     bodyWeight: bodyWeight.slice(-20),
     sessions: sessions.slice(-15),
     currentPlan: plan
@@ -963,7 +1033,14 @@ const coachPlanSchema = () => `{
           "restSecondsNext": <number, optional — rest before moving to the next movement, omit if same as restSeconds>,
           "equipment": "<one of: barbell, trap-bar, landmine, training-bar, dumbbell, machine, cable, bodyweight, other>",
           "barWeight": <number, optional — only for barbell/trap-bar/training-bar if the bar isn't a standard 20kg/45lb bar; omit otherwise>,
-          "metric": "<optional — 'load' (default, omit) or 'height' for a jump exercise logged in cm; use equipment 'bodyweight' and weight 0 with 'height'>",
+          "metric": "<load (weight × reps), height (cm), duration (seconds + optional load), distance (metres + optional load), or cardio (time/distance/speed)>",
+          "movementId": "<optional reusable movement/variant key; same across days, independent of display name>",
+          "side": "<unspecified, left, right, or bilateral>",
+          "setupId": "<optional reusable equipment/setup name; different machines have separate history>",
+          "loadProfile": "<optional custom equipment loads: {unit: '${unit()}', offset: empty-equipment weight, increment: step}; alternatively use loads: [total loads] instead of increment. Omit unless known>",
+          "durationSeconds": "<optional positive planned duration for duration/cardio>",
+          "distanceMeters": "<optional positive planned distance for distance/cardio>",
+          "speedKph": "<optional positive planned speed for cardio; pace is derived>",
           "superset": "<optional — a short tag like 'A' shared by adjacent exercises to log them as one alternating superset card; omit for a standalone exercise>",
           "description": "<1-2 sentence how-to>",
           "alternates": [ { "name": "<alternative exercise>", "weight": <number>, "description": "<short how-to>" } ]
@@ -998,7 +1075,7 @@ function relTime(ts) {
 function syncStatusHtml() {
   if (!settings.autoSync) return `<span class="muted small">${esc(tr("sync_status_html.text.auto_sync_off"))}</span>`;
   if (syncState === 'syncing') return `<span class="small amber">${esc(tr("sync_status_html.text.syncing"))}</span>`;
-  if (syncState === 'error') return `<span class="small red">⚠ ` + esc(lastSyncMsg || tr("sync_status_html.message.sync_error")) + `</span>`;
+  if (syncState === 'error') return `<span class="small red">⚠ ` + esc(lastSyncMsg || tr("sync_status_html.message.sync_error")) + `</span> <button class="ghost" data-action="sync-retry">${esc(tr('sync.retry'))}</button>`;
   if (lastSyncedAt) return `<span class="small green">${esc(tr("sync.status.synced_at", { time: relTime(lastSyncedAt) }))}</span>`;
   return `<span class="muted small">${esc(tr("sync_status_html.text.connected_syncing_on_launch"))}</span>`;
 }
@@ -1006,8 +1083,10 @@ function setSyncState(state, msg) {
   syncState = state;
   if (state === 'ok') { lastSyncedAt = Date.now(); lastSyncMsg = ''; }
   if (state === 'error') lastSyncMsg = msg || '';
-  const el = document.getElementById('sync-status');
-  if (el) el.innerHTML = syncStatusHtml();
+  for (const id of ['sync-status', 'completion-sync-status']) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = syncStatusHtml();
+  }
 }
 function scheduleSync() {
   if (!settings.autoSync) return;
@@ -1021,7 +1100,7 @@ async function workerPush(opts = {}) {
   try {
     const headers = { 'Content-Type': 'application/json' };
     if (writeToken) headers['X-GymTrack-Write'] = writeToken;
-    const res = await fetch(`${WORKER_URL}/data/${gymUUID}`, {
+    const res = await syncFetch(`${WORKER_URL}/data/${gymUUID}`, {
       method: 'POST', headers, body: buildBackup()
     });
     // 409 = the cloud copy is newer than ours, so this push would clobber it.
@@ -1040,8 +1119,14 @@ async function workerPush(opts = {}) {
     return true;
   } catch (e) { setSyncState('error', e.message); if (!opts.silent) toast(tr("cloud_sync.error.push", { error: e.message }), 'err'); return false; }
 }
+async function syncFetch(url, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try { return await fetch(url, { ...options, signal: controller.signal }); }
+  finally { clearTimeout(timer); }
+}
 async function workerFetch() {
-  const res = await fetch(`${WORKER_URL}/data/${gymUUID}`);
+  const res = await syncFetch(`${WORKER_URL}/data/${gymUUID}`);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(tr("cloud_fetch.error.status", { status: res.status }));
   const text = await res.text();
@@ -1395,6 +1480,8 @@ function exerciseCard(e, ei, opts) {
     let summary;
     if (isJump(e)) {
       summary = tr("exercise_card.message.attempt_best_cm", { ws_length: ws.length, ws_length_1_s: ws.length === 1 ? '' : 's', warmTag: warmTag, bestHeight_e_sets: bestHeight(e.sets) });
+    } else if (WorkoutModel.timed(e)) {
+      summary = ws.map(s => measurementText(e, s)).join(' · ');
     } else if (ws.length) {
       const best = ws.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
       summary = tr("exercise_card.message.set_best", { ws_length: ws.length, ws_length_1_s: ws.length === 1 ? '' : 's', warmTag: warmTag, best_weight: best.weight, best_reps: best.reps });
@@ -1415,17 +1502,17 @@ function exerciseCard(e, ei, opts) {
       </div>
     </div>`;
   }
-  const lastP = lastPerformance(e.name);
+  const lastP = lastPerformance(e);
   const lastRpe = lastP ? Math.max(0, ...lastP.sets.map(s => s.rpe || 0)) : 0;
   return `
   <div class="${inGroup ? 'ss-body' : 'card'}">
     <div class="row between">
       <div class="grow">
         <div class="ex-name">${allDone ? '✅ ' : ''}${esc(I18n.exercise(e.name))}</div>
-        <div class="target-line">${isJump(e)
+        <div class="target-line">${WorkoutModel.timed(e) ? esc(`${e.plannedSets} × ${measurementText(e, { ...e, weight: e.plannedWeight })}`) : isJump(e)
           ? tr("exercise_card.message.plan_attempt_rest", { e_plannedSets: e.plannedSets, e_plannedSets_1_s: e.plannedSets === 1 ? '' : 's', fmtClock_e_restSeconds: fmtClock(e.restSeconds) })
           : tr("exercise_card.message.plan_rest", { e_plannedSets: e.plannedSets, e_plannedReps: e.plannedReps, e_plannedWeight: e.plannedWeight, unit: unit(), e_targetRpe_tr_exercise_card: e.targetRpe ? tr("format.rpe_suffix", { rpe: e.targetRpe }) : '', fmtClock_e_restSeconds: fmtClock(e.restSeconds) })} ${equipChip(e)}</div>
-        ${lastP ? `<div class="last-line">${esc(tr("exercise_card.text.last", { lastP_jump_tr_exercise_card_: lastP.jump ? tr("exercise_card.message.best_cm", { bestHeight_lastP_sets: bestHeight(lastP.sets) }) : lastP.sets.map(s => `${s.weight}×${s.reps}`).join(' · ') + (lastRpe ? ` ${tr("exercise_card.message.rpe_2", { lastRpe: lastRpe })}` : ''), fmtDate_lastP_date: fmtDate(lastP.date) }))}</div>` : ''}
+        ${lastP ? `<div class="last-line">${esc(tr("exercise_card.text.last", { lastP_jump_tr_exercise_card_: WorkoutModel.timed(lastP) ? lastP.sets.map(s => measurementText(lastP, s)).join(' · ') : lastP.jump ? tr("exercise_card.message.best_cm", { bestHeight_lastP_sets: bestHeight(lastP.sets) }) : lastP.sets.map(s => `${s.weight}×${s.reps}`).join(' · ') + (lastRpe ? ` ${tr("exercise_card.message.rpe_2", { lastRpe: lastRpe })}` : ''), fmtDate_lastP_date: fmtDate(lastP.date) }))}</div>` : ''}
         ${e.swappedFrom ? `<div class="swap-note">${esc(tr("exercise_card.text.swapped_from", { e_swappedFrom: I18n.exercise(e.swappedFrom) }))}</div>` : ''}
       </div>
       <button class="icon-btn" data-action="ex-info" data-ei="${ei}" title="${esc(tr("exercise_card.title.explain"))}">${icon('info', 18)}</button>
@@ -1433,7 +1520,7 @@ function exerciseCard(e, ei, opts) {
       <button class="icon-btn" data-action="ex-swap" data-ei="${ei}" title="${esc(tr("common.action.swap"))}">${icon('swap', 18)}</button>
       ${allDone && !inGroup ? `<button class="icon-btn" data-action="ex-toggle" data-ei="${ei}" title="${esc(tr("common.action.collapse"))}">${icon('chevUp', 18)}</button>` : ''}
     </div>
-    ${isJump(e) ? `
+    ${WorkoutModel.timed(e) ? measurementGrid(e, ei) : isJump(e) ? `
     <div class="set-grid jump">
       <div class="head">#</div><div class="head">cm</div><div class="head">✓</div>
       ${setLabels(e.sets).map(({ s, si, label }) => `
@@ -1492,7 +1579,7 @@ function viewPlan() {
             <div class="row between" style="padding:9px 0">
               <div class="grow tappable" data-action="ex-menu" data-day="${d.id}" data-i="${i}">
                 <div class="bold">${esc(I18n.exercise(e.name))}${e.superset ? ` <span class="day-pill">${esc(tr("view_plan.text.ss", { e_superset: e.superset }))}</span>` : ''}</div>
-                <div class="muted small">${esc(tr("view_plan.text.rest", { e_warmupSets_tr_view_plan_me: e.warmupSets ? `${tr("view_plan.message.w", { e_warmupSets: e.warmupSets })} ` : '', e_sets: e.sets, e_reps: e.reps, e_weight: e.weight, unit: unit(), e_targetRpe_tr_view_plan_mes: e.targetRpe ? tr("format.rpe_suffix", { rpe: e.targetRpe }) : '', fmtClock_e_restSeconds: fmtClock(e.restSeconds), e_alternates_length_e_altern: e.alternates.length ? ' · ' + e.alternates.length + ' alt' : '' }))} ${equipChip(e)}</div>
+                <div class="muted small">${WorkoutModel.timed(e) ? esc(`${e.sets} × ${measurementText(e, e)}`) : esc(tr("view_plan.text.rest", { e_warmupSets_tr_view_plan_me: e.warmupSets ? `${tr("view_plan.message.w", { e_warmupSets: e.warmupSets })} ` : '', e_sets: e.sets, e_reps: e.reps, e_weight: e.weight, unit: unit(), e_targetRpe_tr_view_plan_mes: e.targetRpe ? tr("format.rpe_suffix", { rpe: e.targetRpe }) : '', fmtClock_e_restSeconds: fmtClock(e.restSeconds), e_alternates_length_e_altern: e.alternates.length ? ' · ' + e.alternates.length + ' alt' : '' }))} ${equipChip(e)}</div>
               </div>
               <button class="icon-btn" data-action="ex-move" data-day="${d.id}" data-i="${i}" data-dir="-1" ${groupOfIdx.get(i) === 0 ? 'disabled' : ''}>↑</button>
               <button class="icon-btn" data-action="ex-move" data-day="${d.id}" data-i="${i}" data-dir="1" ${groupOfIdx.get(i) === groups.length - 1 ? 'disabled' : ''}>↓</button>
@@ -1514,12 +1601,14 @@ function viewPlan() {
 function exerciseHistory(name) {
   const rows = [];
   for (const s of sessions) for (const e of s.exercises) {
-    if (!sameExercise(e.name, name)) continue;
+    if (WorkoutModel.key(e, canonicalName) !== name) continue;
     // Progress is a working-set story throughout — a ramp-up set is neither a
     // data point on the chart nor a candidate for the best set of the day.
     const ws = workingSets(e.sets);
     if (!ws.length) continue;
-    if (e.metric === 'height') {
+    if (WorkoutModel.timed(e)) {
+      rows.push({ date: s.date, timed: true, metric: e.metric, sets: ws });
+    } else if (e.metric === 'height') {
       rows.push({ date: s.date, jump: true, heightCm: bestHeight(e.sets), sets: ws });
     } else {
       const best = ws.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
@@ -1570,7 +1659,7 @@ function weeklyStats(weeks = 8) {
           const ws = workingSets(e.sets); // ramp-ups are neither volume nor a set here
           wk.sets += ws.length;
           // Height sets have no kg × reps to contribute; they still count as sets.
-          if (e.metric === 'height') continue;
+          if (e.metric && e.metric !== 'load') continue;
           for (const st of ws) wk.volume += (st.weight || 0) * (st.reps || 0);
         }
       }
@@ -1597,16 +1686,18 @@ function weeklyBarsSvg(stats, w = 320, h = 96) {
   </svg>`;
 }
 function viewHistory() {
-  const exNames = [...new Set(sessions.flatMap(s => s.exercises.map(e => canonicalName(e.name))))].sort();
+  const historyEntries = new Map(sessions.flatMap(s => s.exercises.map(e => [WorkoutModel.key(e, canonicalName), e])));
+  const exNames = [...historyEntries.keys()].sort((a, b) => historyLabel(historyEntries.get(a)).localeCompare(historyLabel(historyEntries.get(b))));
   if (historyExercise && !exNames.includes(historyExercise)) historyExercise = '';
   const sel = historyExercise || exNames[0] || '';
   const hist = sel ? exerciseHistory(sel) : [];
   const histJump = hist.length ? hist[hist.length - 1].jump : false;
+  const histTimed = hist.length ? hist[hist.length - 1].timed : false;
   // A metric switch mid-history (e.g. load -> height) leaves older rows shaped
   // for the other metric — mixing them into one chart/list produces NaN and
   // "undefined" values, so only rows matching the newest row's metric are shown.
-  const histRows = hist.filter(r => r.jump === histJump);
-  const prBest = histRows.length ? Math.max(...histRows.map(r => histJump ? r.heightCm : r.e1rm)) : 0;
+  const histRows = hist.filter(r => r.jump === histJump && r.timed === (histTimed || undefined));
+  const prBest = !histTimed && histRows.length ? Math.max(...histRows.map(r => histJump ? r.heightCm : r.e1rm)) : 0;
   const bwLast = bodyWeight[bodyWeight.length - 1];
   const weeks = sessions.length ? weeklyStats(8) : [];
   const thisWeek = weeks[weeks.length - 1];
@@ -1639,8 +1730,8 @@ function viewHistory() {
     <h2 class="section">${esc(tr("view_history.text.exercise_progress"))}</h2>
     <div class="card">
       ${exNames.length ? `
-        <select data-bind="history-ex">${exNames.map(n => `<option value="${esc(n)}" ${n === sel ? 'selected' : ''}>${esc(I18n.exercise(n))}</option>`).join('')}</select>
-        ${histRows.length ? `
+        <select data-bind="history-ex">${exNames.map(n => `<option value="${esc(n)}" ${n === sel ? 'selected' : ''}>${esc(historyLabel(historyEntries.get(n)))}</option>`).join('')}</select>
+        ${histTimed ? histRows.slice(-8).reverse().map(r => `<div class="mt8"><span class="muted small">${fmtDate(r.date)}</span><div>${esc(r.sets.map(s => measurementText(r, s)).join(' · '))}</div></div>`).join('') : histRows.length ? `
           ${chartSvg(histRows.slice(-12).map(r => ({ v: histJump ? r.heightCm : r.e1rm, d: r.date })))}
           <div class="muted small mt8">${histJump ? `${esc(tr("view_history.text.best_jump"))} <b class="amber">${esc(tr("view_history.text.cm", { prBest: prBest }))}</b>` : `${esc(tr("view_history.text.best_est_1rm"))} <b class="amber">${prBest} ${unit()}</b>`}</div>
           ${hist.length > histRows.length ? `<div class="muted small mt8">${esc(tr("view_history.text.earlier_session_logged_this_exercise_with_a_diff", { hist_length_histRows_length: hist.length - histRows.length, hist_length_histRows_length_: hist.length - histRows.length === 1 ? '' : 's', hist_length_histRows_length_2: hist.length - histRows.length === 1 ? 'is' : 'are' }))}</div>` : ''}
@@ -1651,7 +1742,7 @@ function viewHistory() {
               <span class="small">${histJump ? r.sets.map(s => tr("view_history.message.cm", { s_heightCm: s.heightCm })).join(' · ') : r.sets.map(s => `${s.weight}×${s.reps}`).join(' · ')}</span>
               <span class="small bold ${(histJump ? r.heightCm : r.e1rm) >= prBest ? 'amber' : ''}">${(histJump ? r.heightCm : r.e1rm) >= prBest ? '🏆 ' : ''}${histJump ? tr("view_history.message.cm_2", { r_heightCm: r.heightCm }) : tr("view_history.message.e1rm", { r_e1rm: r.e1rm })}</span>
             </div>`).join('')}` : `<p class="muted mt8">${esc(tr("view_history.text.no_logged_sets_for_this_exercise_yet"))}</p>`}
-        ${exNames.length > 1 || Object.keys(aliases).length ? `<button class="ghost wide mt8 small" data-action="merge-names" data-name="${esc(sel)}">${esc(tr("view_history.text.merge_names"))}</button>` : ''}`
+        ${!historyEntries.get(sel)?.movementId && (exNames.length > 1 || Object.keys(aliases).length) ? `<button class="ghost wide mt8 small" data-action="merge-names" data-name="${esc(historyEntries.get(sel)?.name)}">${esc(tr("view_history.text.merge_names"))}</button>` : ''}`
       : `<p class="empty"><span class="big">📈</span>${esc(tr("view_history.text.finish_your_first_workout_and_your_progress_will"))}</p>`}
     </div>
 
@@ -1676,9 +1767,7 @@ function viewHistory() {
             <div style="padding:5px 0">
               <div class="bold small">${esc(I18n.exercise(e.name))}${e.swappedFrom ? ` <span class="swap-note">${esc(tr("view_history.text.was", { e_swappedFrom: I18n.exercise(e.swappedFrom) }))}</span>` : ''}</div>
               <div class="muted small">${e.sets.map(x => {
-                const txt = e.metric === 'height'
-                  ? tr("view_history.message.cm_3", { x_heightCm: x.heightCm })
-                  : `${x.weight}${unit()}×${x.reps}${x.rpe ? '@' + x.rpe : ''}`;
+                const txt = measurementText(e, x);
                 // Warm-ups stay visible here — this is the raw log, not a stat —
                 // but dimmed and prefixed so they can't be misread as work sets.
                 return x.warmup ? `<span class="warmup-set">${esc(tr("view_history.text.w", { txt: txt }))}</span>` : txt;
@@ -1825,7 +1914,7 @@ function exMenuModal(dayId, i) {
   const e = day.exercises[i];
   const desc = I18n.explanation(e.name, e.description) || lookupExplanation(e.name);
   showModal(I18n.exercise(e.name), `
-    <p class="muted small">${esc(tr("ex_menu_modal.text.rest", { e_sets: e.sets, e_reps: e.reps, e_weight: e.weight, unit: unit(), e_targetRpe_tr_ex_menu_modal: e.targetRpe ? tr("format.rpe_suffix", { rpe: e.targetRpe }) : '', fmtClock_e_restSeconds: fmtClock(e.restSeconds) }))}</p>
+    <p class="muted small">${WorkoutModel.timed(e) ? esc(`${e.sets} × ${measurementText(e, e)}`) : esc(tr("ex_menu_modal.text.rest", { e_sets: e.sets, e_reps: e.reps, e_weight: e.weight, unit: unit(), e_targetRpe_tr_ex_menu_modal: e.targetRpe ? tr("format.rpe_suffix", { rpe: e.targetRpe }) : '', fmtClock_e_restSeconds: fmtClock(e.restSeconds) }))}</p>
     ${desc ? `<p class="small mt8">${esc(desc)}</p>` : ''}
     ${e.alternates.length ? `<div class="divider"></div><p class="small muted">${esc(tr("ex_menu_modal.text.alternates", { e_alternates_map_a_esc_a_nam: e.alternates.map(a => esc(I18n.exercise(a.name))).join(', ') }))}</p>` : ''}`,
     [
@@ -1851,12 +1940,13 @@ function ladderHint(equipment) {
  * block is exactly how a "22.5 kg dumbbell" gets into a plan through whichever
  * screen was forgotten. Returns a ready-to-toast message, or null when fine.
  */
-function weightValidationError({ equipment, barWeight, weight, metric }) {
-  if (metric === 'height') {
-    return weight
-      ? tr("weight_validation_error.message.a_jump_height_exercise_carries_no_weight_set_it_")
-      : null;
+function weightValidationError({ equipment, barWeight, weight, metric, loadProfile }) {
+  if (metric === 'height') return weight ? tr('weight_validation_error.message.a_jump_height_exercise_carries_no_weight_set_it_') : null;
+  if (loadProfile && weight) {
+    if (loadProfile.unit !== unit() || !WorkoutModel.loadable(loadProfile, weight)) return tr('exercise.model.invalid', { fields: 'loadProfile / weight' });
+    return null;
   }
+  if (WorkoutModel.timed({ metric }) && equipment === 'bodyweight') return null;
   if (unit() !== 'kg') return null; // the ladder is kg-only
   const bar = barWeight != null ? barWeight : resolvedBarWeight({ equipment, barWeight: null });
   const kind = weightIssueKind(equipment, bar, weight);
@@ -1880,8 +1970,8 @@ function exEditModal(dayId, i) {
     <label class="field"><span>${esc(tr("exercise.form.name"))}</span><input id="f-name" value="${esc(e.name)}"><span class="field-hint">${esc(tr("exercise.edit.translated_name", { name: I18n.exercise(e.name) }))}</span></label>
     <div class="row">
       <label class="field grow"><span>${esc(tr("exercise.form.sets"))}</span><input id="f-sets" type="number" inputmode="numeric" value="${e.sets}"></label>
-      <label class="field grow"><span>${esc(tr("exercise.form.reps"))}</span><input id="f-reps" value="${esc(e.reps)}"></label>
-      <label class="field grow"><span>${esc(tr("ex_edit_modal.text.warm_up_sets"))}</span><input id="f-warmupsets" type="number" inputmode="numeric" min="0" value="${e.warmupSets || 0}">
+      <label class="field grow" ${e.metric && e.metric !== 'load' ? 'hidden' : ''}><span>${esc(tr("exercise.form.reps"))}</span><input id="f-reps" value="${esc(e.reps)}"></label>
+      <label class="field grow" ${e.metric && e.metric !== 'load' ? 'hidden' : ''}><span>${esc(tr("ex_edit_modal.text.warm_up_sets"))}</span><input id="f-warmupsets" type="number" inputmode="numeric" min="0" value="${e.warmupSets || 0}">
         <span class="field-hint">${esc(tr("ex_edit_modal.text.extra_ramp_rows_seeded_from_the_working_weight"))}</span></label>
     </div>
     <div class="row">
@@ -1898,11 +1988,9 @@ function exEditModal(dayId, i) {
     </label>
     <label class="field${BAR_WEIGHT_EQUIPMENT.has(equipment) ? '' : ' hidden'}" id="f-barweight-row"><span>${esc(tr("ex_edit_modal.text.bar_weight", { unit: unit() }))}</span><input id="f-barweight" type="number" inputmode="decimal" step="0.5" placeholder="${esc(tr("ex_edit_modal.placeholder.default", { resolvedBarWeight_equipment_: resolvedBarWeight({ equipment, barWeight: null }) }))}" value="${e.barWeight != null ? e.barWeight : ''}"></label>
     <label class="field"><span>${esc(tr("exercise.form.measurement"))}</span>
-      <select id="f-metric">
-        <option value="load" ${e.metric !== 'height' ? 'selected' : ''}>${esc(tr("exercise.form.measurement.load"))}</option>
-        <option value="height" ${e.metric === 'height' ? 'selected' : ''}>${esc(tr("exercise.form.measurement.height"))}</option>
-      </select>
+      <select id="f-metric" data-bind="model-metric" data-prefix="f">${modelOptions(e.metric)}</select>
     </label>
+    ${modelFields(e, 'f')}
     <label class="field"><span>${esc(tr("ex_edit_modal.text.superset_group"))}</span>
       <select id="f-superset">
         <option value="" ${!e.superset ? 'selected' : ''}>${esc(tr("ex_edit_modal.text.none"))}</option>
@@ -1922,7 +2010,9 @@ function exEditModal(dayId, i) {
           const metricVal = document.getElementById('f-metric').value;
           const barVal = barWeightRaw ? parseFloat(barWeightRaw) : null;
           const wVal = mnum('f-weight');
-          const wErr = weightValidationError({ equipment: eqVal, barWeight: barVal, weight: wVal, metric: metricVal });
+          let metadata;
+          try { metadata = readModelFields('f', metricVal); } catch (err) { toast(err.message, 'err'); return; }
+          const wErr = weightValidationError({ equipment: eqVal, barWeight: barVal, weight: wVal, metric: metricVal, loadProfile: metadata.loadProfile });
           if (wErr) { toast(wErr, 'err'); return; }
           // A tag must form ONE adjacent run. Split across the day it renders as
           // two cards with independent rest cycles, both headed "Superset A" and
@@ -1938,11 +2028,11 @@ function exEditModal(dayId, i) {
             }
           }
           const warmN = Math.max(0, mnum('f-warmupsets', 0));
-          if (metricVal === 'height' && warmN) {
+          if (metricVal !== 'load' && warmN) {
             toast(tr("ex_edit_modal.message.a_jump_exercise_has_no_load_to_ramp_mark_a_warm_"), 'err');
             return;
           }
-          const upd = { name, sets: Math.max(1, mnum('f-sets', 3)), warmupSets: warmN, reps: mval('f-reps') || '8-12', weight: wVal,
+          const upd = { ...metadata, name, sets: Math.max(1, mnum('f-sets', 3)), warmupSets: warmN, reps: mval('f-reps') || '8-12', weight: wVal,
             targetRpe: rpeRaw ? parseFloat(rpeRaw) : null, restSeconds: Math.max(0, mnum('f-rest', 120)),
             restSecondsNext: restNextRaw ? Math.max(0, parseInt(restNextRaw, 10)) : null,
             equipment: eqVal,
@@ -1993,10 +2083,12 @@ function doPlanSwap(dayId, i, ai) {
   // Equipment travels with each — without that, swap-then-swap-back changes the
   // equipment type, which then changes the ladder the weight is checked against.
   const newAlts = e.alternates.filter((_, x) => x !== ai);
-  newAlts.unshift({ name: e.name, weight: e.weight, description: e.description,
+  newAlts.unshift({ ...WorkoutModel.metadata(e), name: e.name, weight: e.weight, description: e.description,
     equipment: e.equipment, barWeight: e.barWeight, metric: e.metric || 'load' });
   const newMetric = a.metric || e.metric || 'load';
+  for (const k of Object.keys(WorkoutModel.metadata(e))) delete e[k];
   Object.assign(e, {
+    ...WorkoutModel.metadata(a),
     name: a.name, weight: a.weight || e.weight, description: a.description || '',
     equipment: a.equipment || e.equipment,
     barWeight: a.equipment ? a.barWeight : e.barWeight,
@@ -2040,23 +2132,26 @@ function doSessionSwap(ei, alt) {
   // The two metrics log different shapes — kg × reps per row vs one height per
   // row — so a change has to rebuild the grid. Refuse once anything is logged
   // rather than silently discarding sets the athlete actually did.
-  if (metricChanged && e.sets.some(s => s.done)) {
-    toast(tr("do_session_swap.message.is_logged_as_swap_it_before_logging_sets_not_aft", { alt_name: I18n.exercise(alt.name), newMetric_height_jump_height: newMetric === 'height' ? tr("workout.swap.height") : tr("do_session_swap.message.weight_reps") }), 'err');
+  if (e.sets.some(s => s.done)) {
+    toast(tr('exercise.model.swap_logged'), 'err');
     return;
   }
   const original = e.swappedFrom || e.name;
   e.swappedFrom = original === alt.name ? null : original;
   e.name = alt.name;
+  for (const k of Object.keys(WorkoutModel.metadata(e))) delete e[k];
+  Object.assign(e, WorkoutModel.metadata(alt));
   if (alt.equipment) { e.equipment = alt.equipment; e.barWeight = alt.barWeight != null ? alt.barWeight : null; }
   if (metricChanged) {
     e.metric = newMetric;
     const n = e.sets.length;
-    e.sets = newMetric === 'height'
-      ? Array.from({ length: n }, () => ({ heightCm: null, done: false }))
-      : Array.from({ length: n }, () => ({ weight: alt.weight || 0, reps: parseRepsLow(e.plannedReps), rpe: e.targetRpe, done: false }));
-  } else if (alt.weight) {
+    e.sets = Array.from({ length: n }, () => WorkoutModel.row({ ...e, weight: alt.weight || 0, reps: e.plannedReps }));
+  } else if (WorkoutModel.timed(e)) {
+    e.sets = e.sets.map(() => WorkoutModel.row({ ...e, weight: alt.weight || 0 }));
+  } else if (alt.weight != null) {
     e.sets.forEach(s => { if (!s.done) s.weight = alt.weight; });
   }
+  e.plannedWeight = alt.weight ?? e.plannedWeight;
   if (alt.description) e.description = alt.description;
   saveActive(); closeModal(); render();
   toast(tr("exercise.swap.success", { exercise: I18n.exercise(alt.name) }));
@@ -2090,11 +2185,9 @@ function sessionAddExerciseModal() {
       <select id="a-equipment" data-bind="add-equipment">${EQUIPMENT_TYPES.map(t => `<option value="${t}">${esc(equipmentLabel(t, 'add'))}</option>`).join('')}</select>
     </label>
     <label class="field"><span>${esc(tr("exercise.form.measurement"))}</span>
-      <select id="a-metric">
-        <option value="load" selected>${esc(tr("exercise.form.measurement.load"))}</option>
-        <option value="height">${esc(tr("exercise.form.measurement.height"))}</option>
-      </select>
+      <select id="a-metric" data-bind="model-metric" data-prefix="a">${modelOptions('load')}</select>
     </label>
+    ${modelFields({}, 'a')}
     ${day ? `<label class="merge-row"><input type="checkbox" id="a-to-plan"><span class="small">${esc(tr("session_add_exercise_modal.option.add_to_plan", { day: day.name }))}</span></label>` : ''}`,
     [
       { label: tr("common.action.add"), cls: 'primary', fn: () => {
@@ -2103,39 +2196,40 @@ function sessionAddExerciseModal() {
           const eqVal = document.getElementById('a-equipment').value;
           const metricVal = document.getElementById('a-metric').value;
           const wVal = mnum('a-weight');
+          let metadata;
+          try { metadata = readModelFields('a', metricVal); } catch (err) { toast(err.message, 'err'); return; }
           const planBox = document.getElementById('a-to-plan');
           const toPlan = !!(day && planBox && planBox.checked);
 
           // Exercise history, PR tracking and the aliases map are all keyed on
           // name GLOBALLY, so two different movements sharing a name silently
           // merge into one progression history. Same rule push-plan.mjs enforces.
-          if (active.exercises.some(x => sameExercise(x.name, name))) {
+          if (!metadata.movementId && active.exercises.some(x => sameExercise(x.name, name))) {
             toast(tr("session_add_exercise_modal.message.is_already_in_this_session_give_it_a_distinct_na", { name: name }), 'err'); return;
           }
-          if (toPlan && plan.days.some(d => d.exercises.some(x => sameExercise(x.name, name)))) {
+          if (!metadata.movementId && toPlan && plan.days.some(d => d.exercises.some(x => sameExercise(x.name, name)))) {
             toast(tr("session_add_exercise_modal.message.already_exists_in_your_plan_history_is_keyed_on_", { name: name }), 'err'); return;
           }
-          const wErr = weightValidationError({ equipment: eqVal, barWeight: null, weight: wVal, metric: metricVal });
+          const wErr = weightValidationError({ equipment: eqVal, barWeight: null, weight: wVal, metric: metricVal, loadProfile: metadata.loadProfile });
           if (wErr) { toast(wErr, 'err'); return; }
 
           const sets = Math.max(1, mnum('a-sets', 3));
           const reps = mval('a-reps') || '8-12';
           const rest = Math.max(0, mnum('a-rest', 120));
           if (toPlan) {
-            day.exercises.push({ id: uid(), name, sets, reps, weight: wVal, targetRpe: null,
+            day.exercises.push({ ...metadata, id: uid(), name, sets, reps, weight: wVal, targetRpe: null,
               restSeconds: rest, restSecondsNext: null, equipment: eqVal, barWeight: null,
               metric: metricVal, superset: null, description: '', notes: '', alternates: [] });
             savePlan();
           }
           active.exercises.push({
+            ...metadata,
             name, planId: null, swappedFrom: null,
             plannedSets: sets, plannedReps: reps, plannedWeight: wVal,
             targetRpe: null, restSeconds: rest, restSecondsNext: null,
             equipment: eqVal, barWeight: null, metric: metricVal, superset: null,
             description: '', alternates: [], notes: '',
-            sets: metricVal === 'height'
-              ? Array.from({ length: sets }, () => ({ heightCm: null, done: false }))
-              : Array.from({ length: sets }, () => ({ weight: wVal, reps: parseRepsLow(reps), rpe: null, done: false }))
+            sets: Array.from({ length: sets }, () => WorkoutModel.row({ ...metadata, metric: metricVal, weight: wVal, reps }))
           });
           saveActive(); closeModal(); render();
           toast(toPlan ? tr("session_add_exercise_modal.message.added_also_saved_to", { name: name, day_name: day.name }) : tr("session_add_exercise_modal.message.added_for_today", { name: name }));
@@ -2148,7 +2242,7 @@ function exInfoModal(ei) {
   const desc = I18n.explanation(e.name, e.description) || lookupExplanation(e.name) || tr("ex_info_modal.message.no_description_available_ask_your_ai_coach_to_in");
   // A jump has no load or rep target — every other jump surface already branches
   // on the metric, so building this line unconditionally read "Target: 3×1 @ 0kg".
-  const target = isJump(e)
+  const target = WorkoutModel.timed(e) ? `${e.plannedSets} × ${measurementText(e, { ...e, weight: e.plannedWeight })}` : isJump(e)
     ? tr("ex_info_modal.message.attempt", { e_plannedSets: e.plannedSets, e_plannedSets_1_s: e.plannedSets === 1 ? '' : 's' })
     : `${e.plannedSets}×${esc(e.plannedReps)} @ ${e.plannedWeight}${unit()}${e.targetRpe ? tr("format.rpe_suffix", { rpe: e.targetRpe }) : ''}`;
   showModal(I18n.exercise(e.name), `<p>${esc(desc)}</p>
@@ -2298,7 +2392,13 @@ function stepperInfo(el) {
   if (f === 'heightCm') return { kind: 'height', label: tr("stepper_info.button.cm"), down: 0.5, up: 0.5 };
   if (f !== 'weight') return null;
   const ex = active && active.exercises[+el.dataset.ei];
-  if (!ex || ex.equipment === 'bodyweight') return null;   // nothing to load
+  if (!ex || (ex.equipment === 'bodyweight' && !ex.loadProfile && !WorkoutModel.timed(ex))) return null;
+  if (ex.loadProfile?.unit === unit()) {
+    const current = parseFloat(el.value) || 0;
+    return { kind: 'weight', label: unit(), down: Math.max(0, current - WorkoutModel.nextLoad(ex.loadProfile, current, -1)), up: Math.max(0, WorkoutModel.nextLoad(ex.loadProfile, current, 1) - current) };
+  }
+  if (ex.loadProfile) return null; // A profile expressed in another unit is not a usable ladder.
+  if (WorkoutModel.timed(ex) && ex.equipment === 'bodyweight') return { kind: 'weight', label: unit(), down: 2.5, up: 2.5 };
   if (unit() !== 'kg') return { kind: 'weight', label: unit(), down: 2.5, up: 2.5 };
   const cur = parseFloat(el.value) || 0;
   const bar = resolvedBarWeight(ex);
@@ -2353,7 +2453,7 @@ document.getElementById('stepper-bar').addEventListener('pointerdown', e => {
   let next;
   if (info.kind === 'weight' && unit() === 'kg') {
     const ex = active.exercises[+stepperTarget.dataset.ei];
-    next = nextWeight(ex.equipment, resolvedBarWeight(ex), curN, dir);
+    next = ex.loadProfile?.unit === unit() ? WorkoutModel.nextLoad(ex.loadProfile, curN, dir) : WorkoutModel.timed(ex) && ex.equipment === 'bodyweight' ? curN + dir * 2.5 : nextWeight(ex.equipment, resolvedBarWeight(ex), curN, dir);
   } else {
     next = curN + dir * (dir > 0 ? info.up : info.down);
   }
@@ -2929,6 +3029,11 @@ document.addEventListener('click', e => {
     case 'set-done': {
       const ei = +el.dataset.ei, si = +el.dataset.si;
       const ex = active.exercises[ei], s = ex.sets[si];
+      if (!s.done && WorkoutModel.timed(ex) && (
+          !(ex.metric === 'duration' ? s.durationSeconds > 0 : ex.metric === 'distance' ? s.distanceMeters > 0 : s.durationSeconds > 0 || s.distanceMeters > 0) ||
+          ['weight', 'durationSeconds', 'distanceMeters', 'speedKph'].some(k => s[k] != null && (!Number.isFinite(s[k]) || s[k] < 0)))) {
+        toast(tr('exercise.model.actual_required'), 'err'); return;
+      }
       s.done = !s.done;
       if (s.done) completeSet(ei, si);
       else { saveActive(); render(); }
@@ -2995,7 +3100,7 @@ document.addEventListener('click', e => {
       // not whatever a warm-up row happens to be sitting at.
       const ws = workingSets(ex.sets);
       const lastSet = ws[ws.length - 1] || ex.sets[ex.sets.length - 1];
-      ex.sets.push(isJump(ex)
+      ex.sets.push(WorkoutModel.timed(ex) ? { ...WorkoutModel.row(ex), ...lastSet, done: false } : isJump(ex)
         ? { heightCm: null, done: false }
         : { weight: lastSet ? lastSet.weight : ex.plannedWeight, reps: lastSet ? lastSet.reps : parseRepsLow(ex.plannedReps), rpe: ex.targetRpe, done: false });
       saveActive(); render(); break;
@@ -3108,6 +3213,7 @@ document.addEventListener('click', e => {
       } catch (err) { toast(tr("plan_import.error.invalid", { error: err.message }), 'err'); }
       break;
     }
+    case 'sync-retry': workerPush({ silent: true }); break;
     case 'toggle-autosync': settings.autoSync = !settings.autoSync; saveSettings(); render(); if (settings.autoSync) workerPush({ silent: true }); break;
     case 'share-ai': copyText(workerShareUrl()).then(ok => toast(ok ? tr("action_share-ai.message.link_copied_paste_into_any_ai_chat") : tr("common.error.copy_failed"), ok ? 'ok' : 'err')); break;
     case 'copy-uuid': copyText(gymUUID).then(ok => toast(ok ? tr("action_copy-uuid.message.backup_code_copied") : tr("common.error.copy_failed"), ok ? 'ok' : 'err')); break;
@@ -3168,6 +3274,8 @@ document.addEventListener('input', e => {
     const s = active.exercises[+el.dataset.ei].sets[+el.dataset.si];
     const v = parseFloat(el.value);
     s[el.dataset.f] = isNaN(v) ? null : v;
+    const summary = document.querySelector(`[data-measurement-summary="${el.dataset.ei}-${el.dataset.si}"]`);
+    if (summary) summary.textContent = measurementText(active.exercises[+el.dataset.ei], s);
     saveActive();
   } else if (bind === 'session-notes' && active) {
     active.notes = el.value; saveActive();
@@ -3187,6 +3295,34 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('change', e => {
   const bind = e.target.dataset.bind;
+  const prefix = e.target.dataset.prefix;
+  if (bind === 'model-metric') {
+    const metric = e.target.value;
+    const targets = document.querySelector(`.model-targets[data-prefix="${prefix}"]`);
+    targets.hidden = !WorkoutModel.timed({ metric });
+    for (const field of targets.querySelectorAll('[data-model-field]')) field.hidden = field.dataset.modelField === 'pace' ? metric !== 'cardio' : !WorkoutModel.targetFields({ metric }).includes(field.dataset.modelField);
+    const reps = document.getElementById(`${prefix}-reps`);
+    if (reps) reps.closest('label').hidden = metric !== 'load';
+    const warmups = document.getElementById(`${prefix}-warmupsets`);
+    if (warmups) { warmups.closest('label').hidden = metric !== 'load'; if (metric !== 'load') warmups.value = 0; }
+  }
+  if (bind === 'target-pace') {
+    const match = e.target.value.trim().match(/^(\d+):([0-5]\d)$/);
+    if (match && (+match[1] * 60 + +match[2]) > 0) document.getElementById(`${prefix}-speedKph`).value = Math.round(360000 / (+match[1] * 60 + +match[2])) / 100;
+    else if (e.target.value) { toast(tr('exercise.model.invalid', { fields: modelLabel('pace') }), 'err'); e.target.value = ''; }
+  }
+  if (bind === 'setup-profile') {
+    const saved = [...plan.days.flatMap(d => d.exercises), ...sessions.flatMap(s => s.exercises)].find(x => x.setupId === e.target.value && x.loadProfile?.unit === unit());
+    if (saved) for (const field of ['offset', 'increment', 'loads']) document.getElementById(`${prefix}-${field}`).value = field === 'loads' ? saved.loadProfile.loads?.join(', ') || '' : saved.loadProfile[field] ?? '';
+    if (saved) {
+      document.getElementById(`${prefix}-profileUnit`).value = saved.loadProfile.unit;
+      const equipment = document.getElementById(`${prefix}-equipment`);
+      equipment.value = saved.equipment;
+      equipment.dispatchEvent(new Event('change', { bubbles: true }));
+      const bar = document.getElementById(`${prefix}-barweight`);
+      if (bar) bar.value = saved.barWeight ?? '';
+    }
+  }
   if (bind === 'set-language') {
     const drafts = [...document.querySelectorAll('#app input[id], #app textarea[id]')].map(el => [el.id, el.value]);
     I18n.setLocale(e.target.value); render(); renderRest();

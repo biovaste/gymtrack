@@ -1,4 +1,191 @@
 {
+  "sync.retry": {"en":"Retry sync","fi":"Yritä synkronointia uudelleen","context":"Retry failed cloud push; local workout is already saved","screen":"Cloud sync","role":"button"},
+  "exercise.model.identity_setup": {
+    "en": "Movement history and equipment setup",
+    "fi": "Liikehistoria ja laiteasetukset",
+    "context": "Exercise model: identity_setup",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.identity_hint": {
+    "en": "Use the same movement key across days to share history. Keep variants distinct. Blank keeps legacy name-based history; existing records are not reassigned.",
+    "fi": "Käytä samaa liiketunnistetta eri päivinä yhteistä historiaa varten. Erota liikeversiot. Tyhjä säilyttää nimipohjaisen historian; vanhoja kirjauksia ei siirretä.",
+    "context": "Exercise model: identity_hint",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.movementId": {
+    "en": "Movement key (reusable name)",
+    "fi": "Liiketunniste (uudelleenkäytettävä nimi)",
+    "context": "Exercise model: movementId",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.side": {
+    "en": "Side",
+    "fi": "Puoli",
+    "context": "Exercise model: side",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.setupId": {
+    "en": "Equipment setup (reusable name)",
+    "fi": "Laiteasetus (uudelleenkäytettävä nimi)",
+    "context": "Exercise model: setupId",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.unspecified": {
+    "en": "Not specified",
+    "fi": "Ei määritetty",
+    "context": "Exercise model: unspecified",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.left": {
+    "en": "Left",
+    "fi": "Vasen",
+    "context": "Exercise model: left",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.right": {
+    "en": "Right",
+    "fi": "Oikea",
+    "context": "Exercise model: right",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.bilateral": {
+    "en": "Both sides together",
+    "fi": "Molemmat puolet yhdessä",
+    "context": "Exercise model: bilateral",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.profile_hint": {
+    "en": "Optional custom loads in your selected weight unit. Enter an empty-machine offset and increment, or a comma-separated list of total loads including the offset. Selecting a saved setup copies its profile.",
+    "fi": "Valinnaiset kuormat valitussa painoyksikössä. Anna tyhjän laitteen paino ja korotusväli tai pilkuin erotettu lista kokonaiskuormista. Tallennetun laiteasetuksen valinta kopioi sen kuormaprofiilin.",
+    "context": "Exercise model: profile_hint",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.offset": {
+    "en": "Empty equipment / carriage weight",
+    "fi": "Tyhjän laitteen / kelkan paino",
+    "context": "Exercise model: offset",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.increment": {
+    "en": "Load increment",
+    "fi": "Kuorman korotusväli",
+    "context": "Exercise model: increment",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.loads": {
+    "en": "Available total loads (comma-separated)",
+    "fi": "Mahdolliset kokonaiskuormat (pilkuin eroteltuna)",
+    "context": "Exercise model: loads",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.durationSeconds": {
+    "en": "Duration (seconds)",
+    "fi": "Kesto (sekuntia)",
+    "context": "Exercise model: durationSeconds",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.distanceMeters": {
+    "en": "Distance (metres)",
+    "fi": "Matka (metriä)",
+    "context": "Exercise model: distanceMeters",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.speedKph": {
+    "en": "Speed (km/h)",
+    "fi": "Nopeus (km/h)",
+    "context": "Exercise model: speedKph",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.pace": {
+    "en": "Pace (min:sec/km)",
+    "fi": "Vauhti (min:s/km)",
+    "context": "Exercise model: pace",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.measurement_hint": {
+    "en": "Targets are optional. Record actual results per set. Pace is calculated from speed, or actual distance and time when both are recorded.",
+    "fi": "Tavoitteet ovat valinnaisia. Kirjaa toteutuneet tulokset sarjoittain. Vauhti lasketaan nopeudesta tai toteutuneesta matkasta ja ajasta, kun molemmat on kirjattu.",
+    "context": "Exercise model: measurement_hint",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.load": {
+    "en": "Weight × repetitions",
+    "fi": "Paino × toistot",
+    "context": "Exercise model: load",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.height": {
+    "en": "Jump height",
+    "fi": "Hyppykorkeus",
+    "context": "Exercise model: height",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.duration": {
+    "en": "Duration + optional load",
+    "fi": "Kesto + valinnainen kuorma",
+    "context": "Exercise model: duration",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.distance": {
+    "en": "Distance + optional load",
+    "fi": "Matka + valinnainen kuorma",
+    "context": "Exercise model: distance",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.cardio": {
+    "en": "Time, distance and speed",
+    "fi": "Aika, matka ja nopeus",
+    "context": "Exercise model: cardio",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.invalid": {
+    "en": "Check these exercise fields: {fields}",
+    "fi": "Tarkista liikkeen kentät: {fields}",
+    "context": "Exercise model: invalid",
+    "screen": "Exercise editor and workout",
+    "role": "text",
+    "examples": [
+      "fields"
+    ]
+  },
+  "exercise.model.swap_logged": {
+    "en": "Swap before logging sets. Logged sets belong to the original movement.",
+    "fi": "Vaihda liike ennen sarjojen kirjaamista. Kirjatut sarjat kuuluvat alkuperäiseen liikkeeseen.",
+    "context": "Exercise model: swap_logged",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "exercise.model.actual_required": {
+    "en": "Enter a positive duration or distance before completing this set.",
+    "fi": "Anna positiivinen kesto tai matka ennen sarjan merkitsemistä tehdyksi.",
+    "context": "Exercise model: actual_required",
+    "screen": "Exercise editor and workout",
+    "role": "text"
+  },
+  "sync.saved_locally": {"en":"Workout saved on this device.","fi":"Treeni tallennettu tälle laitteelle.","context":"Completion confirmation independent of network sync","screen":"Workout completion","role":"text"},
   "start_rest.message.rest": {
     "en": "Rest",
     "fi": "Lepo",
@@ -140,9 +327,9 @@
     ]
   },
   "finish_session.text.session_rpe": {
-    "en": "Session RPE",
-    "fi": "Treenin RPE",
-    "context": "Workout completion: text for Session RPE",
+    "en": "Set-RPE average · load estimate",
+    "fi": "Sarja-RPE:n keskiarvo · kuormitusarvio",
+    "context": "Workout completion: rep-weighted set RPE and duration-derived proxy, not a whole-session rating",
     "screen": "Workout completion",
     "role": "text"
   },
@@ -1071,8 +1258,8 @@
     "role": "text"
   },
   "view_history.message.rpe_au": {
-    "en": "· RPE {sl_rpe} · {sl_load} AU{sl_partial}",
-    "fi": "· RPE {sl_rpe} · {sl_load} AU{sl_partial}",
+    "en": "· Set-RPE average {sl_rpe} · estimated load {sl_load} AU{sl_partial}",
+    "fi": "· Sarja-RPE:n keskiarvo {sl_rpe} · kuormitusarvio {sl_load} AU{sl_partial}",
     "context": "History: message for · RPE {sl_rpe} · {sl_load} AU{sl_partial}",
     "screen": "History",
     "role": "message",
@@ -1083,8 +1270,8 @@
     ]
   },
   "view_history.text.session_rpe_from_only_of_sets_the_rest_were_logg": {
-    "en": "* session RPE from only {Math_round_sl_coverage_100}% of sets — the rest were logged without one.",
-    "fi": "* Treenin RPE perustuu vain {Math_round_sl_coverage_100} %:iin sarjoista — muille ei kirjattu RPE:tä.",
+    "en": "* Set-RPE estimate from only {Math_round_sl_coverage_100}% of repetition sets. This is not a whole-session effort rating.",
+    "fi": "* Sarja-RPE:n arvio perustuu vain {Math_round_sl_coverage_100} %:iin toistosarjoista. Se ei ole koko treenin rasittavuusarvio.",
     "context": "History: text for * session RPE from only {Math_round_sl_coverage_100}% of sets — the rest were logged without one.",
     "screen": "History",
     "role": "text",
