@@ -1,10 +1,10 @@
 name: Finnish translations
 on:
   pull_request:
-    paths: ['app.js', 'index.html', 'i18n.js', 'exercises.js', 'styles.css', 'sw.js', 'manifest.webmanifest', 'locales/**', 'tools/i18n/**', '.github/workflows/localization.yml']
+    paths: ['app.js', 'index.html', 'i18n.js', 'exercises.js', 'exercise-library.js', 'workout-model.js', 'styles.css', 'sw.js', 'manifest.webmanifest', 'locales/**', 'tools/i18n/**', '.github/workflows/localization.yml']
   push:
     branches: [master, main]
-    paths: ['app.js', 'index.html', 'i18n.js', 'exercises.js', 'styles.css', 'sw.js', 'manifest.webmanifest', 'locales/**', 'tools/i18n/**', '.github/workflows/localization.yml']
+    paths: ['app.js', 'index.html', 'i18n.js', 'exercises.js', 'exercise-library.js', 'workout-model.js', 'styles.css', 'sw.js', 'manifest.webmanifest', 'locales/**', 'tools/i18n/**', '.github/workflows/localization.yml']
   schedule:
     - cron: '20 6 * * 1'
   workflow_dispatch:
@@ -23,7 +23,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: node --test --test-isolation=none tools/i18n/*.test.mjs tools/i18n-exercises.test.mjs tools/i18n-offline.test.mjs tools/i18n-runtime.test.mjs
+      - run: node --test --test-isolation=none tools/i18n/*.test.mjs tools/i18n-exercises.test.mjs tools/i18n-offline.test.mjs tools/i18n-runtime.test.mjs tools/exercise-library.test.mjs tools/workout-model.test.mjs
       - run: node tools/i18n/cli.mjs check
 
   reconcile:

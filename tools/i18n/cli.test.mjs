@@ -37,7 +37,7 @@ test('offline cache version is stable across Windows and Unix line endings', asy
   const root = await mkdtemp(path.join(os.tmpdir(), 'gym-i18n-cache-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(path.join(root, 'locales'), { recursive: true });
-  const assets = ['index.html', 'styles.css', 'app.js', 'i18n.js', 'exercises.js', 'locales/catalog.js', 'manifest.webmanifest'];
+  const assets = ['index.html', 'styles.css', 'app.js', 'workout-model.js', 'exercise-library.js', 'i18n.js', 'exercises.js', 'locales/catalog.js', 'manifest.webmanifest'];
   await Promise.all(assets.map(file => writeFile(path.join(root, file), 'alpha\r\nbeta\r\n')));
   await writeFile(path.join(root, 'sw.js'), "const CACHE = 'gymtrack-i18n-development';\r\nself.value = true;\r\n");
   await releaseCache(root);

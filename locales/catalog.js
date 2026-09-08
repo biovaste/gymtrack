@@ -893,6 +893,10 @@ globalThis.GYM_I18N_CATALOG = {
       "en": "Bicep Curl",
       "fi": "Hauiskääntö"
     },
+    "exercises.bike.description": {
+      "en": "Adjust the seat for a comfortable pedalling position. Pedal smoothly and record time and distance when available.",
+      "fi": "Säädä satula sopivaan polkemisasentoon. Polje tasaisesti ja kirjaa aika sekä matka, jos ne ovat saatavilla."
+    },
     "exercises.bike.name": {
       "en": "Bike",
       "fi": "Kuntopyörä"
@@ -1040,6 +1044,10 @@ globalThis.GYM_I18N_CATALOG = {
     "exercises.face_pull.name": {
       "en": "Face Pull",
       "fi": "Takaolkapääveto (face pull)"
+    },
+    "exercises.farmer_carry.description": {
+      "en": "Hold the weights at your sides, stand tall and walk with controlled steps. Keep your trunk steady and record the distance covered.",
+      "fi": "Pidä painot sivuilla, seiso ryhdikkäästi ja kävele hallituin askelin. Pidä keskivartalo vakaana ja kirjaa kuljettu matka."
     },
     "exercises.farmer_carry.name": {
       "en": "Farmer Carry",
@@ -1445,6 +1453,10 @@ globalThis.GYM_I18N_CATALOG = {
       "en": "Rowing Machine",
       "fi": "Soutulaite"
     },
+    "exercises.running.description": {
+      "en": "Start at an easy pace, keep your stride comfortable and record time and distance.",
+      "fi": "Aloita rauhallisesti, pidä askel luontevana ja kirjaa aika sekä matka."
+    },
     "exercises.running.name": {
       "en": "Running",
       "fi": "Juoksu"
@@ -1457,6 +1469,10 @@ globalThis.GYM_I18N_CATALOG = {
       "en": "Seated Calf Raise",
       "fi": "Pohjenousu istuen"
     },
+    "exercises.seated_dumbbell_press.description": {
+      "en": "Sit on a supported bench, brace your trunk and press the dumbbells overhead under control. Lower to a comfortable depth without arching your back.",
+      "fi": "Istu selkänojallisella penkillä, jännitä keskivartalo ja punnerra käsipainot hallitusti ylös. Laske mukavalle syvyydelle selkää notkistamatta."
+    },
     "exercises.seated_dumbbell_press.name": {
       "en": "Seated Dumbbell Press",
       "fi": "Pystypunnerrus käsipainoilla istuen"
@@ -1468,6 +1484,10 @@ globalThis.GYM_I18N_CATALOG = {
     "exercises.seated_row.name": {
       "en": "Seated Row",
       "fi": "Soutu istuen"
+    },
+    "exercises.shoulder_press.description": {
+      "en": "Brace your trunk and press overhead under control. Keep your ribs down and use a comfortable range of motion. For one-arm work, avoid leaning or twisting.",
+      "fi": "Jännitä keskivartalo ja punnerra hallitusti ylös. Pidä kylkiluut alhaalla ja käytä sopivaa liikerataa. Vältä kallistumista ja kiertymistä yhdellä kädellä tehdessä."
     },
     "exercises.shoulder_press.name": {
       "en": "Shoulder Press",
@@ -1660,6 +1680,178 @@ globalThis.GYM_I18N_CATALOG = {
     "ladder_hint.message.bodyweight_leave_at_0": {
       "en": "bodyweight — leave at 0",
       "fi": "kehonpaino — jätä arvoksi 0"
+    },
+    "library.alias": {
+      "en": "Save as library alias",
+      "fi": "Tallenna rinnakkaisnimeksi"
+    },
+    "library.all": {
+      "en": "All",
+      "fi": "Kaikki"
+    },
+    "library.category": {
+      "en": "Movement category",
+      "fi": "Liikeryhmä"
+    },
+    "library.category.cardio": {
+      "en": "Cardio",
+      "fi": "Kestävyys"
+    },
+    "library.category.carry": {
+      "en": "Carry",
+      "fi": "Kantaminen"
+    },
+    "library.category.core": {
+      "en": "Core",
+      "fi": "Keskivartalo"
+    },
+    "library.category.hinge": {
+      "en": "Hip hinge",
+      "fi": "Lonkan ojennus"
+    },
+    "library.category.isolation": {
+      "en": "Isolation",
+      "fi": "Eristävä liike"
+    },
+    "library.category.lunge": {
+      "en": "Lunge / split squat",
+      "fi": "Askel- ja askelkyykky"
+    },
+    "library.category.other": {
+      "en": "Other",
+      "fi": "Muu"
+    },
+    "library.category.press": {
+      "en": "Press",
+      "fi": "Punnerrus"
+    },
+    "library.category.pull": {
+      "en": "Pull",
+      "fi": "Veto"
+    },
+    "library.category.squat": {
+      "en": "Squat",
+      "fi": "Kyykky"
+    },
+    "library.choice": {
+      "en": "Choose an entry or create your own. Library identities do not merge old workout history.",
+      "fi": "Valitse liike tai luo oma. Kirjaston tunnisteet eivät yhdistä vanhaa treenihistoriaa."
+    },
+    "library.continue": {
+      "en": "Continue to plan settings",
+      "fi": "Jatka ohjelman asetuksiin"
+    },
+    "library.custom": {
+      "en": "Create custom entry",
+      "fi": "Luo oma liike"
+    },
+    "library.custom_choice": {
+      "en": "Create a separate entry, or explicitly choose an existing entry to save this name as its alias. Suggested matches appear first. For an alias, the existing entry supplies the defaults below.",
+      "fi": "Luo erillinen liike tai valitse olemassa oleva liike, jonka rinnakkaisnimeksi tämä nimi tallennetaan. Ehdotukset ovat ensin. Rinnakkaisnimi käyttää valitun liikkeen oletusasetuksia."
+    },
+    "library.defaults": {
+      "en": "Default instructions",
+      "fi": "Oletusohje"
+    },
+    "library.execution": {
+      "en": "Execution (e.g. one-arm)",
+      "fi": "Suoritustapa (esim. yhdellä kädellä)"
+    },
+    "library.identity_locked": {
+      "en": "Keep the library movement ID. Create a separate library entry for a different movement.",
+      "fi": "Säilytä kirjaston liiketunniste. Luo eri liikkeelle oma kirjastomerkintä."
+    },
+    "library.instructions": {
+      "en": "Leave plan instructions blank to use these library instructions:",
+      "fi": "Jätä ohjelman ohje tyhjäksi, jos haluat käyttää tätä kirjaston ohjetta:"
+    },
+    "library.link_question": {
+      "en": "Use {match}, or save “{name}” as its library alias? This does not change legacy history aliases.",
+      "fi": "Käytetäänkö liikettä {match}, vai tallennetaanko ”{name}” sen rinnakkaisnimeksi kirjastoon? Tämä ei muuta vanhan historian rinnakkaisnimiä."
+    },
+    "library.link_title": {
+      "en": "Choose how to use this entry",
+      "fi": "Valitse, miten käytät liikettä"
+    },
+    "library.movement": {
+      "en": "Base movement",
+      "fi": "Perusliike"
+    },
+    "library.muscle": {
+      "en": "Target muscle",
+      "fi": "Kohdelihas"
+    },
+    "library.muscle.back": {
+      "en": "Back",
+      "fi": "Selkä"
+    },
+    "library.muscle.biceps": {
+      "en": "Biceps",
+      "fi": "Hauis"
+    },
+    "library.muscle.calves": {
+      "en": "Calves",
+      "fi": "Pohkeet"
+    },
+    "library.muscle.chest": {
+      "en": "Chest",
+      "fi": "Rinta"
+    },
+    "library.muscle.core": {
+      "en": "Core",
+      "fi": "Keskivartalo"
+    },
+    "library.muscle.glutes": {
+      "en": "Glutes",
+      "fi": "Pakarat"
+    },
+    "library.muscle.hamstrings": {
+      "en": "Hamstrings",
+      "fi": "Takareidet"
+    },
+    "library.muscle.legs": {
+      "en": "Legs",
+      "fi": "Jalat"
+    },
+    "library.muscle.other": {
+      "en": "Other",
+      "fi": "Muu"
+    },
+    "library.muscle.quadriceps": {
+      "en": "Quadriceps",
+      "fi": "Etureidet"
+    },
+    "library.muscle.shoulders": {
+      "en": "Shoulders",
+      "fi": "Olkapäät"
+    },
+    "library.muscle.triceps": {
+      "en": "Triceps",
+      "fi": "Ojentajat"
+    },
+    "library.name": {
+      "en": "Exercise name",
+      "fi": "Liikkeen nimi"
+    },
+    "library.no_matches": {
+      "en": "No matches. Try a shorter search, clear filters, or create a custom entry.",
+      "fi": "Ei osumia. Lyhennä hakua, poista suodattimet tai luo oma liike."
+    },
+    "library.position": {
+      "en": "Position (e.g. seated)",
+      "fi": "Asento (esim. istuen)"
+    },
+    "library.search": {
+      "en": "Search names and variants",
+      "fi": "Hae nimellä tai variaatiolla"
+    },
+    "library.title": {
+      "en": "Exercise library",
+      "fi": "Liikekirjasto"
+    },
+    "library.use": {
+      "en": "Use library name",
+      "fi": "Käytä kirjaston nimeä"
     },
     "merge_names_modal.button.merge": {
       "en": "Merge",
@@ -2598,5 +2790,5 @@ globalThis.GYM_I18N_CATALOG = {
       "fi": "hyppykorkeus"
     }
   },
-  "version": "9976d900a535a69f4831"
+  "version": "276b3061806fd07091c4"
 };

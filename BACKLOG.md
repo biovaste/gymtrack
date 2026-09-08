@@ -3,7 +3,27 @@
 Known bugs and deferred cleanups, each verified present in `main` as of the commit that added it
 here.
 
-**Empty as of 2026-08-14.** All six items in the previous list have been fixed:
+## Open — Exercise library entry paths (2026-09-08)
+
+**Unknown exercises bypass the library choice on import and mid-workout entry.**
+The plan picker offers custom-entry versus alias selection, but imported unknown
+exercises remain standalone, and mid-session free-text entry (including Add to
+plan) offers neither choice. This leaves reusable entries and identities
+inconsistent depending on how an exercise enters the app.
+
+Follow-up: suggest existing matches and offer an explicit choice to create a
+custom library entry or link a library alias for unknown imported and mid-workout
+exercises. Preserve prescriptions, plan order, supersets, side/setup separation,
+custom load profiles, instructions and existing explicit IDs. Never infer legacy
+history mappings or merge identities from similar names. Cover English/Finnish,
+import cancellation, active-workout safety and all persistence paths with focused
+tests. Entry points: normalizePlan/import-plan and sessionAddExerciseModal in app.js.
+
+Deferred explicitly by Henri for the library v1 release; not fixed in this release.
+
+## Resolved
+
+All six items in the previous list were fixed as of 2026-08-14:
 
 | # | What it was | Fixed by |
 |---|---|---|

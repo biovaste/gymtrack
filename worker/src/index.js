@@ -7,6 +7,9 @@
  * can never overwrite the training history.
  */
 
+import ExerciseLibrary from '../../exercise-library.js';
+import WorkoutModel from '../../workout-model.js';
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -139,6 +142,16 @@ export default {
 
       // No stale guard needed here: this route is read-modify-write on the
       // current record and stamps updatedAt itself.
+      // Share the client/desktop rule: plan replacement retains reusable entries.
+      try {
+        if (!newPlan || typeof newPlan !== 'object' || !Array.isArray(newPlan.days)) return json({ error: 'Invalid plan' }, 400);
+        const invalid = newPlan.library == null ? [] : WorkoutModel.libraryListErrors(newPlan.library);
+        for (const day of newPlan.days) for (const e of day.exercises || []) {
+          for (const x of [e, ...(e.alternates || [])]) if (x.libraryEntry != null) invalid.push(...WorkoutModel.errors(x));
+        }
+        if (invalid.length) return json({ error: 'Invalid library data' }, 400);
+        newPlan.library = ExerciseLibrary.importLibrary(backup.plan || {}, newPlan);
+      } catch { return json({ error: 'Invalid library data' }, 400); }
       backup.plan = newPlan;
       backup.updatedAt = Date.now();
       backup.exportedAt = new Date().toISOString();

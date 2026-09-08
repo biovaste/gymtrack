@@ -1,0 +1,346 @@
+{
+  "library.title": {
+    "en": "Exercise library",
+    "fi": "Liikekirjasto",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library title",
+    "examples": {}
+  },
+  "library.search": {
+    "en": "Search names and variants",
+    "fi": "Hae nimellä tai variaatiolla",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library search",
+    "examples": {}
+  },
+  "library.all": {
+    "en": "All",
+    "fi": "Kaikki",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library all",
+    "examples": {}
+  },
+  "library.category": {
+    "en": "Movement category",
+    "fi": "Liikeryhmä",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library category",
+    "examples": {}
+  },
+  "library.muscle": {
+    "en": "Target muscle",
+    "fi": "Kohdelihas",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library muscle",
+    "examples": {}
+  },
+  "library.custom": {
+    "en": "Create custom entry",
+    "fi": "Luo oma liike",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library custom",
+    "examples": {}
+  },
+  "library.choice": {
+    "en": "Choose an entry or create your own. Library identities do not merge old workout history.",
+    "fi": "Valitse liike tai luo oma. Kirjaston tunnisteet eivät yhdistä vanhaa treenihistoriaa.",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library choice",
+    "examples": {}
+  },
+  "library.instructions": {
+    "en": "Leave plan instructions blank to use these library instructions:",
+    "fi": "Jätä ohjelman ohje tyhjäksi, jos haluat käyttää tätä kirjaston ohjetta:",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library instructions",
+    "examples": {}
+  },
+  "library.identity_locked": {
+    "en": "Keep the library movement ID. Create a separate library entry for a different movement.",
+    "fi": "Säilytä kirjaston liiketunniste. Luo eri liikkeelle oma kirjastomerkintä.",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library identity_locked",
+    "examples": {}
+  },
+  "library.no_matches": {
+    "en": "No matches. Try a shorter search, clear filters, or create a custom entry.",
+    "fi": "Ei osumia. Lyhennä hakua, poista suodattimet tai luo oma liike.",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library no_matches",
+    "examples": {}
+  },
+  "library.link_title": {
+    "en": "Choose how to use this entry",
+    "fi": "Valitse, miten käytät liikettä",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library link_title",
+    "examples": {}
+  },
+  "library.link_question": {
+    "en": "Use {match}, or save “{name}” as its library alias? This does not change legacy history aliases.",
+    "fi": "Käytetäänkö liikettä {match}, vai tallennetaanko ”{name}” sen rinnakkaisnimeksi kirjastoon? Tämä ei muuta vanhan historian rinnakkaisnimiä.",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library link_question",
+    "examples": {}
+  },
+  "library.use": {
+    "en": "Use library name",
+    "fi": "Käytä kirjaston nimeä",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library use",
+    "examples": {}
+  },
+  "library.alias": {
+    "en": "Save as library alias",
+    "fi": "Tallenna rinnakkaisnimeksi",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library alias",
+    "examples": {}
+  },
+  "library.name": {
+    "en": "Exercise name",
+    "fi": "Liikkeen nimi",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library name",
+    "examples": {}
+  },
+  "library.movement": {
+    "en": "Base movement",
+    "fi": "Perusliike",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library movement",
+    "examples": {}
+  },
+  "library.position": {
+    "en": "Position (e.g. seated)",
+    "fi": "Asento (esim. istuen)",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library position",
+    "examples": {}
+  },
+  "library.execution": {
+    "en": "Execution (e.g. one-arm)",
+    "fi": "Suoritustapa (esim. yhdellä kädellä)",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library execution",
+    "examples": {}
+  },
+  "library.defaults": {
+    "en": "Default instructions",
+    "fi": "Oletusohje",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library defaults",
+    "examples": {}
+  },
+  "library.continue": {
+    "en": "Continue to plan settings",
+    "fi": "Jatka ohjelman asetuksiin",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library continue",
+    "examples": {}
+  },
+  "library.category.press": {
+    "en": "Press",
+    "fi": "Punnerrus",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library category.press",
+    "examples": {}
+  },
+  "library.category.pull": {
+    "en": "Pull",
+    "fi": "Veto",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library category.pull",
+    "examples": {}
+  },
+  "library.category.squat": {
+    "en": "Squat",
+    "fi": "Kyykky",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library category.squat",
+    "examples": {}
+  },
+  "library.category.hinge": {
+    "en": "Hip hinge",
+    "fi": "Lonkan ojennus",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library category.hinge",
+    "examples": {}
+  },
+  "library.category.lunge": {
+    "en": "Lunge / split squat",
+    "fi": "Askel- ja askelkyykky",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library category.lunge",
+    "examples": {}
+  },
+  "library.category.isolation": {
+    "en": "Isolation",
+    "fi": "Eristävä liike",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library category.isolation",
+    "examples": {}
+  },
+  "library.category.core": {
+    "en": "Core",
+    "fi": "Keskivartalo",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library category.core",
+    "examples": {}
+  },
+  "library.category.carry": {
+    "en": "Carry",
+    "fi": "Kantaminen",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library category.carry",
+    "examples": {}
+  },
+  "library.category.cardio": {
+    "en": "Cardio",
+    "fi": "Kestävyys",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library category.cardio",
+    "examples": {}
+  },
+  "library.category.other": {
+    "en": "Other",
+    "fi": "Muu",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library category.other",
+    "examples": {}
+  },
+  "library.muscle.chest": {
+    "en": "Chest",
+    "fi": "Rinta",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library muscle.chest",
+    "examples": {}
+  },
+  "library.muscle.shoulders": {
+    "en": "Shoulders",
+    "fi": "Olkapäät",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library muscle.shoulders",
+    "examples": {}
+  },
+  "library.muscle.back": {
+    "en": "Back",
+    "fi": "Selkä",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library muscle.back",
+    "examples": {}
+  },
+  "library.muscle.quadriceps": {
+    "en": "Quadriceps",
+    "fi": "Etureidet",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library muscle.quadriceps",
+    "examples": {}
+  },
+  "library.muscle.hamstrings": {
+    "en": "Hamstrings",
+    "fi": "Takareidet",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library muscle.hamstrings",
+    "examples": {}
+  },
+  "library.muscle.glutes": {
+    "en": "Glutes",
+    "fi": "Pakarat",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library muscle.glutes",
+    "examples": {}
+  },
+  "library.muscle.calves": {
+    "en": "Calves",
+    "fi": "Pohkeet",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library muscle.calves",
+    "examples": {}
+  },
+  "library.muscle.biceps": {
+    "en": "Biceps",
+    "fi": "Hauis",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library muscle.biceps",
+    "examples": {}
+  },
+  "library.muscle.triceps": {
+    "en": "Triceps",
+    "fi": "Ojentajat",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library muscle.triceps",
+    "examples": {}
+  },
+  "library.muscle.core": {
+    "en": "Core",
+    "fi": "Keskivartalo",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library muscle.core",
+    "examples": {}
+  },
+  "library.muscle.legs": {
+    "en": "Legs",
+    "fi": "Jalat",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library muscle.legs",
+    "examples": {}
+  },
+  "library.muscle.other": {
+    "en": "Other",
+    "fi": "Muu",
+    "screen": "Exercise library",
+    "role": "label",
+    "context": "Exercise library muscle.other",
+    "examples": {}
+  },
+  "library.custom_choice": {
+    "en": "Create a separate entry, or explicitly choose an existing entry to save this name as its alias. Suggested matches appear first. For an alias, the existing entry supplies the defaults below.",
+    "fi": "Luo erillinen liike tai valitse olemassa oleva liike, jonka rinnakkaisnimeksi tämä nimi tallennetaan. Ehdotukset ovat ensin. Rinnakkaisnimi käyttää valitun liikkeen oletusasetuksia.",
+    "screen": "Exercise library",
+    "role": "hint",
+    "context": "Explicit custom versus alias choice",
+    "examples": {}
+  }
+}

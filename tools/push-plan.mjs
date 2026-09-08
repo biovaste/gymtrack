@@ -30,6 +30,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import WorkoutModel from '../workout-model.js';
+import ExerciseLibrary from '../exercise-library.js';
 
 const WORKER_URL = 'https://api.gymtrack.hithitpull.fi';
 
@@ -184,7 +185,7 @@ function guessAlternateEquipment(name, parentEquipment) {
  *   2. Weights that cannot be loaded on the actual equipment.
  */
 export function validatePlan(plan, { unit = 'kg' } = {}) {
-  const errors = [], warnings = [];
+  const errors = plan.library == null ? [] : WorkoutModel.libraryListErrors(plan.library), warnings = [];
   for (const day of plan.days) for (const e of day.exercises || []) {
     for (const x of [e, ...(e.alternates || [])]) {
       const invalid = WorkoutModel.errors(x).filter(field => field !== 'metric'); // Metric errors below retain alternate context.
@@ -412,6 +413,7 @@ async function main() {
   const keptBw = (backup.bodyWeight || []).length;
   const oldPlan = backup.plan && backup.plan.name;
 
+  newPlan.library = ExerciseLibrary.importLibrary(backup.plan || {}, newPlan);
   backup.plan = newPlan;
   backup.updatedAt = Date.now();
   backup.exportedAt = new Date().toISOString();

@@ -249,6 +249,71 @@ set ratings multiplied by session minutes. It is a proxy, not a whole-session RP
 rating. No whole-session score is inferred or backfilled. Completion confirms local
 saving independently of cloud sync, then shows success or an error with Retry sync.
 
+## Exercise library v1
+
+In Plan, expand a day and use **+ Exercise** to search the library. The initial
+30 entries cover practical presses, pulls, squats, hinges, isolation, core, carries
+and cardio. Search includes the existing English/Finnish names and dictionary
+aliases. Filter by movement category or target muscle. Variant details show base
+movement → equipment → position → execution. A one-arm variant does not choose
+left or right: set the side and machine/setup in the existing plan editor.
+
+Select an entry to review the usual prescription before saving. New exercises
+append to the day; existing ordering and supersets are unchanged. For an unfamiliar
+name, use **Create custom entry**: create a separate UUID identity, or explicitly
+select an existing entry to register the name as a library alias. Suggestions are
+only discovery; they never merge identities or rewrite old logs. Existing history
+aliases remain separate. A renamed plan exercise is a display label, not an
+implicit alias registration or historical migration.
+
+### Data and portability
+
+- `plan.library` is an array of saved reusable entries. An entry contains `id`,
+  `name`, `movement`, `category`, `muscles` (array), `equipment`, `position`,
+  `execution`, `metric`, `description` and `aliases` (array). Curated IDs use the
+  `library:` namespace; custom IDs use `custom:` plus a UUID. Treat published IDs
+  as permanent, even if a catalogue name changes later.
+- Each selection stores a deep `libraryEntry` snapshot on the exercise, with
+  `movementId === libraryEntry.id`. Include both when constructing an imported
+  library exercise. Standalone `movementId` values still retain the existing
+  explicit-identity behavior; they are not guessed to be library references.
+- Nonempty exercise `description` is a plan-specific override. Blank inherits the
+  selected entry's instructions. Snapshots preserve the selected defaults and
+  workout instructions when another plan or catalogue changes. New completed
+  sessions also preserve the override; old sessions are never backfilled.
+- Side, setup, load profile, targets, sets and supersets remain prescription data,
+  separate from library variants. Equipment/side/setup/metric still participate in
+  the existing comparison key. Custom load ladders are not library-wide defaults.
+- App plan imports, the desktop push helper, and the Worker plan-only endpoint
+  retain saved entries and union aliases by explicit ID. Incoming entry metadata
+  wins a same-ID conflict; no similar-name reconciliation occurs. Cloud pulls
+  retain local-only library entries and aliases while keeping the existing plan
+  conflict policy. Full backup restore intentionally replaces the whole backup.
+- Full backups, AI exports (`currentPlan`), cloud sync and offline storage include
+  the library and snapshots. Removing an exercise from a day does not delete its
+  saved library entry. Snapshot-only entries can be discovered and retained too.
+
+Names and standard instructions reuse `exercises.js` and `locales/source/exercises.json`;
+new UI text is in `locales/source/library.json`. Custom text remains as written
+until translated through the established pending-exercise/reviewer workflow.
+There is no external exercise database, library-wide editor or alias-removal UI in
+v1. New variants can be created through the custom-entry form. Mid-session free-text
+adding remains the existing workflow; the library picker is for plan authoring.
+
+### Verification and release
+
+Run `node --test --test-isolation=none tools/exercise-library.test.mjs` plus the
+existing model, pure, localization, weight and validator checks. The existing
+`tools/i18n-browser-smoke.mjs` now includes `tools/exercise-library-browser-checks.mjs`,
+using isolated data and intercepted sync. On Windows use the ignored repository
+`tmp` directory for TEMP/TMP and the bundled Playwright with installed Edge.
+Run `node tools/i18n/cli.mjs build` and `node tools/i18n/cli.mjs check` before release.
+The library asset participates in offline cache versioning and installation.
+
+This release includes a Worker change for retaining entries on plan-only updates:
+release both the static app and Worker when authorized. No deployment is performed
+as part of preparing these local changes.
+
 ## iOS limitations worth knowing
 
 - The rest-timer **audio cue plays while the app is open on screen**. The app

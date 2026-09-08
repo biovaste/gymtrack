@@ -264,6 +264,24 @@ test('the plan route writes with a valid token and stamps updatedAt', async () =
   assert.ok(stored.updatedAt > 5);
 });
 
+test('plan-only endpoint retains custom library aliases and rejects broken references', async () => {
+  const { default: Library } = await import('../exercise-library.js');
+  const entry = { ...Library.builtins[0], id: 'custom:test', aliases: ['Nickname'], description: 'Custom cue' };
+  const original = { type: 'gymtrack-backup', sessions: [{id:'old'}], plan: { days: [], library: [entry] } };
+  const env = { GYMTRACK_DATA: kv(JSON.stringify(original)), GYMTRACK_WRITE_SECRET: SECRET };
+  const token = await worker.deriveWriteToken(SECRET, UUID);
+  const request = plan => new Request('https://api.example/data/' + UUID + '/plan', {
+    method: 'POST', headers: { 'X-GymTrack-Write': token }, body: JSON.stringify(plan)
+  });
+  assert.equal((await worker.default.fetch(request({days:[]}), env)).status,200);
+  const stored=JSON.parse(env.GYMTRACK_DATA._m.get(UUID));
+  assert.deepEqual(stored.plan.library,[entry]);
+  assert.deepEqual(stored.sessions,original.sessions);
+  const validStored=env.GYMTRACK_DATA._m.get(UUID);
+  assert.equal((await worker.default.fetch(request({days:[{exercises:[{name:'bad',libraryEntry:entry,movementId:'different'}]}]}), env)).status,400);
+  assert.equal(env.GYMTRACK_DATA._m.get(UUID),validStored);
+});
+
 /* ---------- sessionLoad ---------- */
 const sessionLoad = evaluate(
   slice('const workingSets = sets =>', ';') + '\n' +

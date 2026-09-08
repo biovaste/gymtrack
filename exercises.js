@@ -159,6 +159,11 @@
     const translated = match ? translation(key, null) : null;
     return translated || originalFallback || null;
   };
+  api.exerciseSearchNames = name => {
+    const match = byName.get(normalize(name));
+    return match ? [...byName].filter(([, entry]) => entry?.key === match.key).map(([alias]) => alias)
+      .concat([...byFinnish].filter(([, entry]) => entry.key === match.key).map(([alias]) => alias)) : [];
+  };
   api.pendingExercises = () => { const queue = read(pendingKey, []); return Array.isArray(queue) ? queue : []; };
   api.exportPendingExercises = () => JSON.stringify(api.pendingExercises(), null, 2);
   api.setExerciseTranslation = function (name, translations) {

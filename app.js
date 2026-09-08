@@ -552,8 +552,11 @@ function normalizePlan(raw) {
   if (!raw || typeof raw !== 'object') throw new Error(tr("normalize_plan.message.not_a_json_object"));
   if (raw.type && raw.type !== 'workout-plan') throw new Error(tr("normalize_plan.message.json_type_should_be_workout_plan"));
   if (!Array.isArray(raw.days) || !raw.days.length) throw new Error(tr("normalize_plan.message.plan_needs_a_non_empty_days_array"));
+  const libraryProblems = raw.library == null ? [] : WorkoutModel.libraryListErrors(raw.library);
+  if (libraryProblems.length) throw new Error(tr('exercise.model.invalid', { fields: libraryProblems.join(', ') }));
   const p = {
     type: 'workout-plan', version: 1,
+    ...(raw.library ? { library: JSON.parse(JSON.stringify(raw.library)) } : {}),
     name: String(raw.name || tr("normalize_plan.message.imported_plan")),
     createdAt: raw.createdAt || today(),
     days: raw.days.map(d => {
@@ -851,7 +854,7 @@ function finishSession() {
     id: active.id, date: new Date(active.startedAt).toISOString(), dayName: active.dayName,
     durationMin, notes: active.notes,
     exercises: active.exercises
-      .map(e => ({ ...WorkoutModel.metadata(e), name: e.name, plannedSets: e.plannedSets, plannedReps: e.plannedReps,
+      .map(e => ({ ...WorkoutModel.metadata(e), name: e.name, description: e.description, plannedSets: e.plannedSets, plannedReps: e.plannedReps,
         plannedWeight: e.plannedWeight, targetRpe: e.targetRpe,
         equipment: e.equipment, barWeight: e.barWeight, metric: e.metric || 'load',
         superset: e.superset || null,
@@ -1154,9 +1157,14 @@ async function workerReconcile(opts = {}) {
     const remoteSessions = r.parsed.sessions || [], remoteBW = r.parsed.bodyWeight || [];
     const mergedSessions = mergeByKey(remoteSessions, sessions, s => s.id);
     const mergedBW = mergeByKey(remoteBW, bodyWeight, b => b.date);
-    const hadLocalOnly = mergedSessions.length > remoteSessions.length || mergedBW.length > remoteBW.length;
+    const remoteLibraryPlan = normalizePlan(r.parsed.plan);
+    const mergedLibrary = ExerciseLibrary.importLibrary(plan, remoteLibraryPlan);
+    const libraryChanged = JSON.stringify(mergedLibrary) !== JSON.stringify(ExerciseLibrary.retained(remoteLibraryPlan));
+    const hadLocalOnly = mergedSessions.length > remoteSessions.length || mergedBW.length > remoteBW.length || libraryChanged;
     restoreBackup(r.raw);
     sessions = mergedSessions; bodyWeight = mergedBW;
+    if (mergedLibrary.length) plan.library = mergedLibrary;
+    store.set('plan', plan);
     store.set('sessions', sessions); store.set('bw', bodyWeight);
     render(); setSyncState('ok');
     if (hadLocalOnly) { touch(); await workerPush({ silent: true, retried: opts.retried }); }
@@ -1912,7 +1920,7 @@ function viewSettings() {
 function exMenuModal(dayId, i) {
   const day = plan.days.find(d => d.id === dayId); if (!day) return;
   const e = day.exercises[i];
-  const desc = I18n.explanation(e.name, e.description) || lookupExplanation(e.name);
+  const desc = ExerciseLibrary.instructions(e, I18n.explanation, lookupExplanation);
   showModal(I18n.exercise(e.name), `
     <p class="muted small">${WorkoutModel.timed(e) ? esc(`${e.sets} × ${measurementText(e, e)}`) : esc(tr("ex_menu_modal.text.rest", { e_sets: e.sets, e_reps: e.reps, e_weight: e.weight, unit: unit(), e_targetRpe_tr_ex_menu_modal: e.targetRpe ? tr("format.rpe_suffix", { rpe: e.targetRpe }) : '', fmtClock_e_restSeconds: fmtClock(e.restSeconds) }))}</p>
     ${desc ? `<p class="small mt8">${esc(desc)}</p>` : ''}
@@ -1962,9 +1970,83 @@ function weightValidationError({ equipment, barWeight, weight, metric, loadProfi
   }
   return null;
 }
-function exEditModal(dayId, i) {
+function libraryVariantLabel(value) {
+  if (!value) return '';
+  const key = 'exercises.modifier_' + ExerciseLibrary.normalize(value).replace(/[^a-z0-9]+/g, '_') + '.name';
+  return I18n.english(key) ? tr(key) : I18n.exercise(value);
+}
+function exerciseLibraryModal(dayId) {
+  const items = ExerciseLibrary.entries(plan);
+  const label = key => I18n.english('library.' + key) ? tr('library.' + key) : key.split('.').at(-1);
+  const options = (values, kind) => `<option value="">${esc(label('all'))}</option>` + values.map(v => `<option value="${esc(v)}">${esc(label(kind + '.' + v))}</option>`).join('');
+  showModal(tr('library.title'), `
+    <p class="small muted">${esc(tr('library.choice'))}</p>
+    <label class="field"><span>${esc(tr('library.search'))}</span><input id="library-query" type="search"></label>
+    <label class="field"><span>${esc(tr('library.category'))}</span><select id="library-category">${options([...new Set(items.map(e => e.category))], 'category')}</select></label>
+    <label class="field"><span>${esc(tr('library.muscle'))}</span><select id="library-muscle">${options([...new Set(items.flatMap(e => e.muscles))], 'muscle')}</select></label>
+    <div id="library-results"></div>`, [
+      { label: tr('library.custom'), fn: () => customLibraryModal(dayId, mval('library-query')) },
+      { label: tr('common.action.cancel') }
+    ]);
+  function refresh() {
+    const query = mval('library-query');
+    const results = ExerciseLibrary.search(items, query, mval('library-category'), mval('library-muscle'), libraryVariantLabel, I18n.exerciseSearchNames);
+    const container = document.getElementById('library-results');
+    container.innerHTML = results.length ? results.map(e => `<button class="ghost wide mt8" data-library-id="${esc(e.id)}">${esc(I18n.exercise(e.name))}<br><span class="small muted">${esc([I18n.exercise(e.movement), equipmentLabel(e.equipment), libraryVariantLabel(e.position), libraryVariantLabel(e.execution)].filter(Boolean).join(' → '))}</span></button>`).join('') : `<p class="muted">${esc(tr('library.no_matches'))}</p>`;
+    container.querySelectorAll('[data-library-id]').forEach(button => button.onclick = () => {
+      const entry = items.find(e => e.id === button.dataset.libraryId);
+      if (!query || ExerciseLibrary.normalize(query) === ExerciseLibrary.normalize(entry.name) || ExerciseLibrary.normalize(query) === ExerciseLibrary.normalize(I18n.exercise(entry.name))) {
+        exEditModal(dayId, null, ExerciseLibrary.attach(entry));
+        return;
+      }
+      showModal(tr('library.link_title'), `<p>${esc(tr('library.link_question', { name: query, match: I18n.exercise(entry.name) }))}</p>`, [
+        { label: tr('library.use'), fn: () => exEditModal(dayId, null, ExerciseLibrary.attach(entry)) },
+        { label: tr('library.alias'), fn: () => exEditModal(dayId, null, ExerciseLibrary.attach({ ...entry, aliases: [...new Set([...entry.aliases, query])] }, query)) },
+        { label: tr('common.action.cancel'), fn: () => exerciseLibraryModal(dayId) }
+      ]);
+    });
+  }
+  for (const id of ['library-query', 'library-category', 'library-muscle']) document.getElementById(id).addEventListener('input', refresh);
+  refresh();
+}
+function customLibraryModal(dayId, name) {
+  const candidates = ExerciseLibrary.entries(plan);
+  const suggestions = ExerciseLibrary.search(candidates, name, '', '', I18n.exercise, I18n.exerciseSearchNames);
+  const ordered = [...suggestions, ...candidates.filter(e => !suggestions.includes(e))];
+  const select = (id, values, prefix) => `<select id="custom-${id}">${values.map(v => `<option value="${esc(v)}">${esc(tr(prefix + v))}</option>`).join('')}</select>`;
+  const field = (id, text, value = '') => `<label class="field"><span>${esc(tr('library.' + text))}</span><input id="custom-${id}" value="${esc(value)}"></label>`;
+  showModal(tr('library.custom'), `
+    <p class="small muted">${esc(tr('library.custom_choice'))}</p>
+    <label class="field"><span>${esc(tr('library.link_title'))}</span><select id="custom-link"><option value="">${esc(tr('library.custom'))}</option>${ordered.map(e => `<option value="${esc(e.id)}">${esc(I18n.exercise(e.name))}</option>`).join('')}</select></label>
+    ${field('name', 'name', name)}
+    <div id="custom-fields">${field('movement', 'movement', name)}
+    <label class="field"><span>${esc(tr('library.category'))}</span>${select('category', ['press','pull','squat','hinge','lunge','isolation','core','carry','cardio','other'], 'library.category.')}</label>
+    <label class="field"><span>${esc(tr('library.muscle'))}</span>${select('muscle', ['chest','shoulders','back','quadriceps','hamstrings','glutes','calves','biceps','triceps','core','legs','other'], 'library.muscle.')}</label>
+    <label class="field"><span>${esc(tr('exercise.form.equipment'))}</span>${select('equipment', EQUIPMENT_TYPES, 'equipment.name.')}</label>
+    ${field('position', 'position')}${field('execution', 'execution')}
+    <label class="field"><span>${esc(tr('exercise.form.measurement'))}</span><select id="custom-metric">${modelOptions('load')}</select></label>
+    <label class="field"><span>${esc(tr('library.defaults'))}</span><textarea id="custom-description"></textarea></label></div>`, [
+      { label: tr('library.continue'), cls: 'primary', fn: () => {
+        if (!mval('custom-name')) { toast(tr('exercise.validation.name_required'), 'err'); return; }
+        const linked = candidates.find(e => e.id === mval('custom-link'));
+        if (linked) {
+          exEditModal(dayId, null, ExerciseLibrary.attach({ ...linked, aliases: [...new Set([...linked.aliases, mval('custom-name')])] }, mval('custom-name')));
+          return;
+        }
+        const entry = { id: 'custom:' + crypto.randomUUID(), name: mval('custom-name'), movement: mval('custom-movement') || mval('custom-name'),
+          category: mval('custom-category'), muscles: [mval('custom-muscle')], equipment: mval('custom-equipment'),
+          position: mval('custom-position'), execution: mval('custom-execution'), metric: mval('custom-metric'),
+          description: mval('custom-description'), aliases: [] };
+        exEditModal(dayId, null, ExerciseLibrary.attach(entry));
+      } },
+      { label: tr('common.action.cancel'), fn: () => exerciseLibraryModal(dayId) }
+    ]);
+}
+
+function exEditModal(dayId, i, selection = null) {
   const day = plan.days.find(d => d.id === dayId);
   const e = i != null ? day.exercises[i] : { name: '', sets: 3, warmupSets: 0, reps: '8-12', weight: 0, targetRpe: 8, restSeconds: 120, restSecondsNext: null, equipment: 'barbell', barWeight: null, metric: 'load', superset: null, description: '', alternates: [] };
+  if (selection) Object.assign(e, selection);
   const equipment = e.equipment || 'barbell';
   showModal(i != null ? tr("ex_edit_modal.message.edit_exercise") : tr("exercise.add.title"), `
     <label class="field"><span>${esc(tr("exercise.form.name"))}</span><input id="f-name" value="${esc(e.name)}"><span class="field-hint">${esc(tr("exercise.edit.translated_name", { name: I18n.exercise(e.name) }))}</span></label>
@@ -1999,6 +2081,7 @@ function exEditModal(dayId, i) {
       </select>
       <span class="field-hint">${esc(tr("ex_edit_modal.text.members_must_sit_next_to_each_other_in_the_day_u"))}</span>
     </label>
+    ${e.libraryEntry ? `<p class="small muted">${esc(tr("library.instructions"))}<br>${esc(ExerciseLibrary.instructions({ ...e, description: '' }, I18n.explanation, lookupExplanation) || '')}</p>` : ''}
     <label class="field"><span>${esc(tr("ex_edit_modal.text.how_to_description_optional"))}</span><textarea id="f-desc" style="min-height:60px">${esc(e.description)}</textarea></label>`,
     [
       { label: tr("common.action.save"), cls: 'primary', fn: () => {
@@ -2040,6 +2123,14 @@ function exEditModal(dayId, i) {
             metric: metricVal,
             superset: ssVal,
             description: mval('f-desc') };
+          if (e.libraryEntry) {
+            if (metadata.movementId !== e.libraryEntry.id) { toast(tr('library.identity_locked'), 'err'); return; }
+            upd.libraryEntry = e.libraryEntry;
+            const items = ExerciseLibrary.retained(plan);
+            const saved = items.find(x => x.id === e.libraryEntry.id);
+            const entry = saved ? { ...saved, aliases: [...new Set([...saved.aliases, ...e.libraryEntry.aliases])] } : e.libraryEntry;
+            plan.library = [...items.filter(x => x.id !== entry.id), entry];
+          }
           if (i != null) Object.assign(day.exercises[i], upd);
           else day.exercises.push(Object.assign({ id: uid(), notes: '', alternates: [] }, upd));
           savePlan(); closeModal(); render();
@@ -2239,7 +2330,7 @@ function sessionAddExerciseModal() {
 }
 function exInfoModal(ei) {
   const e = active.exercises[ei];
-  const desc = I18n.explanation(e.name, e.description) || lookupExplanation(e.name) || tr("ex_info_modal.message.no_description_available_ask_your_ai_coach_to_in");
+  const desc = ExerciseLibrary.instructions(e, I18n.explanation, lookupExplanation) || tr("ex_info_modal.message.no_description_available_ask_your_ai_coach_to_in");
   // A jump has no load or rep target — every other jump surface already branches
   // on the metric, so building this line unconditionally read "Target: 3×1 @ 0kg".
   const target = WorkoutModel.timed(e) ? `${e.plannedSets} × ${measurementText(e, { ...e, weight: e.plannedWeight })}` : isJump(e)
@@ -3125,7 +3216,7 @@ document.addEventListener('click', e => {
     /* plan editing */
     case 'day-toggle': expandedDay = expandedDay === el.dataset.id ? null : el.dataset.id; render(); break;
     case 'ex-menu': exMenuModal(el.dataset.day, +el.dataset.i); break;
-    case 'ex-add': exEditModal(el.dataset.day, null); break;
+    case 'ex-add': exerciseLibraryModal(el.dataset.day); break;
     case 'day-warmup': dayWarmupModal(el.dataset.id); break;
     case 'ex-move': {
       const day = plan.days.find(d => d.id === el.dataset.day);
@@ -3209,7 +3300,7 @@ document.addEventListener('click', e => {
         const cleaned = raw.replace(/^```(json)?/m, '').replace(/```\s*$/m, '').trim();
         const newPlan = normalizePlan(JSON.parse(cleaned));
         showModal(tr("plan.import.title", { plan: newPlan.name }), `<p>${esc(tr("action_import-plan.text.days_exercises_your_current_plan_is_replaced_wor", { newPlan_days_length: newPlan.days.length, newPlan_days_reduce_n_d_n_d_: newPlan.days.reduce((n, d) => n + d.exercises.length, 0) }))}</p>`,
-          [{ label: tr("action_import-plan.button.import"), cls: 'primary', fn: () => { plan = newPlan; savePlan(); expandedDay = null; tab = 'plan'; render(); toast(tr("action_import-plan.message.plan_imported")); } }, { label: tr("common.action.cancel") }]);
+          [{ label: tr("action_import-plan.button.import"), cls: 'primary', fn: () => { newPlan.library = ExerciseLibrary.importLibrary(plan, newPlan); plan = newPlan; savePlan(); expandedDay = null; tab = 'plan'; render(); toast(tr("action_import-plan.message.plan_imported")); } }, { label: tr("common.action.cancel") }]);
       } catch (err) { toast(tr("plan_import.error.invalid", { error: err.message }), 'err'); }
       break;
     }

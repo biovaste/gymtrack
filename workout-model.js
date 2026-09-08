@@ -6,18 +6,32 @@
   const timed = e => ['duration', 'distance', 'cardio'].includes(e.metric);
   const targetFields = e => e.metric === 'duration' ? ['durationSeconds'] : e.metric === 'distance' ? ['distanceMeters'] : e.metric === 'cardio' ? ['durationSeconds', 'distanceMeters', 'speedKph'] : [];
   const numeric = v => typeof v === 'number' && Number.isFinite(v);
-  const fields = ['movementId', 'side', 'setupId', 'loadProfile', 'durationSeconds', 'distanceMeters', 'speedKph'];
+  const fields = ['libraryEntry', 'movementId', 'side', 'setupId', 'loadProfile', 'durationSeconds', 'distanceMeters', 'speedKph'];
   function metadata(e) {
     return Object.fromEntries(fields.filter(k => e[k] != null).map(k => [k,
-      k === 'loadProfile' ? JSON.parse(JSON.stringify(e[k])) : e[k]]));
+      ['loadProfile', 'libraryEntry'].includes(k) ? JSON.parse(JSON.stringify(e[k])) : e[k]]));
   }
   // Legacy names remain a separate namespace. Never guess a side or movement ID.
   function key(e, canonical = x => x) {
     const identity = e.movementId ? ['id', e.movementId] : ['name', canonical(e.name).trim().toLowerCase()];
     return JSON.stringify([...identity, e.side || 'unspecified', e.setupId || '', e.metric || 'load', ...(e.movementId ? [e.equipment || ''] : [])]);
   }
+  function libraryErrors(entry) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return ['libraryEntry'];
+    const strings = ['id', 'name', 'category', 'equipment', 'movement', 'metric'];
+    if (strings.some(k => typeof entry[k] !== 'string' || !entry[k].trim()) ||
+        !metrics.includes(entry.metric) || !Array.isArray(entry.muscles) || entry.muscles.some(x => typeof x !== 'string') ||
+        !Array.isArray(entry.aliases) || entry.aliases.some(x => typeof x !== 'string') ||
+        ['description', 'position', 'execution'].some(k => typeof entry[k] !== 'string')) return ['libraryEntry'];
+    return [];
+  }
+  function libraryListErrors(list) {
+    if (!Array.isArray(list)) return ['library'];
+    return list.flatMap(libraryErrors).concat(new Set(list.map(e => e?.id)).size !== list.length ? ['library duplicate id'] : []);
+  }
   function errors(e) {
-    const out = [];
+    const out = e.libraryEntry == null ? [] : libraryErrors(e.libraryEntry);
+    if (e.libraryEntry && e.libraryEntry.id !== e.movementId) out.push('libraryEntry / movementId');
     if (e.metric != null && !metrics.includes(e.metric)) out.push('metric');
     if (e.side != null && !sides.includes(e.side)) out.push('side');
     for (const k of ['movementId', 'setupId']) if (e[k] != null && (typeof e[k] !== 'string' || !e[k].trim())) out.push(k);
@@ -63,7 +77,7 @@
   function speed(s) {
     return s.distanceMeters > 0 && s.durationSeconds > 0 ? s.distanceMeters / s.durationSeconds * 3.6 : s.speedKph || null;
   }
-  const api = { metrics, sides, timed, targetFields, metadata, key, errors, loadable, nextLoad, row, recordSet, speed };
+  const api = { libraryErrors, libraryListErrors, metrics, sides, timed, targetFields, metadata, key, errors, loadable, nextLoad, row, recordSet, speed };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.WorkoutModel = api;
 })(typeof globalThis === 'object' ? globalThis : this);
