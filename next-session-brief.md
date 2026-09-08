@@ -3,9 +3,13 @@ _Last updated: 2026-09-08_
 
 ## Current state
 
-Exercise library v1 is implemented locally on main, on top of deployed commit
-`a6741cd` (release steps 1–2). Henri authorized commit and deployment on 2026-09-08. Release preparation
-includes the app, Worker and the deferred entry-path gap in BACKLOG.md.
+Exercise library v1 was committed as `5803407`, pushed to main and deployed on
+2026-09-08, after Henri authorized release. App assets at gymtrack.hithitpull.fi
+were verified against the local release; GitHub build/deploy and localization
+checks all succeeded. Worker deployment succeeded (version
+`19a423a5-56a6-4cee-a4db-6fd02ad2959f`); the API responded with its expected JSON
+404 at the root route. No workout data was changed during verification.
+The deferred import/mid-workout entry gap is recorded in BACKLOG.md.
 
 The plan add-exercise flow now offers 30 curated reusable entries, bilingual
 search and existing dictionary aliases, movement/muscle filters, structured
@@ -40,9 +44,8 @@ text is draft; existing human review records are preserved. Review through
 
 ## Next action
 
-Complete the authorized app and Worker release and verify the live assets. The
-next product follow-up is the imported/mid-workout unknown-exercise choice in
-BACKLOG.md. Review new Finnish wording as needed. Do not include the pre-existing
+The next product follow-up is the imported/mid-workout unknown-exercise choice
+in BACKLOG.md. Review new Finnish wording as needed. Do not include the pre-existing
 `.claude/skills/weekly-review/SKILL.md` edit; it remains untouched.
 
 V1 has no library-wide editing/deletion or alias-removal screen. Custom text uses
