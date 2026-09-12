@@ -314,6 +314,65 @@ This release includes a Worker change for retaining entries on plan-only updates
 release both the static app and Worker when authorized. No deployment is performed
 as part of preparing these local changes.
 
+## Demo mode
+
+A public, clickable instance of the app that starts from fabricated data and resets on
+reload — for linking from a portfolio case study, and for screen captures.
+
+Turn it on with **`?demo=1`**, or by serving the app from a host whose first label is
+`demo` (`demo.gymtrack.hithitpull.fi`). Locally:
+
+```bash
+python -m http.server 8765
+# open http://localhost:8765/?demo=1
+```
+
+What changes, and nothing else:
+
+- **Storage** — the demo reads and writes `gymdemo.*` keys instead of `gym.*`, and wipes
+  and reseeds them on every load. It never touches the real app's data, which matters
+  because `?demo=1` shares an origin with production.
+- **Cloud sync is off entirely.** `settings.autoSync` is forced false, so no push is ever
+  scheduled and the launch reconcile never runs; `syncFetch()` — the single function every
+  Worker request passes through — throws under DEMO as a backstop.
+- **Hidden:** the backup code, restore-from-code, write token, auto-sync toggle, "Share
+  with AI", and the update check. **Kept:** "Copy coaching prompt + data", which is the
+  headline feature and runs entirely client-side, and the language switcher.
+- **No service worker is registered**, so a reload always fetches the current build. A
+  demo served under `?demo=1` on a host that already installed the worker will still be
+  served through that existing cache — nothing is unregistered, because on the production
+  origin that would kill the real app's offline support.
+- An intro card on the workout tab explains what the app is and that the data is generated.
+
+The seed lives in `demo-data.js`: a fixed-seed generator producing ~6 months of training
+with progressive overload, ladder-snapped plateaus, a deload week, missed weeks, stalls and
+PRs, ending in the current week so the demo never looks abandoned. Validate it the same way
+as any plan:
+
+```bash
+node tools/demo-plan.mjs tmp/demo-plan.json
+node tools/push-plan.mjs --check tmp/demo-plan.json
+node --test tools/demo.test.mjs
+```
+
+**The case-study link** the intro card points at is `DEMO_CASE_STUDY_URL`, at the top of
+`demo.js`. That is the only place it appears.
+
+### Deploying it
+
+The demo lives on the `demo` branch, which is `main` plus `demo.js`, `demo-data.js` and a
+small set of guards in `app.js`. Cloudflare Pages builds it as a preview deployment at
+`demo.gymtrack-7wz.pages.dev`. Refresh it after any release:
+
+```bash
+git checkout demo
+git merge main
+node --test tools/demo.test.mjs
+git push
+```
+
+Never merge `demo` back into `main` — it is a permanent downstream leaf.
+
 ## iOS limitations worth knowing
 
 - The rest-timer **audio cue plays while the app is open on screen**. The app

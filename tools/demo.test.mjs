@@ -256,7 +256,12 @@ test('the history has the shape the demo is meant to show', () => {
 
   // Body weight trending gently up, not a straight line.
   assert.ok(bodyWeight.length >= 30);
-  const first = bodyWeight[0].kg, last = bodyWeight.at(-1).kg;
+  // The app reads b.weight (see the bw-add action and the body-weight chart).
+  // Naming this field `kg` renders a chart of NaN, which is how it shipped the
+  // first time.
+  assert.ok(bodyWeight.every(b => typeof b.weight === 'number' && typeof b.date === 'string'),
+    'body-weight entries must be { date, weight } — the field the app actually reads');
+  const first = bodyWeight[0].weight, last = bodyWeight.at(-1).weight;
   assert.ok(last > first && last - first < 6, `expected a gentle upward trend, got ${first} → ${last}`);
-  assert.ok(new Set(bodyWeight.map(b => b.kg)).size > bodyWeight.length / 2, 'body weight should have day-to-day noise');
+  assert.ok(new Set(bodyWeight.map(b => b.weight)).size > bodyWeight.length / 2, 'body weight should have day-to-day noise');
 });

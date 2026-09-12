@@ -65,7 +65,7 @@
     return {
       type: 'workout-plan', version: 1,
       name: 'Strength Block — Upper / Lower / Full',
-      createdAt: '2026-03-16',
+      createdAt: '',  // set from the generated start date in build()
       days: [
         {
           id: 'demo-day-a', name: 'Day A — Upper Strength',
@@ -157,8 +157,19 @@
   const STALLS = { 'Bench Press': [14, 16], 'Squat': [19, 21] };
 
   const SLOT_DAYS = [0, 1, 3, 5];  // Mon, Tue, Thu, Sat
-  const START = Date.UTC(2026, 2, 16); // Monday 2026-03-16
   const DAY_MS = 86400000;
+
+  // The history ends this week, not on a date baked in when the demo was built:
+  // a demo that is still live next spring must not open on a six-month-old log
+  // and "This week: 0 sessions". The SHAPE is fixed — same blocks, same deload,
+  // same stalls, same PRs — only the calendar slides, so the tests and the plan
+  // validation stay deterministic.
+  function startMonday(now) {
+    const d = new Date(now);
+    const midnight = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    const isoDow = (new Date(midnight).getUTCDay() + 6) % 7; // Mon = 0
+    return midnight - isoDow * DAY_MS - (WEEKS - 1) * 7 * DAY_MS;
+  }
 
   function weightFor(name, equipment, barWeight, base, week) {
     const stall = STALLS[name];
@@ -198,7 +209,7 @@
   ];
 
   /* ---------- session generation ---------- */
-  function buildSessions(plan, rand) {
+  function buildSessions(plan, rand, START, now) {
     const sessions = [];
     let n = 0;
     for (let week = 0; week < WEEKS; week++) {
@@ -209,6 +220,9 @@
         n++;
         const startedAt = START + (week * 7 + SLOT_DAYS[slot]) * DAY_MS
           + (16 * 60 + 20 + Math.floor(rand() * 90)) * 60000;
+        // The final week is the current one, so its later slots may not have
+        // happened yet.
+        if (startedAt > now) continue;
         const record = {
           id: 'demo-s' + String(n).padStart(3, '0'),
           date: new Date(startedAt).toISOString(),
@@ -291,34 +305,53 @@
     return rec;
   }
 
-  function buildBodyWeight(rand) {
+  function buildBodyWeight(rand, START, now) {
     const out = [];
-    for (let d = 0; d <= WEEKS * 7; d += 3) {
+    for (let d = 0; d <= WEEKS * 7 && START + d * DAY_MS <= now; d += 3) {
       if (rand() < 0.18) continue; // not every logging day happens
       const trend = 78.4 + (d / (WEEKS * 7)) * 3.2;
       out.push({
         date: new Date(START + d * DAY_MS).toISOString().slice(0, 10),
-        kg: Math.round((trend + (rand() - 0.5) * 0.8) * 10) / 10
+        weight: Math.round((trend + (rand() - 0.5) * 0.8) * 10) / 10
       });
     }
     return out;
   }
 
   /* ---------- public API ---------- */
-  function build() {
+  // The template's weights are the starting point of the progression, so after
+  // generating the history the plan has to be moved forward to match it —
+  // otherwise the demo prescribes 85 kg on a bench that last logged 95 and
+  // looks like a plan nobody has updated in six months.
+  function progressPlan(plan) {
+    for (const day of plan.days) {
+      for (const e of day.exercises) {
+        if (typeof e.weight === 'number' && e.weight > 0) {
+          e.weight = weightFor(e.name, e.equipment, e.barWeight, e.weight, WEEKS - 1);
+        }
+      }
+    }
+    return plan;
+  }
+
+  function build(now = Date.now()) {
     const rand = makeRng(20260316);
-    const plan = planTemplate();
+    const START = startMonday(now);
+    const template = planTemplate();
+    template.createdAt = new Date(START).toISOString().slice(0, 10);
+    const sessions = buildSessions(template, rand, START, now);
+    const plan = progressPlan(template);
     return {
       plan,
-      sessions: buildSessions(plan, rand),
-      bodyWeight: buildBodyWeight(rand),
+      sessions,
+      bodyWeight: buildBodyWeight(rand, START, now),
       // Two legacy names, so the demo shows that renaming an exercise keeps its
       // history rather than orphaning it.
       aliases: { 'rdl': 'Romanian Deadlift', 'ohp': 'Overhead Press' }
     };
   }
 
-  const api = { build, plan: planTemplate };
+  const api = { build, plan: () => progressPlan(planTemplate()) };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.GymDemoData = api;
 })(typeof globalThis === 'object' ? globalThis : this);
