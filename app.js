@@ -4,10 +4,18 @@
 const tr = (key, params) => I18n.t(key, params);
 
 /* ================= storage ================= */
+// Demo mode (see demo.js — `?demo=1`, or a demo.* host). Every difference from
+// production behaviour in this file is a guard on this one flag; there are seven.
+// The demo reads and writes its own key namespace, so it can never touch — or
+// bump the sync clock on — the real app's data, which matters because `?demo=1`
+// shares an origin with production.
+const DEMO = !!(typeof GymDemo === 'object' && GymDemo && GymDemo.active);
+const KEY_PREFIX = DEMO ? GymDemo.prefix : 'gym.';
+const DEMO_BLOCKED_ACTIONS = new Set(['toggle-autosync', 'share-ai', 'restore-uuid', 'save-write-token', 'sync-retry', 'copy-uuid']);
 const store = {
-  get(k, d) { try { const v = localStorage.getItem('gym.' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
-  set(k, v) { localStorage.setItem('gym.' + k, JSON.stringify(v)); },
-  del(k) { localStorage.removeItem('gym.' + k); }
+  get(k, d) { try { const v = localStorage.getItem(KEY_PREFIX + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { localStorage.setItem(KEY_PREFIX + k, JSON.stringify(v)); },
+  del(k) { localStorage.removeItem(KEY_PREFIX + k); }
 };
 
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -284,9 +292,16 @@ let active = store.get('active', null);
 let bodyWeight = store.get('bw', []);
 let settings = Object.assign({ unit: 'kg', sound: true, vibrate: true, autoSync: true }, store.get('settings', {}));
 delete settings.gistToken; delete settings.gistId; delete settings.gistOwner;
+// Demo mode never talks to the sync Worker. This is what actually keeps it
+// quiet: scheduleSync() and autoSyncOnLoad() both return early on it, so no
+// push is ever scheduled and the launch reconcile never runs.
+if (DEMO) settings.autoSync = false;
 
 const WORKER_URL = 'https://api.gymtrack.hithitpull.fi';
 let gymUUID = (() => {
+  // The demo never syncs, so it needs no identity — and must not mint or read
+  // one on the production origin under ?demo=1.
+  if (DEMO) return '00000000-0000-4000-8000-000000000000';
   let id = localStorage.getItem('gymtrack_uuid');
   if (!id) { id = crypto.randomUUID(); localStorage.setItem('gymtrack_uuid', id); }
   return id;
@@ -296,7 +311,7 @@ let gymUUID = (() => {
 // be computed here, so it is pasted in once via Settings. Empty until then — the
 // Worker allows unauthenticated writes while its secret is unset, which is the
 // deploy window that lets the API ship ahead of the phone.
-let writeToken = localStorage.getItem('gymtrack_write_token') || '';
+let writeToken = DEMO ? '' : (localStorage.getItem('gymtrack_write_token') || '');
 let aliases = store.get('aliases', {}); // { aliasLowercase: 'Canonical Name' } — display-time merge of exercise names
 let tab = 'workout';
 let prevTab = 'workout';      // where the settings view returns to
@@ -1123,6 +1138,13 @@ async function workerPush(opts = {}) {
   } catch (e) { setSyncState('error', e.message); if (!opts.silent) toast(tr("cloud_sync.error.push", { error: e.message }), 'err'); return false; }
 }
 async function syncFetch(url, options = {}) {
+  // Every request to WORKER_URL in this file goes through here (workerPush and
+  // workerFetch are the only callers), so this single line is what makes "the
+  // demo cannot reach the sync API" true by construction rather than by
+  // remembering to check a flag at each call site. Under DEMO nothing should
+  // ever get this far — settings.autoSync is false — so throwing is right: it
+  // surfaces a bug rather than silently swallowing a write attempt.
+  if (DEMO) throw new Error('Demo mode: cloud sync is disabled');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try { return await fetch(url, { ...options, signal: controller.signal }); }
@@ -1294,6 +1316,14 @@ async function forceRefresh() {
 }
 
 function initServiceWorkerUpdates() {
+  // The demo deliberately runs without a service worker. Its whole premise is
+  // that a reload gives you the current build and a clean slate, and a
+  // cache-first worker that waits for an explicit "Update" tap gives you
+  // neither: a visitor returning months later would get a stale build plus an
+  // update banner over the top of it. Offline support is a thing the case study
+  // describes, not a thing the demo has to prove. Nothing is unregistered here
+  // — under ?demo=1 that would kill the real app's worker on its own origin.
+  if (DEMO) return;
   if (!('serviceWorker' in navigator)) return;
   navigator.serviceWorker.register('sw.js').then(reg => {
     if (reg.waiting && reg.active) { swWaiting = reg.waiting; showUpdateBanner(); }
@@ -1318,7 +1348,8 @@ function render() {
   hideStepper(); // any focused set input is about to be replaced
   const app = document.getElementById('app');
   document.querySelectorAll('#tabbar .tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-  if (tab === 'workout') app.innerHTML = active ? viewActiveSession() : viewStart();
+  const demoIntro = DEMO ? GymDemo.introCard() : '';
+  if (tab === 'workout') app.innerHTML = demoIntro + (active ? viewActiveSession() : viewStart());
   else if (tab === 'plan') app.innerHTML = viewPlan();
   else if (tab === 'history') app.innerHTML = viewHistory();
   else if (tab === 'settings') app.innerHTML = viewSettings();
@@ -1822,11 +1853,12 @@ function mergeNamesModal(selName) {
 function viewCoach() {
   return `
     <h2 class="section">${esc(tr("view_coach.text.share_with_ai"))}</h2>
+    ${DEMO ? `<div class="card"><p class="small muted">${esc(GymDemo.text('shareOff'))}</p></div>` : `
     <div class="card">
       <button class="primary wide" data-action="share-ai">${icon('link', 18)} ${esc(tr("view_coach.text.share_with_ai_2"))}</button>
       <p class="small muted mt8">${esc(tr("view_coach.text.copies_a_link_you_can_paste_into_claude_chatgpt_"))}</p>
       <div id="sync-status" class="mt8">${syncStatusHtml()}</div>
-    </div>
+    </div>`}
 
     <h2 class="section">${esc(tr("view_coach.text.or_copy_your_data_directly"))}</h2>
     <div class="card">
@@ -1876,6 +1908,7 @@ function viewSettings() {
     </div>
 
     <h2 class="section">${esc(tr("view_settings.text.cloud_sync"))}</h2>
+    ${DEMO ? `<div class="card"><p class="small muted">${esc(GymDemo.text('syncOff'))}</p></div>` : `
     <div class="card">
       <div class="row between">
         <span class="bold">${esc(tr("view_settings.text.auto_sync"))}</span>
@@ -1897,7 +1930,7 @@ function viewSettings() {
       <input id="write-token-input" class="mt8" placeholder="${esc(tr("view_settings.placeholder.paste_your_write_token"))}" style="width:100%;box-sizing:border-box">
       <button class="ghost wide mt8" data-action="save-write-token">${esc(tr("view_settings.text.save_write_token"))}</button>
       <p class="small muted mt8">${esc(tr("settings.write_token.explanation"))}</p>
-    </div>
+    </div>`}
 
     <h2 class="section">${esc(tr("view_settings.text.backup"))}</h2>
     <div class="card">
@@ -1908,11 +1941,12 @@ function viewSettings() {
       <button class="ghost wide danger mt8" data-action="reset-all">${esc(tr("view_settings.text.reset_everything"))}</button>
     </div>
 
+    ${DEMO ? '' : `
     <h2 class="section">${esc(tr("view_settings.text.app_version"))}</h2>
     <div class="card">
       <button class="ghost wide" data-action="check-updates">${esc(tr("updates.action.check"))}</button>
       <p class="small muted mt8">${esc(tr("view_settings.text.updates_normally_appear_as_a_banner_at_the_top_u"))}</p>
-    </div>
+    </div>`}
     <p class="muted small" style="text-align:center">${esc(tr("view_settings.text.gymtrack_v1_data_lives_on_this_device", { settings_autoSync_tr_view_se: settings.autoSync ? tr("view_settings.message.auto_synced_to_cloud") : '' }))}</p>`;
 }
 
@@ -3085,6 +3119,11 @@ document.addEventListener('click', e => {
   const a = el.dataset.action;
   unlockAudio(); // every tap keeps the iOS audio context alive
 
+  // Every control that can reach the sync Worker or the real backup identity is
+  // hidden under DEMO, but this dispatcher is keyed on data-action strings —
+  // markup must not be the only thing standing between the demo and a write.
+  if (DEMO && DEMO_BLOCKED_ACTIONS.has(a)) return;
+
   switch (a) {
     /* navigation */
     case 'modal-dismiss': if (e.target === el) { closeModal(); if (cmjState) cmjCleanup(); } break; // only when tapping the backdrop itself
@@ -3343,7 +3382,7 @@ document.addEventListener('click', e => {
             endSession(); // clears `active` and its UI state, stops rest, releases the wake lock
             ['plan', 'sessions', 'active', 'bw', 'settings', 'updatedAt'].forEach(k => store.del(k));
             plan = defaultPlan(); sessions = []; bodyWeight = []; dataUpdatedAt = 0;
-            settings = { unit: 'kg', sound: true, vibrate: true, autoSync: true };
+            settings = { unit: 'kg', sound: true, vibrate: true, autoSync: !DEMO };
             closeModal(); render(); toast(tr("action_reset-all.message.fresh_start"));
           } }, { label: tr("common.action.cancel") }]);
       break;

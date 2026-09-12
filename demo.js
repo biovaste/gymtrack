@@ -74,14 +74,18 @@
       body: 'GymTrack is a workout tracker that swaps training plans and logs with an AI coach as JSON. Everything here works — log sets, run the rest timer, browse history and PRs.',
       note: 'The training data is generated, not real, and it resets every time you reload.',
       link: 'Read about how it was built',
-      dismiss: 'Dismiss'
+      dismiss: 'Dismiss',
+      syncOff: 'Cloud sync is off in the demo. Everything you log stays in this browser and resets when you reload.',
+      shareOff: '"Share with AI" is disabled here — it hands out a link to a real synced account. "Copy coaching prompt + data" below is the same feature the app ships, and it works entirely in your browser.'
     },
     fi: {
       title: 'Tämä on esittelyversio',
       body: 'GymTrack on treenipäiväkirja, joka vaihtaa ohjelmia ja treenilokeja tekoälyvalmentajan kanssa JSON-muodossa. Kaikki toimii — kirjaa sarjoja, käytä palautusajastinta, selaa historiaa ja ennätyksiä.',
       note: 'Treenidata on keksittyä, ja se palautuu alkutilaan aina sivun latauksella.',
       link: 'Lue miten se on rakennettu',
-      dismiss: 'Sulje'
+      dismiss: 'Sulje',
+      syncOff: 'Pilvisynkronointi on pois päältä esittelyversiossa. Kaikki kirjaamasi pysyy tässä selaimessa ja nollautuu sivun latauksella.',
+      shareOff: '"Jaa tekoälylle" on poistettu käytöstä täällä — se antaisi linkin oikeaan synkronoituun tiliin. Alla oleva "Kopioi valmennuskehote + data" on sama ominaisuus kuin sovelluksessa ja toimii kokonaan selaimessa.'
     }
   };
 
@@ -129,5 +133,11 @@
     bindDismiss();
   }
 
-  root.GymDemo = { active, prefix: PREFIX, introCard, caseStudyUrl: DEMO_CASE_STUDY_URL };
+  /** Demo-only prose, in the language the app is currently showing. */
+  function text(key) {
+    const t = TEXT[root.I18n && root.I18n.locale() === 'fi' ? 'fi' : 'en'];
+    return t[key] || TEXT.en[key] || '';
+  }
+
+  root.GymDemo = { active, prefix: PREFIX, introCard, text, caseStudyUrl: DEMO_CASE_STUDY_URL };
 })(typeof globalThis === 'object' ? globalThis : this);
