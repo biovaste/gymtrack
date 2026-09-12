@@ -323,3 +323,40 @@ guard — keep both sides.
 
 Never merge `demo` back into `main`. The demo branch is a permanent downstream leaf; the
 only direction is `main` → `demo`.
+
+---
+
+## 12. Verification record (2026-09-12)
+
+Implemented on branch `demo`, cut from `main` at `f39f226`. Diff against `main`:
+`app.js` +48/−9, plus `demo.js`, `demo-data.js`, `tools/demo-plan.mjs`,
+`tools/demo.test.mjs`, and 4 lines across `index.html` / `sw.js` / `tools/i18n/cli.mjs`.
+
+- **Full test suite passes** — `pure`, `weights`, `validate`, `workout-model`,
+  `exercise-library`, the four i18n suites, plus the new `tools/demo.test.mjs` (14 tests).
+- **`node tools/push-plan.mjs --check`** passes on the generated plan (3 days, 18
+  exercises), and every logged session weight is run through the real `isLoadable` ladder.
+- **`node tools/i18n/cli.mjs build && … check`** clean, with `demo.js`/`demo-data.js` in
+  both the `sw.js` ASSETS list and the derived cache hash.
+- **Zero Worker traffic, measured.** `performance.getEntriesByType('resource')` filtered on
+  `api.gymtrack` after a full start-session → log a set → finish flow:
+  - demo mode: **0 entries**, 9 resources total, `syncState` never leaves `idle`.
+  - non-demo mode on the same origin: **1 entry** (the launch reconcile), `syncState` `ok`.
+  That pair is the positive/negative control. Note the browser network panel does not
+  record cross-origin fetches, so it alone would have been weak evidence.
+- **Storage isolation, measured.** After finishing a session in demo mode:
+  `gymdemo.sessions` = 91, `gym.sessions` = 0, `gym.updatedAt` unchanged from before the
+  demo visit. A pre-existing `gym.*` payload comes back byte-identical in the unit test.
+- **Reload resets.** 91 sessions → reload → 90, no `gymdemo.active`, `gym.*` untouched.
+- **Non-demo unchanged.** `DEMO` false, prefix `gym.`, auto-sync on, "✓ Synced just now",
+  backup code / restore / write token / update check all present.
+- **UI checked in the browser** in both languages: intro card, seeded plan, "Last:" lookups
+  from history, rest timer, weekly-training bars, body-weight chart, and the Bench Press
+  e1RM chart with a PR badge (best e1RM 114 kg).
+
+Two things found by running it that the plan had not predicted:
+
+1. **Body weight was written as `{date, kg}`** where the app reads `{date, weight}` — the
+   chart rendered as `NaN`. Fixed, and pinned by a test.
+2. **A fixed start date ages badly.** The seed now ends in the current week, so the demo
+   never opens on a stale log. Only the calendar slides; the progression shape is unchanged.
