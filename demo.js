@@ -31,8 +31,7 @@
   /** Demo mode is on for `?demo=1`, or for any host whose first label is `demo`. */
   function detect() {
     try {
-      const params = new URLSearchParams(root.location.search);
-      if (params.get('demo') === '1') return true;
+      if (/[?&]demo=1(?:&|$)/.test(String(root.location.search || ''))) return true;
       return String(root.location.hostname || '').split('.')[0] === 'demo';
     } catch (e) { return false; }
   }
