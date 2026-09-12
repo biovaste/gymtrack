@@ -361,8 +361,8 @@ node --test tools/demo.test.mjs
 ### Deploying it
 
 The demo lives on the `demo` branch, which is `main` plus `demo.js`, `demo-data.js` and a
-small set of guards in `app.js`. Cloudflare Pages builds it as a preview deployment at
-`demo.gymtrack-7wz.pages.dev`. Refresh it after any release:
+small set of guards in `app.js`. Cloudflare Pages builds it as a preview deployment, live at
+<https://demo.gymtrack-7wz.pages.dev>. Refresh it after any release:
 
 ```bash
 git checkout demo
@@ -372,6 +372,22 @@ git push
 ```
 
 Never merge `demo` back into `main` — it is a permanent downstream leaf.
+
+#### Pointing `demo.gymtrack.hithitpull.fi` at the branch
+
+There is **no branch selector in the custom-domain dialog** — that is not where the branch is
+chosen, which is why looking for it there comes up empty. Pages always attaches a new custom
+domain to the *production* deployment, and you repoint it at a branch afterwards, in DNS:
+
+1. **Workers & Pages → gymtrack → Custom domains → Set up a custom domain**, enter
+   `demo.gymtrack.hithitpull.fi`, **Continue**, **Activate domain**. This creates a proxied
+   CNAME in the `hithitpull.fi` zone pointing at `gymtrack-7wz.pages.dev` — production.
+2. **DNS → hithitpull.fi**, find the new `demo.gymtrack` CNAME and change its target from
+   `gymtrack-7wz.pages.dev` to **`demo.gymtrack-7wz.pages.dev`** — the branch alias. Leave it
+   **proxied** (orange cloud).
+
+Requirements: the branch needs a successful deployment first (it has one), and the record must
+be a proxied Cloudflare record. An external DNS provider silently serves production instead.
 
 ## iOS limitations worth knowing
 
