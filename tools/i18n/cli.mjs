@@ -10,7 +10,7 @@ export async function releaseCache(root,check=false) {
   const canonical=text=>text.replace(/\r\n?/g,'\n');
   const current=canonical(sw);
   const normalized=current.replace(/const CACHE = '[^']+';/,"const CACHE = 'gymtrack-i18n-development';");
-  const contents=await Promise.all(['index.html','styles.css','app.js','workout-model.js','exercise-library.js','i18n.js','exercises.js','locales/catalog.js','manifest.webmanifest'].map(async f=>canonical(await readFile(path.join(root,f),'utf8').catch(e=>{if(e.code==='ENOENT')return '';throw e;}))));
+  const contents=await Promise.all(['index.html','styles.css','app.js','workout-model.js','demo-data.js','demo.js','exercise-library.js','i18n.js','exercises.js','locales/catalog.js','manifest.webmanifest'].map(async f=>canonical(await readFile(path.join(root,f),'utf8').catch(e=>{if(e.code==='ENOENT')return '';throw e;}))));
   const expected=normalized.replace("const CACHE = 'gymtrack-i18n-development';",`const CACHE = 'gymtrack-i18n-${hash([normalized,...contents])}';`);
   if(check && current!==expected)throw Error('Offline app version is stale: run node tools/i18n/cli.mjs build');
   if(!check && current!==expected)await atomic(file,expected);

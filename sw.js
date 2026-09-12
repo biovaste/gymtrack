@@ -9,6 +9,8 @@ const ASSETS = [
   './styles.css',
   './app.js',
   './workout-model.js',
+  './demo-data.js',
+  './demo.js',
   './exercise-library.js',
   './i18n.js',
   './exercises.js',
