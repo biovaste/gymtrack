@@ -28,7 +28,7 @@ test('offline install includes translation runtime, exercise dictionary and cata
   const h = harness(); let done;
   h.events.install({ waitUntil: promise => { done = promise; } });
   await done;
-  for (const path of ['./exercise-library.js', './workout-model.js', './i18n.js', './exercises.js', './locales/catalog.js']) assert.ok(h.installed.includes(path));
+  for (const path of ['./exercise-library.js', './workout-model.js', './i18n.js', './exercises.js', './locales/catalog.js', './app-config.js']) assert.ok(h.installed.includes(path));
 });
 test('cached app and catalogue remain immutable until next worker activation', async () => {
   const h = harness();

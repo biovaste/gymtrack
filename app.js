@@ -1,13 +1,327 @@
 /* GymTrack — offline-first gym workout tracker designed to exchange
-   plans and logs with Claude via JSON. No dependencies. */
+   plans and logs with AI assistants via JSON. No dependencies. */
 'use strict';
 const tr = (key, params) => I18n.t(key, params);
 
+/* ================= configuration ================= */
+const APP_CONFIG = (() => {
+  const cfg = (typeof window !== 'undefined' && window.GYM_CONFIG) || {};
+  let mode = 'alpha'; // Fail-closed default
+  if (typeof location !== 'undefined') {
+    const isPersonalOrigin = location.hostname === 'gymtrack.hithitpull.fi' ||
+      ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') && location.port === '8765');
+    const isPersonalConfig = cfg.mode === 'personal';
+    const params = new URLSearchParams(location.search);
+    const modeParam = params.get('mode');
+    const isDevHost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
+    if (params.has('alpha') || modeParam === 'alpha' || location.hostname === 'alpha.gymtrack.hithitpull.fi' || (isDevHost && location.port === '8766')) {
+      mode = 'alpha';
+    } else if (isPersonalOrigin && isPersonalConfig && modeParam !== 'alpha') {
+      mode = 'personal';
+    } else if (isDevHost && modeParam === 'personal') {
+      mode = 'personal';
+    } else {
+      mode = 'alpha';
+    }
+  }
+  const isAlpha = mode !== 'personal';
+  return {
+    mode: isAlpha ? 'alpha' : 'personal',
+    isAlpha,
+    version: isAlpha ? (cfg.alphaVersion || '0.1.0-alpha') : (cfg.version || '1.0.0'),
+    build: cfg.build || '2026-09-15',
+    cloudSync: !isAlpha,
+    keyPrefix: isAlpha ? 'gym_alpha.' : 'gym.'
+  };
+})();
+
 /* ================= storage ================= */
+const corruptData = {}; // In-memory preservation of raw corrupt data
+let storageAlert = null;
+
 const store = {
-  get(k, d) { try { const v = localStorage.getItem('gym.' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
-  set(k, v) { localStorage.setItem('gym.' + k, JSON.stringify(v)); },
-  del(k) { localStorage.removeItem('gym.' + k); }
+  get prefix() { return APP_CONFIG.keyPrefix; },
+  _activeTxId: null,
+  rawGet(k) {
+    try { return localStorage.getItem(this.prefix + k); } catch (e) { return null; }
+  },
+  rawSet(k, v) {
+    try { localStorage.setItem(this.prefix + k, v); return { ok: true }; }
+    catch (e) { return { ok: false, error: e.name || e.message || 'WriteFailed' }; }
+  },
+  rawDel(k) {
+    try { localStorage.removeItem(this.prefix + k); return { ok: true }; }
+    catch (e) { return { ok: false, error: e.name || e.message }; }
+  },
+  hasUnresolvedTx() {
+    const raw = this.rawGet('pending_tx');
+    if (!raw) {
+      delete corruptData['pending_tx'];
+      return false;
+    }
+    try {
+      const tx = JSON.parse(raw);
+      if (!tx || typeof tx !== 'object') return true;
+      if (this._activeTxId && tx.id === this._activeTxId) return false;
+      if (tx.status === 'committed') {
+        this.rawDel('pending_tx');
+        delete corruptData['pending_tx'];
+        return false;
+      }
+      if (tx.status === 'rolled_back') {
+        const res = this.rawDel('pending_tx');
+        if (res.ok) delete corruptData['pending_tx'];
+        return !res.ok;
+      }
+      if (corruptData['pending_tx'] !== undefined) return true;
+      return true;
+    } catch (e) {
+      return true;
+    }
+  },
+  get(k, d) {
+    try {
+      const raw = localStorage.getItem(this.prefix + k);
+      if (raw === null) return d;
+      try {
+        const val = JSON.parse(raw);
+        // Shape validation to catch unparseable/corrupt objects
+        if (k === 'sessions' || k === 'bw') {
+          if (!Array.isArray(val)) {
+            corruptData[k] = raw;
+            storageAlert = tr('storage.error.corrupt_data', { key: k });
+            return d;
+          }
+        } else if (k === 'plan') {
+          if (!val || typeof val !== 'object' || !Array.isArray(val.days)) {
+            corruptData[k] = raw;
+            storageAlert = tr('storage.error.corrupt_data', { key: k });
+            return d;
+          }
+        } else if (k === 'settings' || k === 'aliases') {
+          if (!val || typeof val !== 'object' || Array.isArray(val)) {
+            corruptData[k] = raw;
+            storageAlert = tr('storage.error.corrupt_data', { key: k });
+            return d;
+          }
+        }
+        return val;
+      } catch (parseErr) {
+        corruptData[k] = raw;
+        storageAlert = tr('storage.error.corrupt_data', { key: k });
+        return d;
+      }
+    } catch (e) {
+      return d;
+    }
+  },
+  set(k, v, opts = {}) {
+    if (corruptData[k] !== undefined && !opts.allowCorruptRecovery) {
+      console.warn('Blocked overwrite of corrupted key:', k);
+      return { ok: false, error: 'corrupt_blocked' };
+    }
+    if (this.hasUnresolvedTx() && !opts.allowCorruptRecovery && !opts.inTx) {
+      console.warn('Blocked write while transaction recovery is unresolved:', k);
+      return { ok: false, error: 'recovery_required' };
+    }
+    try {
+      localStorage.setItem(this.prefix + k, JSON.stringify(v));
+      return { ok: true };
+    } catch (e) {
+      console.error('Storage write failed for key:', k, e);
+      return { ok: false, error: e.name || e.message || 'WriteFailed' };
+    }
+  },
+  del(k, opts = {}) {
+    if (k !== 'pending_tx' && this.hasUnresolvedTx() && !opts.allowCorruptRecovery && !opts.inTx) {
+      console.warn('Blocked del while transaction recovery is unresolved:', k);
+      return { ok: false, error: 'recovery_required' };
+    }
+    delete corruptData[k];
+    try {
+      localStorage.removeItem(this.prefix + k);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e.name || e.message };
+    }
+  },
+  /* Durable, crash-safe multi-key commit transaction protocol.
+     Records WAL journal into gym_pending_tx before mutating keys.
+     Distinguishes in-flight vs committed journal states.
+     If write fails, rolls back cleanly; retains journal if rollback fails.
+     Prevents subsequent transactions if an unresolved journal exists.
+     During recovery replacement (allowCorruptRecovery), durably preserves
+     original journal and baseline pre-images until replacement commits. */
+  commitTx(writes, opts = {}) {
+    let originalTx = null;
+    const existingTxRaw = this.rawGet('pending_tx');
+    if (existingTxRaw) {
+      try {
+        const existingTx = JSON.parse(existingTxRaw);
+        if (existingTx && existingTx.status !== 'committed' && existingTx.status !== 'rolled_back') {
+          if (!opts.allowCorruptRecovery) {
+            console.error('commitTx blocked: unresolved pending_tx exists:', existingTx);
+            return { ok: false, error: 'UnresolvedPendingTransaction' };
+          }
+          // Keep existingTx as originalTx to preserve all known pre-images and status.
+          // Do not discard existingTx in favor of existingTx.originalTx, which would drop
+          // replacement-only pre-images recorded in existingTx.writes.
+          originalTx = existingTx;
+        }
+      } catch (e) {
+        if (!opts.allowCorruptRecovery) {
+          return { ok: false, error: 'CorruptPendingTransaction' };
+        }
+        originalTx = { id: uid(), status: 'corrupt', raw: existingTxRaw, writes: [] };
+      }
+    } else if (corruptData['pending_tx'] !== undefined && !opts.allowCorruptRecovery) {
+      return { ok: false, error: 'UnresolvedPendingTransaction' };
+    }
+
+    // Build the earliest known pre-image map across all prior transaction generations
+    const origPreMap = new Map();
+    if (originalTx) {
+      const collectPreImages = (tx) => {
+        if (!tx) return;
+        // Traverse to oldest generation first so earliest pre-images take precedence
+        if (tx.originalTx) collectPreImages(tx.originalTx);
+        if (Array.isArray(tx.writes)) {
+          for (const [k, prevRaw] of tx.writes) {
+            // Keep earliest known pre-image for every affected key
+            if (!origPreMap.has(k)) {
+              origPreMap.set(k, prevRaw);
+            }
+          }
+        }
+      };
+      collectPreImages(originalTx);
+    }
+
+    // Preserve baseline pre-images from all prior transaction generations so partial writes are never treated as baselines.
+    // Start with all keys touched by the new writes:
+    const journalWrites = writes.map(([k]) => [
+      k,
+      origPreMap.has(k) ? origPreMap.get(k) : this.rawGet(k)
+    ]);
+    // Then retain every key previously tracked in origPreMap that is not in the new writes:
+    for (const [k, prevRaw] of origPreMap.entries()) {
+      if (!writes.some(([wk]) => wk === k)) {
+        journalWrites.push([k, prevRaw]);
+      }
+    }
+
+    const journal = {
+      id: uid(),
+      status: 'pending',
+      createdAt: Date.now(),
+      ...(originalTx ? { originalTx } : {}),
+      writes: journalWrites
+    };
+    const jRes = this.rawSet('pending_tx', JSON.stringify(journal));
+    if (!jRes.ok) return { ok: false, error: 'JournalWriteFailed: ' + jRes.error };
+
+    this._activeTxId = journal.id;
+    let failedKey = null;
+    let writeError = null;
+    const appliedWrites = [];
+    try {
+      for (const [key, val] of writes) {
+        const preRaw = origPreMap.has(key) ? origPreMap.get(key) : this.rawGet(key);
+        const res = val === undefined ? this.del(key, { ...opts, inTx: true }) : this.set(key, val, { ...opts, inTx: true });
+        if (!res.ok) {
+          failedKey = key;
+          writeError = res.error;
+          break;
+        }
+        appliedWrites.push([key, preRaw]);
+      }
+    } finally {
+      this._activeTxId = null;
+    }
+
+    if (failedKey !== null) {
+      // Rollback applied keys in reverse order using baseline pre-images from journal
+      let rollbackAllOk = true;
+      const rollbackFailures = [];
+      for (const [k, prevRaw] of appliedWrites.reverse()) {
+        const rRes = prevRaw === null ? this.rawDel(k) : this.rawSet(k, prevRaw);
+        if (!rRes.ok) {
+          rollbackAllOk = false;
+          rollbackFailures.push(`${k}: ${rRes.error}`);
+        }
+      }
+
+      if (originalTx) {
+        // Recovery / replacement failed! Do NOT delete the journal.
+        // Durably preserve the complete combined recovery journal (including keys introduced
+        // by the replacement) so mutations remain blocked and all recovery information remains available.
+        const preservedTx = {
+          id: journal.id,
+          status: 'rollback_failed',
+          createdAt: journal.createdAt,
+          failedKey: failedKey,
+          replacementFailures: rollbackFailures.length ? rollbackFailures : undefined,
+          isRecovery: true,
+          originalTx: originalTx,
+          writes: journalWrites
+        };
+        this.rawSet('pending_tx', JSON.stringify(preservedTx));
+        corruptData['pending_tx'] = JSON.stringify(preservedTx);
+        storageAlert = tr('storage.error.corrupt_data', { key: 'pending_tx' });
+        return {
+          ok: false,
+          error: rollbackAllOk
+            ? `ReplacementFailed(${failedKey}): ${writeError}`
+            : `ReplacementRollbackFailed: ${rollbackFailures.join(', ')} (original: ${writeError})`
+        };
+      }
+
+      if (rollbackAllOk) {
+        // Rollback succeeded completely — finalize by deleting pending_tx
+        const delRes = this.rawDel('pending_tx');
+        if (!delRes.ok) {
+          // If deletion fails, record rolled_back so startup recovery does not re-rollback
+          this.rawSet('pending_tx', JSON.stringify({ id: journal.id, status: 'rolled_back' }));
+        } else {
+          delete corruptData['pending_tx'];
+        }
+        return { ok: false, error: `KeyWriteFailed(${failedKey}): ${writeError}` };
+      } else {
+        // Rollback FAILED: persistent storage failure on an applied key!
+        // Retain the journal so data is not lost and subsequent transactions cannot overwrite it
+        journal.status = 'rollback_failed';
+        journal.failedKey = failedKey;
+        journal.rollbackFailures = rollbackFailures;
+        this.rawSet('pending_tx', JSON.stringify(journal));
+        corruptData['pending_tx'] = JSON.stringify(journal);
+        storageAlert = tr('storage.error.corrupt_data', { key: 'pending_tx' });
+        return { ok: false, error: `RollbackFailed: ${rollbackFailures.join(', ')} (original: ${writeError})` };
+      }
+    }
+
+    // All writes succeeded! Establish durable commit point before deleting journal
+    const commitRecord = JSON.stringify({ id: journal.id, status: 'committed', committedAt: Date.now() });
+    const cRes = this.rawSet('pending_tx', commitRecord);
+    if (!cRes.ok) {
+      // Failed to record commit point; attempt direct deletion
+      const dRes = this.rawDel('pending_tx');
+      if (!dRes.ok) {
+        return { ok: false, error: `FinalizationFailed: ${dRes.error}` };
+      }
+      delete corruptData['pending_tx'];
+      return { ok: true };
+    }
+
+    // Commit point is durably recorded! Finalize by deleting the committed journal
+    const cleanRes = this.rawDel('pending_tx');
+    if (!cleanRes.ok) {
+      console.warn('commitTx: committed journal cleanup delayed (status is committed):', cleanRes.error);
+    } else {
+      delete corruptData['pending_tx'];
+    }
+    return { ok: true };
+  }
 };
 
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -277,26 +591,106 @@ function defaultPlan() {
   };
 }
 
+// Startup recovery: check for an interrupted commit transaction (pending_tx)
+(() => {
+  const pendingRaw = store.rawGet('pending_tx');
+  if (pendingRaw) {
+    try {
+      const journal = JSON.parse(pendingRaw);
+      if (journal && journal.status === 'committed') {
+        // Committed cleanup: the transaction reached its durable commit point before termination.
+        // Do NOT roll back application keys! Just clean up the committed journal.
+        console.log('Startup: cleaning up committed transaction journal:', journal.id);
+        store.rawDel('pending_tx');
+        delete corruptData['pending_tx'];
+        return;
+      }
+      if (journal && journal.status === 'rolled_back') {
+        // Already successfully rolled back prior to termination. Just clean up journal.
+        store.rawDel('pending_tx');
+        delete corruptData['pending_tx'];
+        return;
+      }
+      if (journal && Array.isArray(journal.writes)) {
+        console.warn('Startup: found interrupted pending_tx, rolling back keys:', journal.writes.map(w => w[0]));
+        let allRollbackOk = true;
+        const rollbackErrors = [];
+        for (const [k, prevRaw] of journal.writes) {
+          const res = prevRaw === null ? store.rawDel(k) : store.rawSet(k, prevRaw);
+          if (!res.ok) {
+            allRollbackOk = false;
+            rollbackErrors.push(`${k}: ${res.error}`);
+          }
+        }
+        if (allRollbackOk) {
+          if (journal.originalTx) {
+            console.warn('Startup: interrupted replacement transaction rolled back; retaining recovery journal');
+            const preservedTx = Object.assign({}, journal.originalTx, {
+              status: 'rollback_failed',
+              interruptedAt: Date.now(),
+              writes: journal.writes
+            });
+            store.rawSet('pending_tx', JSON.stringify(preservedTx));
+            corruptData['pending_tx'] = JSON.stringify(preservedTx);
+            storageAlert = tr('storage.error.corrupt_data', { key: 'pending_tx' });
+            return;
+          }
+          const delRes = store.rawDel('pending_tx');
+          if (!delRes.ok) {
+            store.rawSet('pending_tx', JSON.stringify({ id: journal.id, status: 'rolled_back' }));
+          } else {
+            delete corruptData['pending_tx'];
+            if (Object.keys(corruptData).length === 0) storageAlert = null;
+          }
+        } else {
+          // Key rollback failed (persistent write failure): retain journal and expose recovery-required state.
+          // Retain complete writes from journal (including any keys introduced by replacement)
+          console.error('Startup: key restoration failed during rollback:', rollbackErrors);
+          const failedTx = Object.assign({}, journal.originalTx || journal, {
+            status: 'rollback_failed',
+            rollbackErrors,
+            writes: journal.writes
+          });
+          store.rawSet('pending_tx', JSON.stringify(failedTx));
+          corruptData['pending_tx'] = JSON.stringify(failedTx);
+          storageAlert = tr('storage.error.corrupt_data', { key: 'pending_tx' });
+        }
+      } else {
+        corruptData['pending_tx'] = pendingRaw;
+        storageAlert = tr('storage.error.corrupt_data', { key: 'pending_tx' });
+      }
+    } catch (err) {
+      console.error('Startup: failed to parse pending_tx journal:', err);
+      corruptData['pending_tx'] = pendingRaw;
+      storageAlert = tr('storage.error.corrupt_data', { key: 'pending_tx' });
+    }
+  }
+})();
+
 /* ================= state ================= */
 let plan = store.get('plan', null) || defaultPlan();
 let sessions = store.get('sessions', []);
 let active = store.get('active', null);
 let bodyWeight = store.get('bw', []);
-let settings = Object.assign({ unit: 'kg', sound: true, vibrate: true, autoSync: true }, store.get('settings', {}));
+let settings = Object.assign({ unit: 'kg', sound: true, vibrate: true, autoSync: APP_CONFIG.cloudSync }, store.get('settings', {}));
 delete settings.gistToken; delete settings.gistId; delete settings.gistOwner;
+if (APP_CONFIG.isAlpha) settings.autoSync = false;
+
+// Startup recovery check for interrupted workout completion
+if (active && sessions.some(s => s.id === active.id)) {
+  console.log('Startup: active workout already recorded in sessions, clearing stale draft:', active.id);
+  active = null;
+  store.del('active');
+}
 
 const WORKER_URL = 'https://api.gymtrack.hithitpull.fi';
 let gymUUID = (() => {
+  if (APP_CONFIG.isAlpha) return '00000000-0000-4000-8000-000000000000';
   let id = localStorage.getItem('gymtrack_uuid');
   if (!id) { id = crypto.randomUUID(); localStorage.setItem('gymtrack_uuid', id); }
   return id;
 })();
-// Write token for the sync API. Reads (and the "Share with AI" URL) need only the
-// UUID; writes need this. It is derived server-side from a Worker secret and can't
-// be computed here, so it is pasted in once via Settings. Empty until then — the
-// Worker allows unauthenticated writes while its secret is unset, which is the
-// deploy window that lets the API ship ahead of the phone.
-let writeToken = localStorage.getItem('gymtrack_write_token') || '';
+let writeToken = APP_CONFIG.isAlpha ? '' : (localStorage.getItem('gymtrack_write_token') || '');
 let aliases = store.get('aliases', {}); // { aliasLowercase: 'Canonical Name' } — display-time merge of exercise names
 let tab = 'workout';
 let prevTab = 'workout';      // where the settings view returns to
@@ -319,14 +713,47 @@ let syncReady = false;                          // becomes true after the initia
 function touch() {
   dataUpdatedAt = Date.now();
   store.set('updatedAt', dataUpdatedAt);
-  if (syncReady) scheduleSync();
+  if (syncReady && APP_CONFIG.cloudSync) scheduleSync();
 }
-const savePlan = () => { store.set('plan', plan); touch(); };
-const saveAliases = () => { store.set('aliases', aliases); touch(); };
-const saveSessions = () => { store.set('sessions', sessions); touch(); };
-const saveActive = () => active ? store.set('active', active) : store.del('active'); // intentionally not synced (local until finished)
-const saveBW = () => { store.set('bw', bodyWeight); touch(); };
-const saveSettings = () => store.set('settings', settings);
+function savePlan() {
+  const res = store.set('plan', plan);
+  if (!res.ok) { toast(tr('storage.error.save_failed', { item: tr('navigation.plan') }), 'err'); return false; }
+  touch();
+  return true;
+}
+function saveAliases() {
+  const res = store.set('aliases', aliases);
+  if (!res.ok) { toast(tr('storage.error.save_failed', { item: 'Aliases' }), 'err'); return false; }
+  touch();
+  return true;
+}
+function saveSessions() {
+  const res = store.set('sessions', sessions);
+  if (!res.ok) { toast(tr('storage.error.save_failed', { item: tr('navigation.history') }), 'err'); return false; }
+  touch();
+  return true;
+}
+function saveActive() {
+  if (active) {
+    const res = store.set('active', active);
+    if (!res.ok) { toast(tr('storage.error.save_failed', { item: tr('navigation.workout') }), 'err'); return false; }
+  } else {
+    const res = store.del('active');
+    if (!res.ok) { toast(tr('storage.error.save_failed', { item: tr('navigation.workout') }), 'err'); return false; }
+  }
+  return true;
+}
+function saveBW() {
+  const res = store.set('bw', bodyWeight);
+  if (!res.ok) { toast(tr('storage.error.save_failed', { item: tr('view_coach.text.body_weight_log') }), 'err'); return false; }
+  touch();
+  return true;
+}
+function saveSettings() {
+  const res = store.set('settings', settings);
+  if (!res.ok) { toast(tr('storage.error.save_failed', { item: tr('navigation.settings') }), 'err'); return false; }
+  return true;
+}
 const unit = () => settings.unit;
 
 /* ================= audio + haptics ================= */
@@ -514,7 +941,7 @@ setInterval(() => {
     chip.classList.remove('hidden');
     chip.textContent = '⏱ ' + fmtClock((Date.now() - active.startedAt) / 1000);
   } else chip.classList.add('hidden');
-  // keep the "synced X min ago" line fresh while the Claude tab is open
+  // keep the "synced X min ago" line fresh while the AI Coach tab is open
   const sEl = document.getElementById('sync-status');
   if (sEl && syncState !== 'syncing') sEl.innerHTML = syncStatusHtml();
 }, 1000);
@@ -547,7 +974,40 @@ function closeModal() { document.getElementById('modal-root').innerHTML = ''; mo
 const mval = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
 const mnum = (id, d = 0) => { const v = parseFloat(mval(id)); return isNaN(v) ? d : v; };
 
-/* ================= plan normalization (for imports) ================= */
+/* ================= plan validation & normalization ================= */
+function validatePlanImport(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error(tr("normalize_plan.message.not_a_json_object"));
+  }
+  if (raw.type && raw.type !== 'workout-plan') {
+    throw new Error(tr("normalize_plan.message.json_type_should_be_workout_plan"));
+  }
+  if (raw.version != null && (typeof raw.version !== 'number' || raw.version > 1 || raw.version < 1)) {
+    throw new Error(tr("plan_import.error.unsupported_version", { version: raw.version }));
+  }
+  if (!Array.isArray(raw.days) || !raw.days.length) {
+    throw new Error(tr("normalize_plan.message.plan_needs_a_non_empty_days_array"));
+  }
+  if (raw.library != null && !Array.isArray(raw.library)) {
+    throw new Error(tr("plan_import.error.library_must_be_array"));
+  }
+  for (let di = 0; di < raw.days.length; di++) {
+    const d = raw.days[di];
+    if (!d || typeof d !== 'object' || Array.isArray(d)) {
+      throw new Error(tr("normalize_plan.message.day_needs_an_exercises_array", { d_name: '#' + (di + 1) }));
+    }
+    if (!Array.isArray(d.exercises)) {
+      throw new Error(tr("normalize_plan.message.day_needs_an_exercises_array", { d_name: d.name || '#' + (di + 1) }));
+    }
+    for (let ei = 0; ei < d.exercises.length; ei++) {
+      const e = d.exercises[ei];
+      if (!e || typeof e !== 'object' || Array.isArray(e) || !e.name) {
+        throw new Error(tr("normalize_plan.message.every_exercise_needs_a_name"));
+      }
+    }
+  }
+  return true;
+}
 function normalizePlan(raw) {
   if (!raw || typeof raw !== 'object') throw new Error(tr("normalize_plan.message.not_a_json_object"));
   if (raw.type && raw.type !== 'workout-plan') throw new Error(tr("normalize_plan.message.json_type_should_be_workout_plan"));
@@ -814,7 +1274,7 @@ function startSession(dayId) {
   const day = plan.days.find(d => d.id === dayId);
   if (!day) return;
   unlockAudio();
-  active = {
+  const newActive = {
     id: uid(), dayId: day.id, dayName: day.name, startedAt: Date.now(), notes: '',
     readiness: {},
     warmup: (day.warmup || []).map(w => ({ name: w.name, detail: w.detail || '', done: false })),
@@ -829,8 +1289,14 @@ function startSession(dayId) {
       sets: buildSetRows(e)
     }))
   };
+  const prevActive = active;
+  active = newActive;
+  if (!saveActive()) {
+    active = prevActive;
+    return;
+  }
   exExpanded = new Set(); readinessOpen = null; warmupOpen = null;
-  saveActive(); syncWakeLock(); render();
+  syncWakeLock(); render();
   toast(tr("start_session.message.session_started_go_crush_it"));
 }
 function parseRepsLow(reps) {
@@ -844,8 +1310,15 @@ function parseRepsLow(reps) {
 // exExpanded/readinessOpen so collapsed-card state leaked into the next session,
 // and reset-all forgot syncWakeLock(). Callers still own closeModal()/render().
 function endSession() {
-  active = null; saveActive(); stopRest(); syncWakeLock();
+  const prevActive = active;
+  active = null;
+  if (!saveActive()) {
+    active = prevActive;
+    return false;
+  }
+  stopRest(); syncWakeLock();
   exExpanded = new Set(); readinessOpen = null; warmupOpen = null;
+  return true;
 }
 function finishSession() {
   if (!active) return;
@@ -872,7 +1345,32 @@ function finishSession() {
     record.warmup = { total: active.warmup.length, done: active.warmup.filter(w => w.done).length };
   }
   const prs = detectPRs(record);
-  sessions.push(record); saveSessions();
+
+  // Check if active.id is already in sessions (retry / restart idempotency)
+  const existingIdx = sessions.findIndex(s => s.id === active.id);
+  const updatedSessions = existingIdx >= 0
+    ? sessions.map((s, i) => i === existingIdx ? record : s)
+    : [...sessions, record];
+
+  const txRes = store.commitTx([
+    ['sessions', updatedSessions],
+    ['active', undefined]
+  ]);
+  if (!txRes.ok) {
+    showModal(tr("storage.completion.failed_title"), `
+      <p class="red">${esc(tr("storage.completion.failed_body"))}</p>
+      <div class="mt8 small muted">${esc(txRes.error || '')}</div>`, [
+      { label: tr("storage.completion.retry"), cls: 'primary', fn: finishSession },
+      { label: tr("storage.completion.emergency_export"), fn: () => {
+          copyText(buildEmergencyExport()).then(ok => toast(ok ? tr("storage.completion.emergency_copied") : tr("common.error.copy_failed"), ok ? 'ok' : 'err'));
+        } },
+      { label: tr("workout.action.keep_going"), fn: closeModal }
+    ]);
+    return;
+  }
+
+  sessions = updatedSessions;
+  touch();
   endSession();
   closeModal(); render();
   const setCount = record.exercises.reduce((n, e) => n + workingSets(e.sets).length, 0);
@@ -881,8 +1379,8 @@ function finishSession() {
   const sl = sessionLoad(record);
   if (sl) html += `<p class="mt8">${esc(tr("finish_session.text.session_rpe"))} <b>${sl.rpe}</b> · <b>${sl.load}</b> AU${sl.partial ? ` <span class="muted small">${esc(tr("finish_session.text.only_of_sets_had_an_rpe", { Math_round_sl_coverage_100: Math.round(sl.coverage * 100) }))}</span>` : ''}</p>`;
   if (prs.length) html += `<p class="mt8">${esc(tr("finish_session.text.new_prs"))} ${prs.map(p => `<span class="pr-badge">${esc(I18n.exercise(p))}</span>`).join(' ')}</p>`;
-  const syncing = settings.autoSync;
-  html += `<p class="muted small mt8">${esc(tr('sync.saved_locally'))}</p><div id="completion-sync-status">${syncing ? syncStatusHtml() : esc(tr("finish_session.message.head_to_the_ai_coach_tab_to_export_this_for_your"))}</div>`;
+  const syncing = settings.autoSync && !APP_CONFIG.isAlpha;
+  html += `<p class="muted small mt8">${esc(tr('sync.saved_locally'))}</p><div id="completion-sync-status">${syncing ? syncStatusHtml() : (APP_CONFIG.isAlpha ? esc(tr("alpha.storage_note")) : esc(tr("finish_session.message.head_to_the_ai_coach_tab_to_export_this_for_your")))}</div>`;
   // Explicit action rather than the implicit "Close" default: the way out of this
   // sheet should be obvious, and it lands you back on the day list.
   showModal(tr("finish_session.message.workout_complete"), html, [{ label: tr("finish_session.button.done"), cls: 'primary',
@@ -959,7 +1457,13 @@ function completeSet(ei, si) {
   const exerciseDone = ex.sets.every(y => y.done);
   // Inside a group the whole group collapses together, so don't collapse a member.
   if (exerciseDone && !group) exExpanded.delete(ei);
-  saveActive(); render();
+  if (!saveActive()) {
+    ex.sets[si].done = false;
+    if (exerciseDone && !group) exExpanded.add(ei);
+    render();
+    return false;
+  }
+  render();
   const remaining = active.exercises.some(x => x.sets.some(y => !y.done));
   // No rest after a warm-up set. A 2:30 countdown following an empty-bar single
   // is how you train yourself to ignore the timer; the prescribed rest starts
@@ -989,11 +1493,11 @@ function completeSet(ei, si) {
   buzz([60]);
 }
 
-/* ================= Claude data exchange ================= */
+/* ================= AI data exchange ================= */
 function buildExport() {
   return JSON.stringify({
     type: 'workout-log', version: 1, exportedAt: new Date().toISOString(), unit: unit(),
-    measurementNotes: 'movementId + side + setupId + metric identify comparable history. durationSeconds and distanceMeters are actual set measurements, never repetitions. The derived rep-weighted set-RPE load estimate is not a whole-session RPE rating.',
+    measurementNotes: 'movementId + side + setupId + metric + equipment identify comparable history. durationSeconds and distanceMeters are actual set measurements, never repetitions. The derived rep-weighted set-RPE load estimate is not a whole-session RPE rating.',
     bodyWeight: bodyWeight.slice(-20),
     sessions: sessions.slice(-15),
     currentPlan: plan
@@ -1006,29 +1510,128 @@ function buildBackup() {
     plan, sessions, bodyWeight, aliases, settings: { unit: settings.unit, sound: settings.sound, vibrate: settings.vibrate }
   }, null, 2);
 }
+function buildEmergencyExport() {
+  return JSON.stringify({
+    type: 'gymtrack-emergency-backup', version: 1, exportedAt: new Date().toISOString(),
+    activeWorkout: active,
+    plan, sessions, bodyWeight, aliases, settings: { unit: settings.unit, sound: settings.sound, vibrate: settings.vibrate }
+  }, null, 2);
+}
+function buildPlanExport() {
+  return JSON.stringify({
+    type: 'workout-plan', version: 1,
+    name: plan.name,
+    createdAt: plan.createdAt || today(),
+    days: plan.days,
+    ...(plan.library && plan.library.length ? { library: plan.library } : {})
+  }, null, 2);
+}
 function restoreBackup(raw) {
-  const b = JSON.parse(raw);
-  if (b.type !== 'gymtrack-backup') throw new Error(tr("restore_backup.message.not_a_gymtrack_backup_expected_type_gymtrack_bac"));
-  plan = normalizePlan(b.plan); sessions = Array.isArray(b.sessions) ? b.sessions : [];
-  bodyWeight = Array.isArray(b.bodyWeight) ? b.bodyWeight : [];
-  aliases = b.aliases && typeof b.aliases === 'object' ? b.aliases : {};
-  if (b.settings) Object.assign(settings, { unit: b.settings.unit, sound: b.settings.sound, vibrate: b.settings.vibrate });
-  // Adopt the source timestamp so we don't immediately bounce the same data back.
-  dataUpdatedAt = b.updatedAt || Date.now();
-  store.set('plan', plan); store.set('sessions', sessions); store.set('bw', bodyWeight); store.set('aliases', aliases);
-  store.set('updatedAt', dataUpdatedAt); saveSettings();
+  let b;
+  try {
+    b = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  } catch (e) {
+    throw new Error(tr("common.error.invalid_json") || 'Invalid JSON');
+  }
+  if (!b || typeof b !== 'object' || Array.isArray(b)) {
+    throw new Error(tr("restore_backup.message.not_a_gymtrack_backup_expected_type_gymtrack_bac"));
+  }
+  if (b.type !== 'gymtrack-backup') {
+    throw new Error(tr("restore_backup.message.not_a_gymtrack_backup_expected_type_gymtrack_bac"));
+  }
+  if (b.version != null && (typeof b.version !== 'number' || b.version > 1 || b.version < 1)) {
+    throw new Error(tr("plan_import.error.unsupported_version", { version: b.version }));
+  }
+
+  // Pre-validate plan
+  validatePlanImport(b.plan);
+  const normalizedPlan = normalizePlan(b.plan);
+
+  // Pre-validate sessions strictly (no silent dropping of malformed records)
+  if (b.sessions != null) {
+    if (!Array.isArray(b.sessions)) throw new Error('Sessions must be an array');
+    for (let idx = 0; idx < b.sessions.length; idx++) {
+      const s = b.sessions[idx];
+      if (!s || typeof s !== 'object' || Array.isArray(s)) throw new Error(`Invalid session at index ${idx}: expected an object`);
+      if (typeof s.id !== 'string' || !s.id.trim()) throw new Error(`Invalid session at index ${idx}: missing or invalid id`);
+      if (typeof s.date !== 'string' || !s.date.trim()) throw new Error(`Invalid session at index ${idx}: missing or invalid date`);
+      if (!Array.isArray(s.exercises)) throw new Error(`Invalid session at index ${idx}: missing exercises array`);
+    }
+  }
+  const restoredSessions = b.sessions || [];
+
+  // Pre-validate body weight strictly (no silent dropping of malformed records)
+  if (b.bodyWeight != null) {
+    if (!Array.isArray(b.bodyWeight)) throw new Error('Body weight must be an array');
+    for (let idx = 0; idx < b.bodyWeight.length; idx++) {
+      const bw = b.bodyWeight[idx];
+      if (!bw || typeof bw !== 'object' || Array.isArray(bw)) throw new Error(`Invalid body weight at index ${idx}: expected an object`);
+      if (typeof bw.date !== 'string' || !bw.date.trim()) throw new Error(`Invalid body weight at index ${idx}: missing or invalid date`);
+      if (typeof bw.weight !== 'number' || !Number.isFinite(bw.weight) || bw.weight <= 0) throw new Error(`Invalid body weight at index ${idx}: weight must be a positive number`);
+    }
+  }
+  const restoredBW = b.bodyWeight || [];
+
+  // Pre-validate aliases
+  if (b.aliases != null && (typeof b.aliases !== 'object' || Array.isArray(b.aliases))) {
+    throw new Error('Aliases must be an object');
+  }
+  const restoredAliases = b.aliases || {};
+
+  // Stage writes and ensure all persist atomically before modifying in-memory state
+  const newUpdatedAt = b.updatedAt || Date.now();
+  const writes = [
+    ['plan', normalizedPlan],
+    ['sessions', restoredSessions],
+    ['bw', restoredBW],
+    ['aliases', restoredAliases],
+    ['updatedAt', newUpdatedAt]
+  ];
+  let stagedSettings = null;
+  if (b.settings && typeof b.settings === 'object') {
+    stagedSettings = Object.assign({}, settings, {
+      unit: b.settings.unit || settings.unit,
+      sound: b.settings.sound ?? settings.sound,
+      vibrate: b.settings.vibrate ?? settings.vibrate
+    });
+    writes.push(['settings', stagedSettings]);
+  }
+
+  // Commit writes via durable WAL commitTx protocol with corrupt recovery allowed
+  const txRes = store.commitTx(writes, { allowCorruptRecovery: true });
+  if (!txRes.ok) {
+    throw new Error(tr("storage.error.restore_write_failed", { key: 'transaction', error: txRes.error }));
+  }
+
+  // Clear corruption records for restored keys now that durable commit succeeded
+  writes.forEach(([k]) => { delete corruptData[k]; });
+  delete corruptData['pending_tx'];
+  store.rawDel('pending_tx');
+  if (Object.keys(corruptData).length === 0) storageAlert = null;
+
+  // Switch in-memory references only after atomic commit succeeds
+  plan = normalizedPlan;
+  sessions = restoredSessions;
+  bodyWeight = restoredBW;
+  aliases = restoredAliases;
+  if (stagedSettings) Object.assign(settings, stagedSettings);
+  dataUpdatedAt = newUpdatedAt;
+  // Active workout is preserved intentionally
 }
 const coachPlanSchema = () => `{
   "type": "workout-plan",
   "version": 1,
   "name": "<plan name>",
+  "library": <optional array of saved library entries; preserve IDs, metadata and aliases from currentPlan.library>,
   "days": [
     {
       "name": "<day name>",
+      "warmup": <optional array of prep strings or {name, detail} objects>,
       "exercises": [
         {
           "name": "<exercise>",
-          "sets": <number>,
+          "sets": <number of working sets>,
+          "warmupSets": <optional nonnegative integer; ramp sets for load exercises only>,
           "reps": "<e.g. 8-10>",
           "weight": <number>,
           "targetRpe": <number 1-10>,
@@ -1038,12 +1641,13 @@ const coachPlanSchema = () => `{
           "barWeight": <number, optional — only for barbell/trap-bar/training-bar if the bar isn't a standard 20kg/45lb bar; omit otherwise>,
           "metric": "<load (weight × reps), height (cm), duration (seconds + optional load), distance (metres + optional load), or cardio (time/distance/speed)>",
           "movementId": "<optional reusable movement/variant key; same across days, independent of display name>",
+          "libraryEntry": <optional full entry snapshot; preserve id, name, movement, category, muscles, equipment, position, execution, metric, description, aliases; movementId must equal its id>,
           "side": "<unspecified, left, right, or bilateral>",
           "setupId": "<optional reusable equipment/setup name; different machines have separate history>",
-          "loadProfile": "<optional custom equipment loads: {unit: '${unit()}', offset: empty-equipment weight, increment: step}; alternatively use loads: [total loads] instead of increment. Omit unless known>",
-          "durationSeconds": "<optional positive planned duration for duration/cardio>",
-          "distanceMeters": "<optional positive planned distance for distance/cardio>",
-          "speedKph": "<optional positive planned speed for cardio; pace is derived>",
+          "loadProfile": <optional object for custom equipment loads: {unit: '${unit()}', offset: empty-equipment weight, increment: step}; alternatively use loads: [total loads] instead of increment. Omit unless known>,
+          "durationSeconds": <optional positive number for duration/cardio>,
+          "distanceMeters": <optional positive number for distance/cardio>,
+          "speedKph": <optional positive number for cardio; pace is derived>,
           "superset": "<optional — a short tag like 'A' shared by adjacent exercises to log them as one alternating superset card; omit for a standalone exercise>",
           "description": "<1-2 sentence how-to>",
           "alternates": [ { "name": "<alternative exercise>", "weight": <number>, "description": "<short how-to>" } ]
@@ -1052,8 +1656,8 @@ const coachPlanSchema = () => `{
     }
   ]
 }`;
-const CLAUDE_PROMPT = () => tr('coach_prompt.copy_data', { unit: unit(), schema: coachPlanSchema() });
-const CLAUDE_URL_PROMPT = url => tr('coach_prompt.share_url', { url, unit: unit() });
+const AI_PROMPT = () => tr('coach_prompt.copy_data', { unit: unit(), schema: coachPlanSchema() });
+const AI_URL_PROMPT = url => tr('coach_prompt.share_url', { url, unit: unit(), schema: coachPlanSchema() });
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); return true; }
   catch (e) {
@@ -1064,7 +1668,7 @@ async function copyText(text) {
 }
 
 /* ================= worker sync ================= */
-const workerShareUrl = () => `${WORKER_URL}/data/${gymUUID}`;
+const workerShareUrl = () => APP_CONFIG.isAlpha ? '' : `${WORKER_URL}/data/${gymUUID}`;
 
 function relTime(ts) {
   if (!ts) return '';
@@ -1076,6 +1680,7 @@ function relTime(ts) {
   return tr("sync.time.days", { count: Math.round(h / 24) });
 }
 function syncStatusHtml() {
+  if (APP_CONFIG.isAlpha) return `<span class="muted small">${esc(tr("alpha.storage_note"))}</span>`;
   if (!settings.autoSync) return `<span class="muted small">${esc(tr("sync_status_html.text.auto_sync_off"))}</span>`;
   if (syncState === 'syncing') return `<span class="small amber">${esc(tr("sync_status_html.text.syncing"))}</span>`;
   if (syncState === 'error') return `<span class="small red">⚠ ` + esc(lastSyncMsg || tr("sync_status_html.message.sync_error")) + `</span> <button class="ghost" data-action="sync-retry">${esc(tr('sync.retry'))}</button>`;
@@ -1092,12 +1697,15 @@ function setSyncState(state, msg) {
   }
 }
 function scheduleSync() {
-  if (!settings.autoSync) return;
+  if (APP_CONFIG.isAlpha || !settings.autoSync) return;
+  if (store.hasUnresolvedTx()) return;
   clearTimeout(syncTimer);
   syncTimer = setTimeout(() => workerPush({ silent: true }), 1500);
 }
 
 async function workerPush(opts = {}) {
+  if (APP_CONFIG.isAlpha) return false;
+  if (store.hasUnresolvedTx()) return false;
   clearTimeout(syncTimer);
   setSyncState('syncing');
   try {
@@ -1123,12 +1731,20 @@ async function workerPush(opts = {}) {
   } catch (e) { setSyncState('error', e.message); if (!opts.silent) toast(tr("cloud_sync.error.push", { error: e.message }), 'err'); return false; }
 }
 async function syncFetch(url, options = {}) {
+  if (APP_CONFIG.isAlpha) {
+    throw new Error(tr("alpha.cloud_disabled") || 'Cloud sync is disabled in athlete alpha mode');
+  }
+  if (store.hasUnresolvedTx()) {
+    throw new Error('Sync disabled while transaction recovery is unresolved');
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try { return await fetch(url, { ...options, signal: controller.signal }); }
   finally { clearTimeout(timer); }
 }
 async function workerFetch() {
+  if (APP_CONFIG.isAlpha) return null;
+  if (store.hasUnresolvedTx()) return null;
   const res = await syncFetch(`${WORKER_URL}/data/${gymUUID}`);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(tr("cloud_fetch.error.status", { status: res.status }));
@@ -1149,6 +1765,8 @@ function mergeByKey(remoteArr, localArr, keyFn) {
 // merging sessions/bodyWeight by id/date so a pull can't silently drop
 // local-only records that hadn't synced yet.
 async function workerReconcile(opts = {}) {
+  if (APP_CONFIG.isAlpha) return 'local';
+  if (store.hasUnresolvedTx()) return 'local';
   const r = await workerFetch();
   if (!r) { await workerPush({ silent: true, retried: opts.retried }); return 'pushed'; }
   const localEmpty = sessions.length === 0 && bodyWeight.length === 0;
@@ -1174,7 +1792,8 @@ async function workerReconcile(opts = {}) {
   return 'pushed';
 }
 async function autoSyncOnLoad() {
-  if (!settings.autoSync || active) { syncReady = true; return; }
+  if (APP_CONFIG.isAlpha) { syncReady = true; return; }
+  if (!settings.autoSync || active || store.hasUnresolvedTx()) { syncReady = true; return; }
   setSyncState('syncing');
   try { await workerReconcile(); } catch (e) { setSyncState('error', e.message); }
   syncReady = true;
@@ -1183,6 +1802,7 @@ async function autoSyncOnLoad() {
 /* ================= restore from backup code ================= */
 // Shared by the settings view and the onboarding "I have a backup code" flow.
 function restoreFromCode(raw) {
+  if (APP_CONFIG.isAlpha) { toast(tr("alpha.cloud_disabled"), 'err'); return; }
   if (!raw) { toast(tr("restore_from_code.message.paste_your_backup_code_first"), 'err'); return; }
   const match = raw.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
   if (!match) { toast(tr("restore_from_code.message.invalid_backup_code"), 'err'); return; }
@@ -1203,6 +1823,7 @@ function restoreFromCode(raw) {
 // accident (a backup code, a truncated copy) and is worth catching here rather
 // than as a 401 mid-workout.
 function saveWriteToken(raw) {
+  if (APP_CONFIG.isAlpha) { toast(tr("alpha.cloud_disabled"), 'err'); return; }
   const t = (raw || '').trim().toLowerCase();
   if (!t) { toast(tr("save_write_token.message.paste_your_write_token_first"), 'err'); return; }
   if (!/^[0-9a-f]{64}$/.test(t)) { toast(tr("save_write_token.message.that_does_not_look_like_a_write_token_64_hex_cha"), 'err'); return; }
@@ -1215,6 +1836,16 @@ function saveWriteToken(raw) {
 
 /* ================= first-run onboarding ================= */
 function showOnboarding() {
+  if (APP_CONFIG.isAlpha) {
+    showModal(tr("show_onboarding.message.welcome_to_gymtrack"), `
+      <div class="onboard-row">${icon('dumbbell', 22)}<div><b>${esc(tr("show_onboarding.text.log_your_workouts"))}</b><div class="muted small">${esc(tr("show_onboarding.text.sets_reps_rpe_with_a_rest_timer_that_runs_itself"))}</div></div></div>
+      <div class="onboard-row">${icon('list', 22)}<div><b>${esc(tr("alpha.badge"))}</b><div class="muted small">${esc(tr("alpha.storage_note"))}</div></div></div>
+      <p class="small muted mt12">${esc(tr("show_onboarding.text.a_starter_push_pull_legs_plan_is_loaded_edit_it_"))}</p>`,
+      [
+        { label: tr("show_onboarding.button.get_started"), cls: 'primary', fn: () => { store.set('onboarded', 1); closeModal(); } }
+      ]);
+    return;
+  }
   showModal(tr("show_onboarding.message.welcome_to_gymtrack"), `
     <div class="onboard-row">${icon('dumbbell', 22)}<div><b>${esc(tr("show_onboarding.text.log_your_workouts"))}</b><div class="muted small">${esc(tr("show_onboarding.text.sets_reps_rpe_with_a_rest_timer_that_runs_itself"))}</div></div></div>
     <div class="onboard-row">${icon('sparkle', 22)}<div><b>${esc(tr("show_onboarding.text.your_ai_coach_writes_the_next_plan"))}</b><div class="muted small">${esc(tr("show_onboarding.text.share_your_training_data_with_claude_chatgpt_or_"))}</div></div></div>
@@ -1318,11 +1949,26 @@ function render() {
   hideStepper(); // any focused set input is about to be replaced
   const app = document.getElementById('app');
   document.querySelectorAll('#tabbar .tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-  if (tab === 'workout') app.innerHTML = active ? viewActiveSession() : viewStart();
-  else if (tab === 'plan') app.innerHTML = viewPlan();
-  else if (tab === 'history') app.innerHTML = viewHistory();
-  else if (tab === 'settings') app.innerHTML = viewSettings();
-  else app.innerHTML = viewCoach();
+
+  let corruptBanner = '';
+  const corruptKeys = Object.keys(corruptData);
+  if (corruptKeys.length > 0) {
+    corruptBanner = `
+      <div class="card" style="border:1px solid var(--red);margin-bottom:12px;background:rgba(255,80,80,0.08)">
+        <b class="red">⚠ ${esc(tr("storage.corrupt.banner"))}</b>
+        <p class="small mt4">${esc(tr("storage.error.corrupt_data", { key: corruptKeys.join(', ') }))}</p>
+        <button class="ghost mt8" data-action="copy-corrupt-raw">${esc(tr("storage.corrupt.copy_raw"))}</button>
+      </div>`;
+  }
+
+  let content = '';
+  if (tab === 'workout') content = active ? viewActiveSession() : viewStart();
+  else if (tab === 'plan') content = viewPlan();
+  else if (tab === 'history') content = viewHistory();
+  else if (tab === 'settings') content = viewSettings();
+  else content = viewCoach();
+
+  app.innerHTML = corruptBanner + content;
 }
 
 /* ---- workout: pick a day ---- */
@@ -1554,6 +2200,75 @@ function exerciseCard(e, ei, opts) {
   </div>`;
 }
 
+function applyImportedPlan(newPlan) {
+  newPlan.library = ExerciseLibrary.importLibrary(plan, newPlan);
+  const prevPlan = plan;
+  plan = newPlan;
+  if (!savePlan()) {
+    plan = prevPlan;
+    render();
+    return false;
+  }
+  expandedDay = null;
+  tab = 'plan';
+  closeModal();
+  render();
+  toast(tr("action_import-plan.message.plan_imported"));
+  return true;
+}
+
+function showPlanImportPreview(newPlan, onConfirm) {
+  const totalExercises = newPlan.days.reduce((n, d) => n + d.exercises.length, 0);
+
+  const daysHtml = newPlan.days.map(d => {
+    const exList = d.exercises.map(e => {
+      let targetDesc = '';
+      if (WorkoutModel.timed(e)) {
+        targetDesc = `${e.sets} × ${measurementText(e, e)}`;
+      } else if (e.metric === 'height') {
+        targetDesc = `${e.sets} attempts`;
+      } else {
+        targetDesc = `${e.warmupSets ? `${e.warmupSets}W + ` : ''}${e.sets} × ${e.reps}${e.weight ? ` @ ${e.weight}${unit()}` : ''}${e.targetRpe ? ` @ RPE ${e.targetRpe}` : ''}`;
+      }
+
+      const techDetails = [
+        e.side && e.side !== 'unspecified' ? modelLabel(e.side) : '',
+        e.setupId ? e.setupId : '',
+        e.equipment && e.equipment !== 'barbell' ? equipmentLabel(e.equipment) : '',
+        e.superset ? `SS ${e.superset}` : ''
+      ].filter(Boolean).join(' · ');
+
+      return `
+        <div class="row between" style="padding:4px 0;border-bottom:1px solid var(--border)">
+          <div>
+            <b>${esc(I18n.exercise(e.name))}</b>
+            <div class="small muted">${esc(targetDesc)}${techDetails ? ` <span class="equip-chip">${esc(techDetails)}</span>` : ''}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="card mt8" style="background:var(--card-bg)">
+        <div class="bold">${esc(d.name)} (${d.exercises.length})</div>
+        ${d.warmup && d.warmup.length ? `<div class="small muted mt4">Prep: ${esc(d.warmup.map(w => w.name || w).join(', '))}</div>` : ''}
+        <div class="mt4">${exList}</div>
+      </div>`;
+  }).join('');
+
+  const bodyHtml = `
+    <div style="max-height:60vh;overflow-y:auto">
+      <div class="bold" style="font-size:1.1em">${esc(newPlan.name)}</div>
+      <p class="small muted">${esc(tr("plan.preview.summary", { days: newPlan.days.length, exercises: totalExercises }))}</p>
+      <div class="mt8">${daysHtml}</div>
+      <p class="small green mt12">✓ ${esc(tr("plan.preview.preserves_history"))}</p>
+    </div>`;
+
+  showModal(tr("plan.import.title", { plan: newPlan.name }), bodyHtml, [
+    { label: tr("action_import-plan.button.import"), cls: 'primary', fn: onConfirm },
+    { label: tr("common.action.cancel"), fn: closeModal }
+  ]);
+}
+
 /* ---- plan view ---- */
 function viewPlan() {
   return `
@@ -1562,7 +2277,11 @@ function viewPlan() {
         <div class="bold">${esc(plan.name)}</div>
         <div class="muted small">${esc(tr("view_plan.text.days_created", { plan_days_length: plan.days.length, plan_createdAt: plan.createdAt || '?' }))}</div>
       </div>
-      <button class="icon-btn" data-action="plan-rename">✏️</button>
+      <div class="row" style="gap:4px">
+        <button class="icon-btn ghost" data-action="plan-export" title="${esc(tr("plan.action.export"))}">${icon('copy', 18)}</button>
+        <button class="icon-btn ghost" data-action="plan-import-open" title="${esc(tr("plan.action.import"))}">${icon('link', 18)}</button>
+        <button class="icon-btn" data-action="plan-rename">✏️</button>
+      </div>
     </div>
     <div class="mt12"></div>
     ${plan.days.map(d => {
@@ -1601,8 +2320,12 @@ function viewPlan() {
         })() : ''}
       </div>`;
     }).join('')}
-    <button class="wide mt8" data-action="day-add">${esc(tr("view_plan.text.add_day"))}</button>
-    <p class="muted small mt12" style="text-align:center">${esc(tr("view_plan.text.tap_an_exercise_to_edit_targets_swap_alternates_"))}<br>${esc(tr("view_plan.text.import_a_whole_new_plan_in_the_ai_coach_tab"))}</p>`;
+    <div class="row mt8" style="gap:6px">
+      <button class="grow" data-action="day-add">${esc(tr("view_plan.text.add_day"))}</button>
+      <button class="ghost" data-action="plan-export">${icon('copy', 16)} ${esc(tr("plan.action.export"))}</button>
+      <button class="ghost" data-action="plan-import-open">${icon('link', 16)} ${esc(tr("plan.action.import"))}</button>
+    </div>
+    <p class="muted small mt12" style="text-align:center">${esc(tr("view_plan.text.tap_an_exercise_to_edit_targets_swap_alternates_"))}</p>`;
 }
 
 /* ---- history view ---- */
@@ -1805,13 +2528,18 @@ function mergeNamesModal(selName) {
       { label: tr("merge_names_modal.button.merge"), cls: 'primary', fn: () => {
           const checked = [...document.querySelectorAll('.merge-cb:checked')].map(c => c.value);
           if (!checked.length) { closeModal(); return; }
+          const prevAliases = { ...aliases };
           for (const n of checked) {
             aliases[n.toLowerCase()] = sel;
             // repoint anything that already aliased to the merged name
             for (const k of Object.keys(aliases)) if (aliases[k].toLowerCase() === n.toLowerCase()) aliases[k] = sel;
           }
+          if (!saveAliases()) {
+            aliases = prevAliases;
+            return;
+          }
           historyExercise = sel;
-          saveAliases(); closeModal(); render();
+          closeModal(); render();
           toast(tr("history.merge.success", { exercise: sel }));
         } },
       { label: tr("common.action.cancel") }
@@ -1822,11 +2550,16 @@ function mergeNamesModal(selName) {
 function viewCoach() {
   return `
     <h2 class="section">${esc(tr("view_coach.text.share_with_ai"))}</h2>
+    ${APP_CONFIG.isAlpha ? `
+    <div class="card">
+      <p class="small muted">${esc(tr("alpha.cloud_disabled"))}</p>
+      <p class="small muted mt4">${esc(tr("alpha.storage_note"))}</p>
+    </div>` : `
     <div class="card">
       <button class="primary wide" data-action="share-ai">${icon('link', 18)} ${esc(tr("view_coach.text.share_with_ai_2"))}</button>
       <p class="small muted mt8">${esc(tr("view_coach.text.copies_a_link_you_can_paste_into_claude_chatgpt_"))}</p>
       <div id="sync-status" class="mt8">${syncStatusHtml()}</div>
-    </div>
+    </div>`}
 
     <h2 class="section">${esc(tr("view_coach.text.or_copy_your_data_directly"))}</h2>
     <div class="card">
@@ -1875,6 +2608,12 @@ function viewSettings() {
       <button class="ghost wide mt8" data-action="test-sound">${esc(tr("view_settings.text.test_the_rest_timer_sound"))}</button>
     </div>
 
+    ${APP_CONFIG.isAlpha ? `
+    <h2 class="section">${esc(tr("alpha.badge"))}</h2>
+    <div class="card">
+      <p class="small muted">${esc(tr("alpha.storage_note"))}</p>
+      <div class="small green mt8">✓ ${esc(tr("alpha.version_label", { version: APP_CONFIG.version, build: APP_CONFIG.build }))}</div>
+    </div>` : `
     <h2 class="section">${esc(tr("view_settings.text.cloud_sync"))}</h2>
     <div class="card">
       <div class="row between">
@@ -1897,7 +2636,7 @@ function viewSettings() {
       <input id="write-token-input" class="mt8" placeholder="${esc(tr("view_settings.placeholder.paste_your_write_token"))}" style="width:100%;box-sizing:border-box">
       <button class="ghost wide mt8" data-action="save-write-token">${esc(tr("view_settings.text.save_write_token"))}</button>
       <p class="small muted mt8">${esc(tr("settings.write_token.explanation"))}</p>
-    </div>
+    </div>`}
 
     <h2 class="section">${esc(tr("view_settings.text.backup"))}</h2>
     <div class="card">
@@ -1905,12 +2644,14 @@ function viewSettings() {
         <button class="grow" data-action="backup-copy">${esc(tr("view_settings.text.copy_full_backup"))}</button>
         <button class="grow" data-action="backup-restore">${esc(tr("view_settings.text.restore_backup"))}</button>
       </div>
+      <p class="small muted mt8">${esc(tr("backup.note.active_excluded"))}</p>
       <button class="ghost wide danger mt8" data-action="reset-all">${esc(tr("view_settings.text.reset_everything"))}</button>
     </div>
 
     <h2 class="section">${esc(tr("view_settings.text.app_version"))}</h2>
     <div class="card">
-      <button class="ghost wide" data-action="check-updates">${esc(tr("updates.action.check"))}</button>
+      ${APP_CONFIG.isAlpha ? `<p class="bold">${esc(tr("alpha.version_label", { version: APP_CONFIG.version, build: APP_CONFIG.build }))}</p>` : ''}
+      <button class="ghost wide ${APP_CONFIG.isAlpha ? 'mt8' : ''}" data-action="check-updates">${esc(tr("updates.action.check"))}</button>
       <p class="small muted mt8">${esc(tr("view_settings.text.updates_normally_appear_as_a_banner_at_the_top_u"))}</p>
     </div>
     <p class="muted small" style="text-align:center">${esc(tr("view_settings.text.gymtrack_v1_data_lives_on_this_device", { settings_autoSync_tr_view_se: settings.autoSync ? tr("view_settings.message.auto_synced_to_cloud") : '' }))}</p>`;
@@ -1928,7 +2669,11 @@ function exMenuModal(dayId, i) {
     [
       { label: tr("ex_menu_modal.button.edit"), cls: 'primary', fn: () => exEditModal(dayId, i) },
       ...(e.alternates.length ? [{ label: tr("common.action.swap"), fn: () => exSwapPlanModal(dayId, i) }] : []),
-      { label: tr("ex_menu_modal.button.remove"), cls: 'danger', fn: () => { day.exercises.splice(i, 1); savePlan(); closeModal(); render(); } },
+      { label: tr("ex_menu_modal.button.remove"), cls: 'danger', fn: () => {
+          const removed = day.exercises.splice(i, 1);
+          if (!savePlan()) { day.exercises.splice(i, 0, ...removed); return; }
+          closeModal(); render();
+        } },
       { label: tr("common.action.close") }
     ]);
 }
@@ -2123,6 +2868,7 @@ function exEditModal(dayId, i, selection = null) {
             metric: metricVal,
             superset: ssVal,
             description: mval('f-desc') };
+          const prevLibrary = plan.library ? [...plan.library] : [];
           if (e.libraryEntry) {
             if (metadata.movementId !== e.libraryEntry.id) { toast(tr('library.identity_locked'), 'err'); return; }
             upd.libraryEntry = e.libraryEntry;
@@ -2131,9 +2877,17 @@ function exEditModal(dayId, i, selection = null) {
             const entry = saved ? { ...saved, aliases: [...new Set([...saved.aliases, ...e.libraryEntry.aliases])] } : e.libraryEntry;
             plan.library = [...items.filter(x => x.id !== entry.id), entry];
           }
+          const prevEx = i != null ? { ...day.exercises[i] } : null;
           if (i != null) Object.assign(day.exercises[i], upd);
           else day.exercises.push(Object.assign({ id: uid(), notes: '', alternates: [] }, upd));
-          savePlan(); closeModal(); render();
+
+          if (!savePlan()) {
+            if (i != null) day.exercises[i] = prevEx;
+            else day.exercises.pop();
+            plan.library = prevLibrary;
+            return;
+          }
+          closeModal(); render();
         } },
       { label: tr("common.action.cancel") }
     ]);
@@ -2149,11 +2903,16 @@ function dayWarmupModal(dayId) {
     <textarea id="f-warmup" style="min-height:150px" placeholder="${esc(tr("day_warmup_modal.placeholder.bike_5_min_easy_10_band_pull_apart_20_10_empty_b"))}">${esc(text)}</textarea>`,
     [
       { label: tr("common.action.save"), cls: 'primary', fn: () => {
+          const prevWarmup = day.warmup ? [...day.warmup] : [];
           day.warmup = mval('f-warmup').split('\n').map(l => l.trim()).filter(Boolean).map(l => {
             const m = l.match(/^(.*?)\s+[—–-]\s+(.*)$/);
             return m ? { name: m[1].trim(), detail: m[2].trim() } : { name: l, detail: '' };
           });
-          savePlan(); closeModal(); render();
+          if (!savePlan()) {
+            day.warmup = prevWarmup;
+            return;
+          }
+          closeModal(); render();
         } },
       { label: tr("common.action.cancel") }
     ]);
@@ -2170,6 +2929,7 @@ function doPlanSwap(dayId, i, ai) {
   const day = plan.days.find(d => d.id === dayId);
   const e = day.exercises[i];
   const a = e.alternates[ai];
+  const prevExercise = structuredClone(e);
   // The current main exercise becomes an alternate, the chosen alternate becomes main.
   // Equipment travels with each — without that, swap-then-swap-back changes the
   // equipment type, which then changes the ladder the weight is checked against.
@@ -2189,7 +2949,11 @@ function doPlanSwap(dayId, i, ai) {
     ...(newMetric === 'height' ? { weight: 0 } : {}),
     alternates: newAlts
   });
-  savePlan(); closeModal(); render();
+  if (!savePlan()) {
+    day.exercises[i] = prevExercise;
+    return;
+  }
+  closeModal(); render();
   toast(tr("exercise.swap.success", { exercise: I18n.exercise(a.name) }));
 }
 
@@ -2227,6 +2991,7 @@ function doSessionSwap(ei, alt) {
     toast(tr('exercise.model.swap_logged'), 'err');
     return;
   }
+  const prevExercise = structuredClone(e);
   const original = e.swappedFrom || e.name;
   e.swappedFrom = original === alt.name ? null : original;
   e.name = alt.name;
@@ -2244,7 +3009,11 @@ function doSessionSwap(ei, alt) {
   }
   e.plannedWeight = alt.weight ?? e.plannedWeight;
   if (alt.description) e.description = alt.description;
-  saveActive(); closeModal(); render();
+  if (!saveActive()) {
+    active.exercises[ei] = prevExercise;
+    return;
+  }
+  closeModal(); render();
   toast(tr("exercise.swap.success", { exercise: I18n.exercise(alt.name) }));
 }
 /*
@@ -2307,13 +3076,10 @@ function sessionAddExerciseModal() {
           const sets = Math.max(1, mnum('a-sets', 3));
           const reps = mval('a-reps') || '8-12';
           const rest = Math.max(0, mnum('a-rest', 120));
-          if (toPlan) {
-            day.exercises.push({ ...metadata, id: uid(), name, sets, reps, weight: wVal, targetRpe: null,
-              restSeconds: rest, restSecondsNext: null, equipment: eqVal, barWeight: null,
-              metric: metricVal, superset: null, description: '', notes: '', alternates: [] });
-            savePlan();
-          }
-          active.exercises.push({
+          const newExPlan = { ...metadata, id: uid(), name, sets, reps, weight: wVal, targetRpe: null,
+            restSeconds: rest, restSecondsNext: null, equipment: eqVal, barWeight: null,
+            metric: metricVal, superset: null, description: '', notes: '', alternates: [] };
+          const newExActive = {
             ...metadata,
             name, planId: null, swappedFrom: null,
             plannedSets: sets, plannedReps: reps, plannedWeight: wVal,
@@ -2321,8 +3087,34 @@ function sessionAddExerciseModal() {
             equipment: eqVal, barWeight: null, metric: metricVal, superset: null,
             description: '', alternates: [], notes: '',
             sets: Array.from({ length: sets }, () => WorkoutModel.row({ ...metadata, metric: metricVal, weight: wVal, reps }))
-          });
-          saveActive(); closeModal(); render();
+          };
+
+          if (toPlan) {
+            const nextPlan = structuredClone(plan);
+            const targetDay = nextPlan.days.find(d => d.id === active.dayId);
+            if (targetDay) targetDay.exercises.push(newExPlan);
+            const nextActive = structuredClone(active);
+            nextActive.exercises.push(newExActive);
+            const txRes = store.commitTx([
+              ['plan', nextPlan],
+              ['active', nextActive]
+            ]);
+            if (!txRes.ok) {
+              toast(tr('storage.error.save_failed', { item: tr('navigation.plan') }), 'err');
+              return;
+            }
+            plan = nextPlan;
+            active = nextActive;
+            touch();
+          } else {
+            const prevExercises = [...active.exercises];
+            active.exercises.push(newExActive);
+            if (!saveActive()) {
+              active.exercises = prevExercises;
+              return;
+            }
+          }
+          closeModal(); render();
           toast(toPlan ? tr("session_add_exercise_modal.message.added_also_saved_to", { name: name, day_name: day.name }) : tr("session_add_exercise_modal.message.added_for_today", { name: name }));
         } },
       { label: tr("common.action.cancel") }
@@ -2427,7 +3219,15 @@ function exNoteModal(ei) {
   const e = active.exercises[ei];
   showModal(tr("exercise.note.title", { exercise: I18n.exercise(e.name) }), `<textarea id="ex-note-area" placeholder="${esc(tr("ex_note_modal.placeholder.e_g_felt_heavy_slight_knee_pain_used_safety_bar"))}">${esc(e.notes)}</textarea>`,
     [
-      { label: tr("common.action.save"), cls: 'primary', fn: () => { e.notes = mval('ex-note-area'); saveActive(); closeModal(); render(); } },
+      { label: tr("common.action.save"), cls: 'primary', fn: () => {
+          const prevNotes = e.notes;
+          e.notes = mval('ex-note-area');
+          if (!saveActive()) {
+            e.notes = prevNotes;
+            return;
+          }
+          closeModal(); render();
+        } },
       { label: tr("common.action.cancel") }
     ]);
 }
@@ -2697,7 +3497,11 @@ function cmjSetFps(fps) { cmjState.fps = fps; }
 // one odd file shouldn't wipe the setting used for every Photos import.
 function cmjSetSlowFactor(factor, persist) {
   cmjState.slowFactor = factor;
-  if (persist) { settings.cmjSlowFactor = factor; saveSettings(); }
+  if (persist) {
+    const prev = settings.cmjSlowFactor;
+    settings.cmjSlowFactor = factor;
+    if (!saveSettings()) settings.cmjSlowFactor = prev;
+  }
   cmjPaintRateChips();
   cmjRenderDurationCheck();
   cmjUpdateResultUI();
@@ -2705,7 +3509,11 @@ function cmjSetSlowFactor(factor, persist) {
 
 function cmjSetCaptureFps(fps, persist) {
   cmjState.captureFps = fps;
-  if (persist) { settings.cmjCaptureFps = fps; saveSettings(); }
+  if (persist) {
+    const prev = settings.cmjCaptureFps;
+    settings.cmjCaptureFps = fps;
+    if (!saveSettings()) settings.cmjCaptureFps = prev;
+  }
   cmjPaintRateChips();
   cmjRenderDurationCheck();
   cmjUpdateResultUI();
@@ -3051,11 +3859,23 @@ function cmjAccept() {
     completeSet(targetEi, targetEx.sets.indexOf(slot));
     toast(tr("cmj_accept.message.cm_logged_to", { heightCm: heightCm, targetEx_name: I18n.exercise(targetEx.name) }));
   } else if (active) {
+    const prevCm = active.readiness.cmjCm;
+    const prevFlightTime = active.readiness.flightTimeMs;
+    const prevMethod = active.readiness.method;
+    const prevAttempts = active.readiness.cmjAttempts;
     active.readiness.cmjCm = heightCm;
     active.readiness.flightTimeMs = best.flightTimeMs;
     active.readiness.method = 'video';
     active.readiness.cmjAttempts = list;
-    saveActive();
+    if (!saveActive()) {
+      active.readiness.cmjCm = prevCm;
+      active.readiness.flightTimeMs = prevFlightTime;
+      active.readiness.method = prevMethod;
+      active.readiness.cmjAttempts = prevAttempts;
+      cmjCleanup();
+      closeModal();
+      return;
+    }
     toast(list.length > 1 ? tr("cmj_accept.message.cmj_cm_best_of", { heightCm: heightCm, list_length: list.length }) : tr("cmj_accept.message.cmj_height_set_from_video"));
   } else {
     // Nothing to attach to: say so loudly rather than silently dropping a full test set.
@@ -3112,7 +3932,8 @@ document.addEventListener('click', e => {
         [{ label: tr("action_confirm-discard.button.discard"), cls: 'danger', fn: () => {
             // A button WITH a handler owns closing its own modal — the modal-btn
             // dispatcher only auto-closes handler-less buttons.
-            endSession(); closeModal(); render(); toast(tr("action_confirm-discard.message.session_discarded"));
+            if (!endSession()) return;
+            closeModal(); render(); toast(tr("action_confirm-discard.message.session_discarded"));
           } }, { label: tr("workout.action.keep_going") }]);
       break;
 
@@ -3127,7 +3948,10 @@ document.addEventListener('click', e => {
       }
       s.done = !s.done;
       if (s.done) completeSet(ei, si);
-      else { saveActive(); render(); }
+      else {
+        if (!saveActive()) { s.done = true; return; }
+        render();
+      }
       break;
     }
     case 'ex-toggle': {
@@ -3147,7 +3971,11 @@ document.addEventListener('click', e => {
     }
     case 'warmup-check': {
       const w = (active.warmup || [])[+el.dataset.i];
-      if (w) { w.done = !w.done; saveActive(); render(); }
+      if (w) {
+        w.done = !w.done;
+        if (!saveActive()) { w.done = !w.done; return; }
+        render();
+      }
       break;
     }
     case 'readiness-toggle': {
@@ -3161,7 +3989,12 @@ document.addEventListener('click', e => {
     }
     case 'rpe-pick': {
       const s = active.exercises[+el.dataset.ei].sets[+el.dataset.si];
-      showRpePicker(s.rpe, v => { s.rpe = v; saveActive(); render(); });
+      showRpePicker(s.rpe, v => {
+        const prev = s.rpe;
+        s.rpe = v;
+        if (!saveActive()) { s.rpe = prev; return; }
+        render();
+      });
       break;
     }
     case 'edit-rpe-pick': {
@@ -3180,9 +4013,12 @@ document.addEventListener('click', e => {
     }
     case 'set-warmup': {
       const s = active.exercises[+el.dataset.ei].sets[+el.dataset.si];
+      const prevWarmup = s.warmup;
+      const prevRpe = s.rpe;
       s.warmup = !s.warmup;
       if (s.warmup) s.rpe = null; // an RPE on a ramp-up set is noise, not data
-      saveActive(); render();
+      if (!saveActive()) { s.warmup = prevWarmup; s.rpe = prevRpe; return; }
+      render();
       break;
     }
     case 'set-add': {
@@ -3194,11 +4030,16 @@ document.addEventListener('click', e => {
       ex.sets.push(WorkoutModel.timed(ex) ? { ...WorkoutModel.row(ex), ...lastSet, done: false } : isJump(ex)
         ? { heightCm: null, done: false }
         : { weight: lastSet ? lastSet.weight : ex.plannedWeight, reps: lastSet ? lastSet.reps : parseRepsLow(ex.plannedReps), rpe: ex.targetRpe, done: false });
-      saveActive(); render(); break;
+      if (!saveActive()) { ex.sets.pop(); return; }
+      render(); break;
     }
     case 'set-remove': {
       const ex = active.exercises[+el.dataset.ei];
-      if (ex.sets.length > 1) { ex.sets.pop(); saveActive(); render(); }
+      if (ex.sets.length > 1) {
+        const popped = ex.sets.pop();
+        if (!saveActive()) { ex.sets.push(popped); return; }
+        render();
+      }
       break;
     }
     case 'ex-info': exInfoModal(+el.dataset.ei); break;
@@ -3233,35 +4074,73 @@ document.addEventListener('click', e => {
       const a = groups[Math.min(gi, ti)], b = groups[Math.max(gi, ti)];
       const aEx = a.idx.map(x => day.exercises[x]);
       const bEx = b.idx.map(x => day.exercises[x]);
+      const prevExercises = [...day.exercises];
       day.exercises.splice(a.idx[0], a.idx.length + b.idx.length, ...bEx, ...aEx);
-      savePlan(); render();
+      if (!savePlan()) {
+        day.exercises = prevExercises;
+        return;
+      }
+      render();
       break;
     }
     case 'plan-swap-pick': doPlanSwap(el.dataset.day, +el.dataset.i, +el.dataset.ai); break;
     case 'plan-rename':
       showModal(tr("action_plan-rename.message.rename_plan"), `<label class="field"><span>${esc(tr("action_plan-rename.text.plan_name"))}</span><input id="f-plan-name" value="${esc(plan.name)}"></label>`,
-        [{ label: tr("common.action.save"), cls: 'primary', fn: () => { plan.name = mval('f-plan-name') || plan.name; savePlan(); closeModal(); render(); } }, { label: tr("common.action.cancel") }]);
+        [{ label: tr("common.action.save"), cls: 'primary', fn: () => {
+            const prevName = plan.name;
+            plan.name = mval('f-plan-name') || plan.name;
+            if (!savePlan()) {
+              plan.name = prevName;
+              return;
+            }
+            closeModal(); render();
+          } }, { label: tr("common.action.cancel") }]);
       break;
     case 'day-add':
       showModal(tr("action_day-add.message.add_day"), `<label class="field"><span>${esc(tr("plan.form.day_name"))}</span><input id="f-day-name" placeholder="${esc(tr("action_day-add.placeholder.day_d_upper"))}"></label>`,
         [{ label: tr("common.action.add"), cls: 'primary', fn: () => {
             const name = mval('f-day-name'); if (!name) return;
-            plan.days.push({ id: uid(), name, warmup: [], exercises: [] });
-            expandedDay = plan.days[plan.days.length - 1].id;
-            savePlan(); closeModal(); render();
+            const newDay = { id: uid(), name, warmup: [], exercises: [] };
+            plan.days.push(newDay);
+            const prevExpanded = expandedDay;
+            expandedDay = newDay.id;
+            if (!savePlan()) {
+              plan.days.pop();
+              expandedDay = prevExpanded;
+              return;
+            }
+            closeModal(); render();
           } }, { label: tr("common.action.cancel") }]);
       break;
     case 'day-rename': {
       const day = plan.days.find(d => d.id === el.dataset.id);
+      if (!day) break;
       showModal(tr("action_day-rename.message.rename_day"), `<label class="field"><span>${esc(tr("plan.form.day_name"))}</span><input id="f-day-name" value="${esc(day.name)}"></label>`,
-        [{ label: tr("common.action.save"), cls: 'primary', fn: () => { day.name = mval('f-day-name') || day.name; savePlan(); closeModal(); render(); } }, { label: tr("common.action.cancel") }]);
+        [{ label: tr("common.action.save"), cls: 'primary', fn: () => {
+            const prevName = day.name;
+            day.name = mval('f-day-name') || day.name;
+            if (!savePlan()) {
+              day.name = prevName;
+              return;
+            }
+            closeModal(); render();
+          } }, { label: tr("common.action.cancel") }]);
       break;
     }
     case 'day-delete': {
       const id = el.dataset.id;
       const day = plan.days.find(d => d.id === id);
+      if (!day) break;
       showModal(tr("plan.day.delete.title", { day: day.name }), `<p>${esc(tr("action_day-delete.text.the_day_and_its_exercises_are_removed_from_the_p"))}</p>`,
-        [{ label: tr("common.action.delete"), cls: 'danger', fn: () => { plan.days = plan.days.filter(d => d.id !== id); savePlan(); closeModal(); render(); } }, { label: tr("common.action.cancel") }]);
+        [{ label: tr("common.action.delete"), cls: 'danger', fn: () => {
+            const prevDays = [...plan.days];
+            plan.days = plan.days.filter(d => d.id !== id);
+            if (!savePlan()) {
+              plan.days = prevDays;
+              return;
+            }
+            closeModal(); render();
+          } }, { label: tr("common.action.cancel") }]);
       break;
     }
 
@@ -3270,42 +4149,99 @@ document.addEventListener('click', e => {
     case 'session-delete': {
       const id = el.dataset.id;
       showModal(tr("action_session-delete.message.delete_this_session"), `<p>${esc(tr("action_session-delete.text.this_permanently_removes_it_from_your_history_an"))}</p>`,
-        [{ label: tr("common.action.delete"), cls: 'danger', fn: () => { sessions = sessions.filter(s => s.id !== id); saveSessions(); render(); } }, { label: tr("common.action.cancel") }]);
+        [{ label: tr("common.action.delete"), cls: 'danger', fn: () => {
+            const prevSessions = [...sessions];
+            sessions = sessions.filter(s => s.id !== id);
+            if (!saveSessions()) {
+              sessions = prevSessions;
+              return;
+            }
+            closeModal(); render();
+          } }, { label: tr("common.action.cancel") }]);
       break;
     }
     case 'bw-add': {
       const v = parseFloat(document.getElementById('bw-input').value);
       if (!v || v <= 0) { toast(tr("action_bw-add.message.enter_a_weight_first"), 'err'); break; }
+      const prevBw = [...bodyWeight];
       bodyWeight = bodyWeight.filter(b => b.date !== today());
       bodyWeight.push({ date: today(), weight: v });
-      saveBW(); render(); toast(tr("action_bw-add.message.body_weight_logged"));
+      if (!saveBW()) {
+        bodyWeight = prevBw;
+        return;
+      }
+      render(); toast(tr("action_bw-add.message.body_weight_logged"));
       break;
     }
-    case 'bw-undo': bodyWeight.pop(); saveBW(); render(); break;
+    case 'bw-undo': {
+      if (!bodyWeight.length) break;
+      const popped = bodyWeight.pop();
+      if (!saveBW()) {
+        bodyWeight.push(popped);
+        return;
+      }
+      render();
+      break;
+    }
     case 'merge-names': mergeNamesModal(el.dataset.name); break;
     case 'unmerge-alias': {
+      const prevVal = aliases[el.dataset.k];
       delete aliases[el.dataset.k];
-      saveAliases(); render();
+      if (!saveAliases()) {
+        aliases[el.dataset.k] = prevVal;
+        return;
+      }
+      render();
       mergeNamesModal(el.dataset.name); // reopen with the updated list
       break;
     }
 
-    /* claude tab */
-    case 'copy-coach': copyText(CLAUDE_PROMPT() + buildExport()).then(ok => toast(ok ? tr("action_copy-coach.message.coaching_prompt_copied_paste_it_to_claude") : tr("common.error.copy_failed"), ok ? 'ok' : 'err')); break;
+    case 'plan-export': copyText(buildPlanExport()).then(ok => toast(ok ? tr("plan.export.copied") : tr("common.error.copy_failed"), ok ? 'ok' : 'err')); break;
+    case 'plan-import-open':
+      showModal(tr("plan.action.import"), `
+        <p class="small muted">${esc(tr("view_coach.import.instructions"))}</p>
+        <textarea id="import-area" class="mt8" placeholder='{"type":"workout-plan", "days":[...]}'></textarea>`,
+        [{ label: tr("common.action.continue"), cls: 'primary', fn: () => {
+            const raw = mval('import-area');
+            if (!raw) { toast(tr("action_import-plan.message.paste_the_plan_json_first"), 'err'); return; }
+            try {
+              const cleaned = raw.replace(/^```(json)?/m, '').replace(/```\s*$/m, '').trim();
+              const parsed = JSON.parse(cleaned);
+              validatePlanImport(parsed);
+              const newPlan = normalizePlan(parsed);
+              showPlanImportPreview(newPlan, () => applyImportedPlan(newPlan));
+            } catch (err) { toast(tr("plan_import.error.invalid", { error: err.message }), 'err'); }
+          } },
+          { label: tr("common.action.cancel") }]);
+      break;
+    case 'copy-corrupt-raw': {
+      const corruptJson = JSON.stringify(corruptData, null, 2);
+      copyText(corruptJson).then(ok => toast(ok ? tr("storage.corrupt.copied") : tr("common.error.copy_failed"), ok ? 'ok' : 'err'));
+      break;
+    }
+
+    /* AI Coach tab */
+    case 'copy-coach': copyText(AI_PROMPT() + buildExport()).then(ok => toast(ok ? tr("action_copy-coach.message.coaching_prompt_copied_paste_it_to_claude") : tr("common.error.copy_failed"), ok ? 'ok' : 'err')); break;
     case 'copy-data': copyText(buildExport()).then(ok => toast(ok ? tr("action_copy-data.message.data_copied") : tr("common.error.copy_failed"), ok ? 'ok' : 'err')); break;
     case 'import-plan': {
       const raw = mval('import-area');
       if (!raw) { toast(tr("action_import-plan.message.paste_the_plan_json_first"), 'err'); break; }
       try {
         const cleaned = raw.replace(/^```(json)?/m, '').replace(/```\s*$/m, '').trim();
-        const newPlan = normalizePlan(JSON.parse(cleaned));
-        showModal(tr("plan.import.title", { plan: newPlan.name }), `<p>${esc(tr("action_import-plan.text.days_exercises_your_current_plan_is_replaced_wor", { newPlan_days_length: newPlan.days.length, newPlan_days_reduce_n_d_n_d_: newPlan.days.reduce((n, d) => n + d.exercises.length, 0) }))}</p>`,
-          [{ label: tr("action_import-plan.button.import"), cls: 'primary', fn: () => { newPlan.library = ExerciseLibrary.importLibrary(plan, newPlan); plan = newPlan; savePlan(); expandedDay = null; tab = 'plan'; render(); toast(tr("action_import-plan.message.plan_imported")); } }, { label: tr("common.action.cancel") }]);
+        const parsed = JSON.parse(cleaned);
+        validatePlanImport(parsed);
+        const newPlan = normalizePlan(parsed);
+        showPlanImportPreview(newPlan, () => applyImportedPlan(newPlan));
       } catch (err) { toast(tr("plan_import.error.invalid", { error: err.message }), 'err'); }
       break;
     }
     case 'sync-retry': workerPush({ silent: true }); break;
-    case 'toggle-autosync': settings.autoSync = !settings.autoSync; saveSettings(); render(); if (settings.autoSync) workerPush({ silent: true }); break;
+    case 'toggle-autosync':
+      settings.autoSync = !settings.autoSync;
+      if (!saveSettings()) { settings.autoSync = !settings.autoSync; return; }
+      render();
+      if (settings.autoSync) workerPush({ silent: true });
+      break;
     case 'share-ai': copyText(workerShareUrl()).then(ok => toast(ok ? tr("action_share-ai.message.link_copied_paste_into_any_ai_chat") : tr("common.error.copy_failed"), ok ? 'ok' : 'err')); break;
     case 'copy-uuid': copyText(gymUUID).then(ok => toast(ok ? tr("action_copy-uuid.message.backup_code_copied") : tr("common.error.copy_failed"), ok ? 'ok' : 'err')); break;
     case 'download-pending-exercises': {
@@ -3320,8 +4256,16 @@ document.addEventListener('click', e => {
     }
     case 'restore-uuid': restoreFromCode(mval('restore-uuid-input')); break;
     case 'save-write-token': saveWriteToken(mval('write-token-input')); break;
-    case 'toggle-sound': settings.sound = !settings.sound; saveSettings(); render(); break;
-    case 'toggle-vibrate': settings.vibrate = !settings.vibrate; saveSettings(); render(); break;
+    case 'toggle-sound':
+      settings.sound = !settings.sound;
+      if (!saveSettings()) { settings.sound = !settings.sound; return; }
+      render();
+      break;
+    case 'toggle-vibrate':
+      settings.vibrate = !settings.vibrate;
+      if (!saveSettings()) { settings.vibrate = !settings.vibrate; return; }
+      render();
+      break;
     case 'test-sound': {
       beep(3); buzz();
       const st = audioState();
@@ -3340,10 +4284,31 @@ document.addEventListener('click', e => {
     case 'reset-all':
       showModal(tr("action_reset-all.message.reset_everything"), `<p>${esc(tr("action_reset-all.text.deletes_your_plan_all_sessions_body_weight_log_a"))}</p>`,
         [{ label: tr("action_reset-all.button.reset"), cls: 'danger', fn: () => {
-            endSession(); // clears `active` and its UI state, stops rest, releases the wake lock
-            ['plan', 'sessions', 'active', 'bw', 'settings', 'updatedAt'].forEach(k => store.del(k));
-            plan = defaultPlan(); sessions = []; bodyWeight = []; dataUpdatedAt = 0;
-            settings = { unit: 'kg', sound: true, vibrate: true, autoSync: true };
+            const defaultSettings = { unit: 'kg', sound: true, vibrate: true, autoSync: true };
+            const writes = [
+              ['plan', defaultPlan()],
+              ['sessions', []],
+              ['active', undefined],
+              ['bw', []],
+              ['settings', defaultSettings],
+              ['aliases', {}],
+              ['updatedAt', undefined]
+            ];
+            const txRes = store.commitTx(writes, { allowCorruptRecovery: true });
+            if (!txRes.ok) {
+              toast(tr("storage.error.save_failed", { item: tr("view_settings.text.reset_everything") }), 'err');
+              return;
+            }
+            if (active) {
+              stopRest(); syncWakeLock();
+              exExpanded = new Set(); readinessOpen = null; warmupOpen = null;
+            }
+            active = null;
+            store.rawDel('pending_tx');
+            for (const k in corruptData) delete corruptData[k];
+            storageAlert = null;
+            plan = defaultPlan(); sessions = []; bodyWeight = []; aliases = {}; dataUpdatedAt = 0;
+            settings = defaultSettings;
             closeModal(); render(); toast(tr("action_reset-all.message.fresh_start"));
           } }, { label: tr("common.action.cancel") }]);
       break;
@@ -3363,25 +4328,59 @@ document.addEventListener('input', e => {
   if (!bind) return;
   if (bind === 'set' && active) {
     const s = active.exercises[+el.dataset.ei].sets[+el.dataset.si];
+    const prev = s[el.dataset.f];
+    const prevDomVal = el.value;
     const v = parseFloat(el.value);
     s[el.dataset.f] = isNaN(v) ? null : v;
     const summary = document.querySelector(`[data-measurement-summary="${el.dataset.ei}-${el.dataset.si}"]`);
     if (summary) summary.textContent = measurementText(active.exercises[+el.dataset.ei], s);
-    saveActive();
+    if (!saveActive()) {
+      s[el.dataset.f] = prev;
+      el.value = prev != null ? prev : '';
+      if (summary) summary.textContent = measurementText(active.exercises[+el.dataset.ei], s);
+    }
   } else if (bind === 'session-notes' && active) {
-    active.notes = el.value; saveActive();
+    const prev = active.notes;
+    active.notes = el.value;
+    if (!saveActive()) {
+      active.notes = prev;
+      el.value = prev || '';
+    }
   } else if (bind === 'readiness-cmj' && active) {
-    const v = parseFloat(el.value); active.readiness.cmjCm = isNaN(v) ? null : v;
+    const prevCm = active.readiness.cmjCm;
+    const prevMethod = active.readiness.method;
+    const prevFlightTime = active.readiness.flightTimeMs;
+    const prevAttempts = active.readiness.cmjAttempts;
+    const v = parseFloat(el.value);
+    active.readiness.cmjCm = isNaN(v) ? null : v;
     // A typed value supersedes any earlier video measurement — drop its metadata so a
     // stale method/flight time/attempt list can't ride along with a hand-entered number.
     delete active.readiness.method;
     delete active.readiness.flightTimeMs;
     delete active.readiness.cmjAttempts;
-    saveActive();
+    if (!saveActive()) {
+      active.readiness.cmjCm = prevCm;
+      if (prevMethod !== undefined) active.readiness.method = prevMethod;
+      if (prevFlightTime !== undefined) active.readiness.flightTimeMs = prevFlightTime;
+      if (prevAttempts !== undefined) active.readiness.cmjAttempts = prevAttempts;
+      el.value = prevCm != null ? prevCm : '';
+    }
   } else if (bind === 'readiness-broad' && active) {
-    const v = parseFloat(el.value); active.readiness.broadJumpCm = isNaN(v) ? null : v; saveActive();
+    const prev = active.readiness.broadJumpCm;
+    const v = parseFloat(el.value);
+    active.readiness.broadJumpCm = isNaN(v) ? null : v;
+    if (!saveActive()) {
+      active.readiness.broadJumpCm = prev;
+      el.value = prev != null ? prev : '';
+    }
   } else if (bind === 'readiness-energy' && active) {
-    const v = parseInt(el.value, 10); active.readiness.subjectiveEnergy = isNaN(v) ? null : Math.min(10, Math.max(1, v)); saveActive();
+    const prev = active.readiness.subjectiveEnergy;
+    const v = parseInt(el.value, 10);
+    active.readiness.subjectiveEnergy = isNaN(v) ? null : Math.min(10, Math.max(1, v));
+    if (!saveActive()) {
+      active.readiness.subjectiveEnergy = prev;
+      el.value = prev != null ? prev : '';
+    }
   }
 });
 document.addEventListener('change', e => {
@@ -3421,7 +4420,17 @@ document.addEventListener('change', e => {
     const banner = document.getElementById('update-banner'); if (banner) { banner.remove(); showUpdateBanner(); }
   }
   if (bind === 'history-ex') { historyExercise = e.target.value; render(); }
-  if (bind === 'set-unit') { settings.unit = e.target.value; saveSettings(); render(); toast(tr("settings.unit.changed", { unit: settings.unit })); }
+  if (bind === 'set-unit') {
+    const prevUnit = settings.unit;
+    settings.unit = e.target.value;
+    if (!saveSettings()) {
+      settings.unit = prevUnit;
+      render();
+      return;
+    }
+    render();
+    toast(tr("settings.unit.changed", { unit: settings.unit }));
+  }
   if (bind === 'edit-equipment') {
     const row = document.getElementById('f-barweight-row');
     if (row) {

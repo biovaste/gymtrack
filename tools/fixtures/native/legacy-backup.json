@@ -1,0 +1,61 @@
+{
+  "type": "gymtrack-backup",
+  "version": 1,
+  "plan": {
+    "type": "workout-plan",
+    "version": 1,
+    "name": "Legacy",
+    "days": [
+      {
+        "name": "Day A",
+        "exercises": [
+          {
+            "name": "Bench Press",
+            "sets": 3,
+            "reps": "6-8",
+            "weight": 60,
+            "warmupSets": 2,
+            "equipment": "barbell"
+          }
+        ]
+      }
+    ]
+  },
+  "sessions": [
+    {
+      "id": "legacy-record",
+      "date": "2020-01-01",
+      "notes": "Keep exactly",
+      "extension": {
+        "unknown": 42
+      },
+      "exercises": [
+        {
+          "name": "Old Bench",
+          "sets": [
+            {
+              "weight": 50,
+              "reps": 8,
+              "rpe": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "aliases": {
+    "old bench": "Bench Press"
+  },
+  "bodyWeight": [
+    {
+      "date": "2020-01-01",
+      "weight": 80
+    }
+  ],
+  "settings": {
+    "unit": "kg"
+  },
+  "extension": {
+    "source": "human"
+  }
+}

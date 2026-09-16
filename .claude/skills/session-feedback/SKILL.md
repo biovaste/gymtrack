@@ -21,7 +21,7 @@ Analyse a completed workout and produce concise, evidence-based coaching feedbac
 
 The user provides data in one of three ways:
 
-1. **Paste export JSON** — `type: "workout-log"` from the app's Claude tab, or raw JSON
+1. **Paste export JSON** — `type: "workout-log"` from the app's AI Coach tab, or raw JSON
 2. **Share URL** — fetch `https://api.gymtrack.hithitpull.fi/data/{uuid}` and parse the backup as a `gymtrack-backup` (use `sessions` + `currentPlan` + `bodyWeight`)
 3. **Plain text session** — any structured gym session text; apply graceful degradation (see `../shared/schema-reference.md`)
 

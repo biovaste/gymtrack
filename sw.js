@@ -2,11 +2,12 @@
 // Bump on EVERY release. The browser only installs a new worker when sw.js itself
 // changes byte-for-byte, so shipping app.js/styles.css without touching this file
 // means no 'updatefound', no update banner, and users sit on the old cache.
-const CACHE = 'gymtrack-i18n-ad3eaa20528ce0932fab';
+const CACHE = 'gymtrack-i18n-482779ae3c28dc21da04';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
+  './app-config.js',
   './app.js',
   './workout-model.js',
   './exercise-library.js',

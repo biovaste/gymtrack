@@ -1,7 +1,7 @@
 {
   "name": "GymTrack",
   "short_name": "GymTrack",
-  "description": "Workout tracker that exchanges plans and logs with Claude",
+  "description": "Workout tracker that exchanges plans and logs with AI assistants",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

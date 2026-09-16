@@ -1,13 +1,13 @@
 # GymTrack 🏋️
 
 A gym workout tracker built as an installable web app (PWA) for iPhone, designed to
-exchange workout plans and training logs with Claude via JSON. No accounts, no
+exchange workout plans and training logs with AI assistants via JSON. No accounts, no
 dependencies, no build step — your data lives on your device and syncs automatically
 to the cloud.
 
 ## Features
 
-- **Workout plans from Claude** — paste a JSON plan, the app shows planned sets ×
+- **Workout plans from an AI assistant** — paste a JSON plan, the app shows planned sets ×
   reps @ weight, target RPE and rest time per exercise.
 - **Edit & alternates** — change any target in the Plan tab; every exercise can carry
   alternate options (busy equipment? tap 🔁 to swap mid-workout, or type any exercise).
@@ -27,9 +27,9 @@ to the cloud.
 - **History & PRs** — per-exercise progression with estimated-1RM sparklines, PR
   detection, full session log.
 - **Notes & body weight** — per-exercise and per-session notes plus a body-weight
-  log, all included in the Claude export.
-- **Claude exchange** — one button copies a coaching prompt + your last 15 sessions,
-  body weight and current plan; paste Claude's reply back to import the next plan.
+  log, all included in the AI export.
+- **AI exchange** — one button copies a coaching prompt + your last 15 sessions,
+  body weight and current plan; paste the AI's reply back to import the next plan.
 - **Automatic cloud sync** — works on first launch with no setup. The app pulls your
   latest data on launch and pushes after every workout. Share a link to let any AI
   read your training data directly.
@@ -54,14 +54,14 @@ To test on this PC: `python -m http.server 8765` in this folder, then open
 > and shows a "New version available" banner as soon as the update is ready — tap
 > **Update** to reload on the new version immediately.
 
-## Using it with Claude
+## Using it with an AI assistant
 
 **Get your next plan:** AI Coach tab → **Copy coaching prompt + data** → paste into any
-Claude chat. It contains your recent sessions (actual weights/reps/RPE), notes, body
-weight, your current plan, and instructions telling Claude to reply with a
+AI chat. It contains your recent sessions (actual weights/reps/RPE), notes, body
+weight, your current plan, and instructions telling the AI to reply with a
 `workout-plan` JSON block.
 
-**Load the new plan:** copy Claude's JSON block → AI Coach tab → paste into
+**Load the new plan:** copy the AI's JSON block → AI Coach tab → paste into
 **Import a plan** → Import. History is always kept.
 
 ### Automatic cloud sync — no setup required
@@ -117,7 +117,7 @@ once the app side is live.
 
 ### Desktop → phone: push a plan with no copy-paste
 
-Claude can push a plan from your desktop directly to your phone — the phone picks it
+An AI assistant with shell access can push a plan from your desktop directly to your phone — the phone picks it
 up automatically on next launch.
 
 ```bash
@@ -366,7 +366,7 @@ There is no build step — it's plain HTML/CSS/JS.
 | File | Purpose |
 |---|---|
 | `index.html` | App shell, tab bar |
-| `app.js` | All logic: state, session tracking, rest timer, plan editing, history, Claude import/export, Worker sync, service-worker registration & update banner |
+| `app.js` | All logic: state, session tracking, rest timer, plan editing, history, AI import/export, Worker sync, service-worker registration & update banner |
 | `workout-model.js` | Shared browser/Node identity, measurement and custom-load rules |
 | `styles.css` | Dark, mobile-first UI |
 | `sw.js` | Offline cache (stale-while-revalidate); waits for user confirmation before activating a new version |

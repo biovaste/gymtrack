@@ -23,3 +23,10 @@ tmp/
 
 # Local translation reviewer session lock
 locales/.review.lock
+
+# Native prototype dependencies and generated builds
+node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/android/
+mobile/ios/

@@ -91,7 +91,7 @@ Body: { "type": "workout-plan", "version": 1, ... }
 
 **Sessions and body weight are never touched.** This is the safe default.
 
-**Tool invocation (Claude Code):**
+**Tool invocation (shell-capable AI assistant):**
 ```bash
 node tools/push-plan.mjs <path-to-plan.json>
 ```

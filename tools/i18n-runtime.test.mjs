@@ -56,3 +56,23 @@ test('denied storage still permits a session language choice', () => {
   assert.equal(api.setLocale('en'), true);
   assert.equal(api.t('draft.message'), 'Draft');
 });
+
+
+test('both coaching prompts expose the current schema in English and Finnish', () => {
+  const ctx=vm.createContext({Intl,navigator:{language:'en'},localStorage:{getItem:()=>null,setItem:()=>{}}});
+  vm.runInContext(readFileSync(new URL('../locales/catalog.js',import.meta.url),'utf8'),ctx);
+  vm.runInContext(source,ctx);
+  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+  const prompts=app.slice(app.indexOf('const coachPlanSchema ='),app.indexOf('async function copyText'));
+  vm.runInContext("const unit=()=> 'kg'; const tr=(key,args)=>I18n.t(key,args);"+prompts,ctx);
+  for(const language of ['en','fi']) {
+    ctx.I18n.setLocale(language);
+    for(const expression of ['AI_PROMPT()', 'AI_URL_PROMPT("https://example.test/data")']) {
+      const result=vm.runInContext(expression,ctx);
+      for(const field of ['libraryEntry','movementId','loadProfile','warmupSets','durationSeconds','distanceMeters','speedKph']) assert.ok(result.includes(field),language+': '+field);
+      assert.equal(result.includes('{schema}'),false);
+      assert.equal(result.includes('{unit}'),false);
+      assert.doesNotMatch(result,/Claude/);
+    }
+  }
+});

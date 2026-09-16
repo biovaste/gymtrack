@@ -6031,9 +6031,9 @@
         "screen": "Workout completion",
         "role": "text"
       },
-      "fi": "Sarja-RPE:n keskiarvo · kuormitusarvio",
-      "status": "needs-review",
-      "origin": "source",
+      "fi": "Sarjan RPE-keskiarvo · arvio kuormituksesta",
+      "status": "approved",
+      "origin": "manual",
       "history": [
         {
           "action": "approve",
@@ -6064,6 +6064,21 @@
           "fi": "Treenin RPE",
           "status": "approved",
           "origin": "manual"
+        },
+        {
+          "action": "approve",
+          "at": "2026-09-14T07:45:11.746Z",
+          "revision": "5068bbbc61fc4080ccde",
+          "source": {
+            "en": "Set-RPE average · load estimate",
+            "fi": "Sarja-RPE:n keskiarvo · kuormitusarvio",
+            "context": "Workout completion: rep-weighted set RPE and duration-derived proxy, not a whole-session rating",
+            "screen": "Workout completion",
+            "role": "text"
+          },
+          "fi": "Sarja-RPE:n keskiarvo · kuormitusarvio",
+          "status": "needs-review",
+          "origin": "source"
         }
       ]
     },
@@ -7126,15 +7141,15 @@
       ]
     },
     "show_onboarding.text.share_your_training_data_with_claude_chatgpt_or_": {
-      "revision": "10c6398325eaab6137eb",
+      "revision": "cb490d8181b5b3fbc427",
       "source": {
-        "en": "Share your training data with Claude, ChatGPT or Gemini in one tap.",
-        "fi": "Jaa treenitietosi Claudelle, ChatGPT:lle tai Geminille yhdellä painalluksella.",
-        "context": "Onboarding: text for Share your training data with Claude, ChatGPT or Gemini in one tap.",
+        "en": "Share your training data with your AI coach in one tap.",
+        "fi": "Jaa treenitietosi tekoälyvalmentajallesi yhdellä painalluksella.",
+        "context": "Onboarding: introduce sharing training data with an AI coach.",
         "screen": "Onboarding",
         "role": "text"
       },
-      "fi": "Jaa treenitietosi Claudelle, ChatGPT:lle tai Geminille yhdellä painalluksella.",
+      "fi": "Jaa treenitietosi tekoälyvalmentajallesi yhdellä painalluksella.",
       "status": "approved",
       "origin": "manual",
       "history": [
@@ -7151,6 +7166,36 @@
           },
           "fi": "Jaa treenitietosi Claudelle, ChatGPT:lle tai Geminille yhdellä painalluksella.",
           "status": "draft",
+          "origin": "source"
+        },
+        {
+          "action": "source-changed",
+          "at": "2026-09-10T05:31:07.265Z",
+          "revision": "10c6398325eaab6137eb",
+          "source": {
+            "en": "Share your training data with Claude, ChatGPT or Gemini in one tap.",
+            "fi": "Jaa treenitietosi Claudelle, ChatGPT:lle tai Geminille yhdellä painalluksella.",
+            "context": "Onboarding: text for Share your training data with Claude, ChatGPT or Gemini in one tap.",
+            "screen": "Onboarding",
+            "role": "text"
+          },
+          "fi": "Jaa treenitietosi Claudelle, ChatGPT:lle tai Geminille yhdellä painalluksella.",
+          "status": "approved",
+          "origin": "manual"
+        },
+        {
+          "action": "approve",
+          "at": "2026-09-14T07:45:21.984Z",
+          "revision": "cb490d8181b5b3fbc427",
+          "source": {
+            "en": "Share your training data with your AI coach in one tap.",
+            "fi": "Jaa treenitietosi tekoälyvalmentajallesi yhdellä painalluksella.",
+            "context": "Onboarding: introduce sharing training data with an AI coach.",
+            "screen": "Onboarding",
+            "role": "text"
+          },
+          "fi": "Jaa treenitietosi tekoälyvalmentajallesi yhdellä painalluksella.",
+          "status": "needs-review",
           "origin": "source"
         }
       ]
@@ -8531,15 +8576,15 @@
       ]
     },
     "view_active_session.placeholder.how_did_it_go_anything_claude_should_know_sleep_": {
-      "revision": "4e6fd227477ca850880a",
+      "revision": "92bcab44c49f639e3bfd",
       "source": {
-        "en": "How did it go? Anything Claude should know? (sleep, pain, energy…)",
-        "fi": "Miten meni? Mitä valmentajan tulisi tietää? (uni, kipu, vireys…)",
-        "context": "Active workout: placeholder for How did it go? Anything Claude should know? (sleep, pain, energy…)",
+        "en": "How did it go? Anything your AI coach should know? (sleep, pain, energy…)",
+        "fi": "Miten meni? Mitä tekoälyvalmentajan olisi hyvä tietää? (uni, kipu, vireys…)",
+        "context": "Active workout: session notes for the AI coach.",
         "screen": "Active workout",
         "role": "placeholder"
       },
-      "fi": "Miten meni? Mitä valmentajan tulisi tietää? (uni, kipu, vireys…)",
+      "fi": "Miten meni? Mitä tekoälyvalmentajan olisi hyvä tietää? (uni, kipu, vireys…)",
       "status": "approved",
       "origin": "manual",
       "history": [
@@ -8556,6 +8601,36 @@
           },
           "fi": "Miten meni? Mitä valmentajan tulisi tietää? (uni, kipu, vireys…)",
           "status": "draft",
+          "origin": "source"
+        },
+        {
+          "action": "source-changed",
+          "at": "2026-09-10T05:31:07.266Z",
+          "revision": "4e6fd227477ca850880a",
+          "source": {
+            "en": "How did it go? Anything Claude should know? (sleep, pain, energy…)",
+            "fi": "Miten meni? Mitä valmentajan tulisi tietää? (uni, kipu, vireys…)",
+            "context": "Active workout: placeholder for How did it go? Anything Claude should know? (sleep, pain, energy…)",
+            "screen": "Active workout",
+            "role": "placeholder"
+          },
+          "fi": "Miten meni? Mitä valmentajan tulisi tietää? (uni, kipu, vireys…)",
+          "status": "approved",
+          "origin": "manual"
+        },
+        {
+          "action": "approve",
+          "at": "2026-09-14T07:45:46.160Z",
+          "revision": "92bcab44c49f639e3bfd",
+          "source": {
+            "en": "How did it go? Anything your AI coach should know? (sleep, pain, energy…)",
+            "fi": "Miten meni? Mitä tekoälyvalmentajan olisi hyvä tietää? (uni, kipu, vireys…)",
+            "context": "Active workout: session notes for the AI coach.",
+            "screen": "Active workout",
+            "role": "placeholder"
+          },
+          "fi": "Miten meni? Mitä tekoälyvalmentajan olisi hyvä tietää? (uni, kipu, vireys…)",
+          "status": "needs-review",
           "origin": "source"
         }
       ]
@@ -11083,9 +11158,9 @@
           "{sl_partial}"
         ]
       },
-      "fi": "· Sarja-RPE:n keskiarvo {sl_rpe} · kuormitusarvio {sl_load} AU{sl_partial}",
-      "status": "needs-review",
-      "origin": "source",
+      "fi": "· Sarjojen RPE-keskiarvo {sl_rpe} · arvio kuormituksesta {sl_load} AU{sl_partial}",
+      "status": "approved",
+      "origin": "manual",
       "history": [
         {
           "action": "approve",
@@ -11126,6 +11201,26 @@
           "fi": "· RPE {sl_rpe} · {sl_load} AU{sl_partial}",
           "status": "approved",
           "origin": "manual"
+        },
+        {
+          "action": "approve",
+          "at": "2026-09-14T07:46:19.898Z",
+          "revision": "3c828a06f46577131f89",
+          "source": {
+            "en": "· Set-RPE average {sl_rpe} · estimated load {sl_load} AU{sl_partial}",
+            "fi": "· Sarja-RPE:n keskiarvo {sl_rpe} · kuormitusarvio {sl_load} AU{sl_partial}",
+            "context": "History: message for · RPE {sl_rpe} · {sl_load} AU{sl_partial}",
+            "screen": "History",
+            "role": "message",
+            "examples": [
+              "{sl_rpe}",
+              "{sl_load}",
+              "{sl_partial}"
+            ]
+          },
+          "fi": "· Sarja-RPE:n keskiarvo {sl_rpe} · kuormitusarvio {sl_load} AU{sl_partial}",
+          "status": "needs-review",
+          "origin": "source"
         }
       ]
     },
@@ -11141,9 +11236,9 @@
           "{Math_round_sl_coverage_100}"
         ]
       },
-      "fi": "* Sarja-RPE:n arvio perustuu vain {Math_round_sl_coverage_100} %:iin toistosarjoista. Se ei ole koko treenin rasittavuusarvio.",
-      "status": "needs-review",
-      "origin": "source",
+      "fi": "* Sarjojen arvioitu RPE perustuu vain {Math_round_sl_coverage_100} %:iin toistosarjoista. Se ei ole koko treenin rasittavuusarvio.",
+      "status": "approved",
+      "origin": "manual",
       "history": [
         {
           "action": "approve",
@@ -11180,6 +11275,24 @@
           "fi": "* Treenin RPE perustuu vain {Math_round_sl_coverage_100} %:iin sarjoista — muille ei kirjattu RPE:tä.",
           "status": "approved",
           "origin": "manual"
+        },
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:55:33.920Z",
+          "revision": "c200c85b62423c00bab4",
+          "source": {
+            "en": "* Set-RPE estimate from only {Math_round_sl_coverage_100}% of repetition sets. This is not a whole-session effort rating.",
+            "fi": "* Sarja-RPE:n arvio perustuu vain {Math_round_sl_coverage_100} %:iin toistosarjoista. Se ei ole koko treenin rasittavuusarvio.",
+            "context": "History: text for * session RPE from only {Math_round_sl_coverage_100}% of sets — the rest were logged without one.",
+            "screen": "History",
+            "role": "text",
+            "examples": [
+              "{Math_round_sl_coverage_100}"
+            ]
+          },
+          "fi": "* Sarja-RPE:n arvio perustuu vain {Math_round_sl_coverage_100} %:iin toistosarjoista. Se ei ole koko treenin rasittavuusarvio.",
+          "status": "needs-review",
+          "origin": "source"
         }
       ]
     },
@@ -22027,15 +22140,15 @@
       ]
     },
     "action_copy-coach.message.coaching_prompt_copied_paste_it_to_claude": {
-      "revision": "c2a37b64659da9f43604",
+      "revision": "2c65ad00284046026e48",
       "source": {
-        "en": "Coaching prompt copied — paste it to Claude",
-        "fi": "Valmennuskehote kopioitu — liitä se Claudeen",
-        "context": "Confirmation or editor: message for Coaching prompt copied — paste it to Claude",
+        "en": "Coaching prompt copied — paste it into your AI chat",
+        "fi": "Valmennuskehote kopioitu — liitä se tekoälykeskusteluun",
+        "context": "Confirmation after copying the AI coaching prompt.",
         "screen": "Confirmation or editor",
         "role": "message"
       },
-      "fi": "Valmennus-prompti kopioitu — liitä se Claudeen",
+      "fi": "Prompti kopioitu — liitä se tekoälykeskusteluun",
       "status": "approved",
       "origin": "manual",
       "history": [
@@ -22052,6 +22165,36 @@
           },
           "fi": "Valmennuskehote kopioitu — liitä se Claudeen",
           "status": "draft",
+          "origin": "source"
+        },
+        {
+          "action": "source-changed",
+          "at": "2026-09-10T05:31:07.267Z",
+          "revision": "c2a37b64659da9f43604",
+          "source": {
+            "en": "Coaching prompt copied — paste it to Claude",
+            "fi": "Valmennuskehote kopioitu — liitä se Claudeen",
+            "context": "Confirmation or editor: message for Coaching prompt copied — paste it to Claude",
+            "screen": "Confirmation or editor",
+            "role": "message"
+          },
+          "fi": "Valmennus-prompti kopioitu — liitä se Claudeen",
+          "status": "approved",
+          "origin": "manual"
+        },
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:55:47.055Z",
+          "revision": "2c65ad00284046026e48",
+          "source": {
+            "en": "Coaching prompt copied — paste it into your AI chat",
+            "fi": "Valmennuskehote kopioitu — liitä se tekoälykeskusteluun",
+            "context": "Confirmation after copying the AI coaching prompt.",
+            "screen": "Confirmation or editor",
+            "role": "message"
+          },
+          "fi": "Valmennuskehote kopioitu — liitä se tekoälykeskusteluun",
+          "status": "needs-review",
           "origin": "source"
         }
       ]
@@ -26067,15 +26210,15 @@
       ]
     },
     "coach_prompt.copy_data": {
-      "revision": "594638794cf2f8305fb7",
+      "revision": "8ecf75bfff6ba43c249e",
       "source": {
-        "en": "You are my strength coach. Below is my recent GymTrack training data (JSON). Review my actual sets, reps, weights, RPE, notes and body weight, then write my next workout plan.\n\nOutput ONLY a JSON code block matching this exact schema (weights in {unit}):\n{schema}\n\nRules: progress weights from logged RPE (at or below target: increase; above target: hold or reduce). Always include 1–2 alternates per exercise for busy equipment and a short description for every exercise and alternate. Keep rest realistic. Set restSecondsNext only when rest before changing movements differs from between-set rest. Set equipment accurately because it controls the plate calculator and bodyweight weight field. Use metric \"height\" only for jump-height tests logged in cm, with bodyweight and weight 0. Use the same superset tag only for adjacent exercises that form one alternating superset. Preserve canonical exercise names where supplied so history matches; descriptions may be in the selected language. Do not translate or alter user notes.\n\nMy data:\n",
-        "fi": "Olet voimavalmentajani. Alla ovat GymTrackista viedyt viimeisimmät harjoittelutietoni (JSON). Arvioi toteutuneet sarjat, toistot, painot, RPE:t, muistiinpanot ja kehonpaino, ja laadi seuraava harjoitteluohjelmani.\n\nVastaa VAIN JSON-koodilohkolla, joka noudattaa täsmälleen tätä rakennetta (painot yksikössä {unit}):\n{schema}\n\nSäännöt: säädä painoja kirjatun RPE:n perusteella (tavoite-RPE tai alle: lisää painoa; yli tavoitteen: pidä ennallaan tai vähennä). Lisää aina 1–2 vaihtoehtoista liikettä ruuhkaisia välineitä varten sekä lyhyt suoritusohje jokaiselle liikkeelle ja vaihtoehdolle. Pidä palautusajat liikkeeseen sopivina. Aseta restSecondsNext vain, kun palautus ennen seuraavaan liikkeeseen siirtymistä eroaa sarjojen välisestä palautuksesta. Aseta equipment oikein, koska se ohjaa levypainolaskuria ja kehonpainoliikkeiden painokenttää. Käytä metric-arvoa \"height\" vain senttimetreinä kirjattaville hyppykorkeustesteille sekä silloin equipment-arvoa \"bodyweight\" ja weight-arvoa 0. Käytä samaa superset-tunnistetta vain peräkkäisille liikkeille, jotka kirjataan yhtenä vuorottelevana supersarjana. Säilytä annetut liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja.\n\nTietoni:\n",
+        "en": "You are my strength coach. Below is my recent GymTrack training data (JSON). Review my actual sets, reps, weights, RPE, notes and body weight, then write my next workout plan.\n\nOutput ONLY a JSON code block matching this exact schema (weights in {unit}):\n{schema}\n\nRules: progress weights from logged RPE (at or below target: increase; above target: hold or reduce). Always include 1–2 alternates per exercise for busy equipment and a short description for every exercise and alternate. Keep rest realistic. Set restSecondsNext only when rest before changing movements differs from between-set rest. Set equipment accurately because it controls the plate calculator and bodyweight weight field. Use metric \"height\" only for jump-height tests logged in cm, with bodyweight and weight 0. Use the same superset tag only for adjacent exercises that form one alternating superset. Preserve canonical exercise names where supplied so history matches; descriptions may be in the selected language. Do not translate or alter user notes. Preserve movementId, side, setupId, loadProfile, libraryEntry and saved library entries for existing movements. Never infer or merge identities from similar names. Alternates may carry their own identity, equipment, metric and measurement targets. Use numbers for durationSeconds, distanceMeters and speedKph, and an object for loadProfile; omit unknown optional fields. Preserve warmup and warmupSets where appropriate. Timed and distance measurements are not repetitions; the set-RPE load estimate is not a whole-session RPE rating.\n\nMy data:\n",
+        "fi": "Olet voimavalmentajani. Alla ovat GymTrackista viedyt viimeisimmät harjoittelutietoni (JSON). Arvioi toteutuneet sarjat, toistot, painot, RPE:t, muistiinpanot ja kehonpaino, ja laadi seuraava harjoitteluohjelmani.\n\nVastaa VAIN JSON-koodilohkolla, joka noudattaa täsmälleen tätä rakennetta (painot yksikössä {unit}):\n{schema}\n\nSäännöt: säädä painoja kirjatun RPE:n perusteella (tavoite-RPE tai alle: lisää painoa; yli tavoitteen: pidä ennallaan tai vähennä). Lisää aina 1–2 vaihtoehtoista liikettä ruuhkaisia välineitä varten sekä lyhyt suoritusohje jokaiselle liikkeelle ja vaihtoehdolle. Pidä palautusajat liikkeeseen sopivina. Aseta restSecondsNext vain, kun palautus ennen seuraavaan liikkeeseen siirtymistä eroaa sarjojen välisestä palautuksesta. Aseta equipment oikein, koska se ohjaa levypainolaskuria ja kehonpainoliikkeiden painokenttää. Käytä metric-arvoa \"height\" vain senttimetreinä kirjattaville hyppykorkeustesteille sekä silloin equipment-arvoa \"bodyweight\" ja weight-arvoa 0. Käytä samaa superset-tunnistetta vain peräkkäisille liikkeille, jotka kirjataan yhtenä vuorottelevana supersarjana. Säilytä annetut liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja. Säilytä olemassa olevien liikkeiden movementId, side, setupId, loadProfile, libraryEntry ja tallennetut kirjastotietueet. Älä päättele tai yhdistä tunnisteita samankaltaisten nimien perusteella. Vaihtoehdoilla voi olla omat tunnisteet, välineet, mittarit ja mittaustavoitteet. Anna durationSeconds, distanceMeters ja speedKph numeroina ja loadProfile objektina; jätä tuntemattomat valinnaiset kentät pois. Säilytä warmup ja warmupSets tarvittaessa. Aika- ja matkamittaukset eivät ole toistoja; sarjojen RPE:stä laskettu kuormitusarvio ei ole koko harjoituksen RPE-arvio.\n\nTietoni:\n",
         "context": "Copied coaching prompt for locally exported training data. Schema is injected as plain technical JSON; user data follows unchanged.",
         "screen": "AI Coach",
         "role": "coaching instruction"
       },
-      "fi": "Olet fysiikkavalmentajani. Alla ovat GymTrackista tuodut viimeisimmät harjoittelutietoni (JSON). Arvioi toteutuneet sarjat, toistot, painot, RPE:t, muistiinpanot ja kehonpaino, ja laadi seuraava harjoitteluohjelmani.\n\nVastaa VAIN JSON-koodilohkolla, joka noudattaa täsmälleen tätä rakennetta (painot yksikössä {unit}):\n{schema}\n\nSäännöt: säädä painoja kirjatun RPE:n perusteella (tavoite-RPE tai alle: lisää painoa; yli tavoitteen: pidä ennallaan tai vähennä). Lisää aina 1–2 vaihtoehtoista liikettä ruuhkaisia välineitä varten sekä lyhyt suoritusohje jokaiselle liikkeelle ja vaihtoehdolle. Pidä palautusajat liikkeeseen sopivina. Aseta restSecondsNext vain, kun palautus ennen seuraavaan liikkeeseen siirtymistä eroaa sarjojen välisestä palautuksesta. Aseta equipment oikein, koska se ohjaa levypainolaskuria ja kehonpainoliikkeiden painokenttää. Käytä metric-arvoa \"height\" vain senttimetreinä kirjattaville hyppykorkeustesteille sekä silloin equipment-arvoa \"bodyweight\" ja weight-arvoa 0. Käytä samaa superset-tunnistetta vain peräkkäisille liikkeille, jotka kirjataan yhtenä vuorottelevana supersarjana. Säilytä annetut liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja.\n\nTietoni:\n",
+      "fi": "Olet fysiikkavalmentajani. Alla ovat GymTrack-sovelluksesta tuodut viimeisimmät harjoittelutietoni (JSON). Arvioi toteutuneet sarjat, toistot, painot, RPE:t, muistiinpanot ja kehonpaino, ja laadi seuraava harjoitteluohjelmani.\n\nVastaa VAIN JSON-koodilohkolla, joka noudattaa täsmälleen tätä rakennetta (painot yksikössä {unit}):\n{schema}\n\nSäännöt: säädä painoja kirjatun RPE:n perusteella (tavoite-RPE tai alle: lisää painoa; yli tavoitteen: pidä ennallaan tai vähennä). Lisää aina 1–2 vaihtoehtoista liikettä ruuhkaisia välineitä varten sekä lyhyt suoritusohje jokaiselle liikkeelle ja vaihtoehdolle. Pidä palautusajat liikkeeseen sopivina. Aseta restSecondsNext vain, kun palautus ennen seuraavaan liikkeeseen siirtymistä eroaa sarjojen välisestä palautuksesta. Aseta equipment oikein, koska se ohjaa levypainolaskuria ja kehonpainoliikkeiden painokenttää. Käytä metric-arvoa \"height\" vain senttimetreinä kirjattaville hyppykorkeustesteille sekä silloin equipment-arvoa \"bodyweight\" ja weight-arvoa 0. Käytä samaa superset-tunnistetta vain peräkkäisille liikkeille, jotka kirjataan yhtenä vuorottelevana supersarjana. Säilytä annetut liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja. Säilytä olemassa olevien liikkeiden movementId, side, setupId, loadProfile, libraryEntry ja tallennetut kirjastotietueet. Älä päättele tai yhdistä tunnisteita samankaltaisten nimien perusteella. Vaihtoehdoilla voi olla omat tunnisteet, välineet, mittarit ja mittaustavoitteet. Anna durationSeconds, distanceMeters ja speedKph numeroina ja loadProfile objektina; jätä tuntemattomat valinnaiset kentät pois. Säilytä warmup ja warmupSets tarvittaessa. Aika- ja matkamittaukset eivät ole toistoja; sarjojen RPE:stä laskettu kuormitusarvio ei ole koko harjoituksen RPE-arvio.\n\nTietoni:\n",
       "status": "approved",
       "origin": "manual",
       "history": [
@@ -26093,19 +26236,49 @@
           "fi": "Olet voimavalmentajani. Alla ovat GymTrackista viedyt viimeisimmät harjoittelutietoni (JSON). Arvioi toteutuneet sarjat, toistot, painot, RPE:t, muistiinpanot ja kehonpaino, ja laadi seuraava harjoitteluohjelmani.\n\nVastaa VAIN JSON-koodilohkolla, joka noudattaa täsmälleen tätä rakennetta (painot yksikössä {unit}):\n{schema}\n\nSäännöt: säädä painoja kirjatun RPE:n perusteella (tavoite-RPE tai alle: lisää painoa; yli tavoitteen: pidä ennallaan tai vähennä). Lisää aina 1–2 vaihtoehtoista liikettä ruuhkaisia välineitä varten sekä lyhyt suoritusohje jokaiselle liikkeelle ja vaihtoehdolle. Pidä palautusajat liikkeeseen sopivina. Aseta restSecondsNext vain, kun palautus ennen seuraavaan liikkeeseen siirtymistä eroaa sarjojen välisestä palautuksesta. Aseta equipment oikein, koska se ohjaa levypainolaskuria ja kehonpainoliikkeiden painokenttää. Käytä metric-arvoa \"height\" vain senttimetreinä kirjattaville hyppykorkeustesteille sekä silloin equipment-arvoa \"bodyweight\" ja weight-arvoa 0. Käytä samaa superset-tunnistetta vain peräkkäisille liikkeille, jotka kirjataan yhtenä vuorottelevana supersarjana. Säilytä annetut liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja.\n\nTietoni:\n",
           "status": "draft",
           "origin": "source"
+        },
+        {
+          "action": "source-changed",
+          "at": "2026-09-10T05:31:07.267Z",
+          "revision": "594638794cf2f8305fb7",
+          "source": {
+            "en": "You are my strength coach. Below is my recent GymTrack training data (JSON). Review my actual sets, reps, weights, RPE, notes and body weight, then write my next workout plan.\n\nOutput ONLY a JSON code block matching this exact schema (weights in {unit}):\n{schema}\n\nRules: progress weights from logged RPE (at or below target: increase; above target: hold or reduce). Always include 1–2 alternates per exercise for busy equipment and a short description for every exercise and alternate. Keep rest realistic. Set restSecondsNext only when rest before changing movements differs from between-set rest. Set equipment accurately because it controls the plate calculator and bodyweight weight field. Use metric \"height\" only for jump-height tests logged in cm, with bodyweight and weight 0. Use the same superset tag only for adjacent exercises that form one alternating superset. Preserve canonical exercise names where supplied so history matches; descriptions may be in the selected language. Do not translate or alter user notes.\n\nMy data:\n",
+            "fi": "Olet voimavalmentajani. Alla ovat GymTrackista viedyt viimeisimmät harjoittelutietoni (JSON). Arvioi toteutuneet sarjat, toistot, painot, RPE:t, muistiinpanot ja kehonpaino, ja laadi seuraava harjoitteluohjelmani.\n\nVastaa VAIN JSON-koodilohkolla, joka noudattaa täsmälleen tätä rakennetta (painot yksikössä {unit}):\n{schema}\n\nSäännöt: säädä painoja kirjatun RPE:n perusteella (tavoite-RPE tai alle: lisää painoa; yli tavoitteen: pidä ennallaan tai vähennä). Lisää aina 1–2 vaihtoehtoista liikettä ruuhkaisia välineitä varten sekä lyhyt suoritusohje jokaiselle liikkeelle ja vaihtoehdolle. Pidä palautusajat liikkeeseen sopivina. Aseta restSecondsNext vain, kun palautus ennen seuraavaan liikkeeseen siirtymistä eroaa sarjojen välisestä palautuksesta. Aseta equipment oikein, koska se ohjaa levypainolaskuria ja kehonpainoliikkeiden painokenttää. Käytä metric-arvoa \"height\" vain senttimetreinä kirjattaville hyppykorkeustesteille sekä silloin equipment-arvoa \"bodyweight\" ja weight-arvoa 0. Käytä samaa superset-tunnistetta vain peräkkäisille liikkeille, jotka kirjataan yhtenä vuorottelevana supersarjana. Säilytä annetut liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja.\n\nTietoni:\n",
+            "context": "Copied coaching prompt for locally exported training data. Schema is injected as plain technical JSON; user data follows unchanged.",
+            "screen": "AI Coach",
+            "role": "coaching instruction"
+          },
+          "fi": "Olet fysiikkavalmentajani. Alla ovat GymTrackista tuodut viimeisimmät harjoittelutietoni (JSON). Arvioi toteutuneet sarjat, toistot, painot, RPE:t, muistiinpanot ja kehonpaino, ja laadi seuraava harjoitteluohjelmani.\n\nVastaa VAIN JSON-koodilohkolla, joka noudattaa täsmälleen tätä rakennetta (painot yksikössä {unit}):\n{schema}\n\nSäännöt: säädä painoja kirjatun RPE:n perusteella (tavoite-RPE tai alle: lisää painoa; yli tavoitteen: pidä ennallaan tai vähennä). Lisää aina 1–2 vaihtoehtoista liikettä ruuhkaisia välineitä varten sekä lyhyt suoritusohje jokaiselle liikkeelle ja vaihtoehdolle. Pidä palautusajat liikkeeseen sopivina. Aseta restSecondsNext vain, kun palautus ennen seuraavaan liikkeeseen siirtymistä eroaa sarjojen välisestä palautuksesta. Aseta equipment oikein, koska se ohjaa levypainolaskuria ja kehonpainoliikkeiden painokenttää. Käytä metric-arvoa \"height\" vain senttimetreinä kirjattaville hyppykorkeustesteille sekä silloin equipment-arvoa \"bodyweight\" ja weight-arvoa 0. Käytä samaa superset-tunnistetta vain peräkkäisille liikkeille, jotka kirjataan yhtenä vuorottelevana supersarjana. Säilytä annetut liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja.\n\nTietoni:\n",
+          "status": "approved",
+          "origin": "manual"
+        },
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:57:12.545Z",
+          "revision": "8ecf75bfff6ba43c249e",
+          "source": {
+            "en": "You are my strength coach. Below is my recent GymTrack training data (JSON). Review my actual sets, reps, weights, RPE, notes and body weight, then write my next workout plan.\n\nOutput ONLY a JSON code block matching this exact schema (weights in {unit}):\n{schema}\n\nRules: progress weights from logged RPE (at or below target: increase; above target: hold or reduce). Always include 1–2 alternates per exercise for busy equipment and a short description for every exercise and alternate. Keep rest realistic. Set restSecondsNext only when rest before changing movements differs from between-set rest. Set equipment accurately because it controls the plate calculator and bodyweight weight field. Use metric \"height\" only for jump-height tests logged in cm, with bodyweight and weight 0. Use the same superset tag only for adjacent exercises that form one alternating superset. Preserve canonical exercise names where supplied so history matches; descriptions may be in the selected language. Do not translate or alter user notes. Preserve movementId, side, setupId, loadProfile, libraryEntry and saved library entries for existing movements. Never infer or merge identities from similar names. Alternates may carry their own identity, equipment, metric and measurement targets. Use numbers for durationSeconds, distanceMeters and speedKph, and an object for loadProfile; omit unknown optional fields. Preserve warmup and warmupSets where appropriate. Timed and distance measurements are not repetitions; the set-RPE load estimate is not a whole-session RPE rating.\n\nMy data:\n",
+            "fi": "Olet voimavalmentajani. Alla ovat GymTrackista viedyt viimeisimmät harjoittelutietoni (JSON). Arvioi toteutuneet sarjat, toistot, painot, RPE:t, muistiinpanot ja kehonpaino, ja laadi seuraava harjoitteluohjelmani.\n\nVastaa VAIN JSON-koodilohkolla, joka noudattaa täsmälleen tätä rakennetta (painot yksikössä {unit}):\n{schema}\n\nSäännöt: säädä painoja kirjatun RPE:n perusteella (tavoite-RPE tai alle: lisää painoa; yli tavoitteen: pidä ennallaan tai vähennä). Lisää aina 1–2 vaihtoehtoista liikettä ruuhkaisia välineitä varten sekä lyhyt suoritusohje jokaiselle liikkeelle ja vaihtoehdolle. Pidä palautusajat liikkeeseen sopivina. Aseta restSecondsNext vain, kun palautus ennen seuraavaan liikkeeseen siirtymistä eroaa sarjojen välisestä palautuksesta. Aseta equipment oikein, koska se ohjaa levypainolaskuria ja kehonpainoliikkeiden painokenttää. Käytä metric-arvoa \"height\" vain senttimetreinä kirjattaville hyppykorkeustesteille sekä silloin equipment-arvoa \"bodyweight\" ja weight-arvoa 0. Käytä samaa superset-tunnistetta vain peräkkäisille liikkeille, jotka kirjataan yhtenä vuorottelevana supersarjana. Säilytä annetut liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja. Säilytä olemassa olevien liikkeiden movementId, side, setupId, loadProfile, libraryEntry ja tallennetut kirjastotietueet. Älä päättele tai yhdistä tunnisteita samankaltaisten nimien perusteella. Vaihtoehdoilla voi olla omat tunnisteet, välineet, mittarit ja mittaustavoitteet. Anna durationSeconds, distanceMeters ja speedKph numeroina ja loadProfile objektina; jätä tuntemattomat valinnaiset kentät pois. Säilytä warmup ja warmupSets tarvittaessa. Aika- ja matkamittaukset eivät ole toistoja; sarjojen RPE:stä laskettu kuormitusarvio ei ole koko harjoituksen RPE-arvio.\n\nTietoni:\n",
+            "context": "Copied coaching prompt for locally exported training data. Schema is injected as plain technical JSON; user data follows unchanged.",
+            "screen": "AI Coach",
+            "role": "coaching instruction"
+          },
+          "fi": "Olet voimavalmentajani. Alla ovat GymTrackista viedyt viimeisimmät harjoittelutietoni (JSON). Arvioi toteutuneet sarjat, toistot, painot, RPE:t, muistiinpanot ja kehonpaino, ja laadi seuraava harjoitteluohjelmani.\n\nVastaa VAIN JSON-koodilohkolla, joka noudattaa täsmälleen tätä rakennetta (painot yksikössä {unit}):\n{schema}\n\nSäännöt: säädä painoja kirjatun RPE:n perusteella (tavoite-RPE tai alle: lisää painoa; yli tavoitteen: pidä ennallaan tai vähennä). Lisää aina 1–2 vaihtoehtoista liikettä ruuhkaisia välineitä varten sekä lyhyt suoritusohje jokaiselle liikkeelle ja vaihtoehdolle. Pidä palautusajat liikkeeseen sopivina. Aseta restSecondsNext vain, kun palautus ennen seuraavaan liikkeeseen siirtymistä eroaa sarjojen välisestä palautuksesta. Aseta equipment oikein, koska se ohjaa levypainolaskuria ja kehonpainoliikkeiden painokenttää. Käytä metric-arvoa \"height\" vain senttimetreinä kirjattaville hyppykorkeustesteille sekä silloin equipment-arvoa \"bodyweight\" ja weight-arvoa 0. Käytä samaa superset-tunnistetta vain peräkkäisille liikkeille, jotka kirjataan yhtenä vuorottelevana supersarjana. Säilytä annetut liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja. Säilytä olemassa olevien liikkeiden movementId, side, setupId, loadProfile, libraryEntry ja tallennetut kirjastotietueet. Älä päättele tai yhdistä tunnisteita samankaltaisten nimien perusteella. Vaihtoehdoilla voi olla omat tunnisteet, välineet, mittarit ja mittaustavoitteet. Anna durationSeconds, distanceMeters ja speedKph numeroina ja loadProfile objektina; jätä tuntemattomat valinnaiset kentät pois. Säilytä warmup ja warmupSets tarvittaessa. Aika- ja matkamittaukset eivät ole toistoja; sarjojen RPE:stä laskettu kuormitusarvio ei ole koko harjoituksen RPE-arvio.\n\nTietoni:\n",
+          "status": "needs-review",
+          "origin": "source"
         }
       ]
     },
     "coach_prompt.share_url": {
-      "revision": "80e9defe4e33ee7040cb",
+      "revision": "8f8756a9ad95dfedd464",
       "source": {
-        "en": "You are my strength coach. Fetch my latest GymTrack training data from this URL (JSON):\n{url}\n\nIt contains recent sessions, notes, body weight and my current plan. Review it, then write my next workout plan. Reply ONLY with a JSON code block of type \"workout-plan\" using the same plan field structure: days and exercises with name, sets, reps, weight, targetRpe, restSeconds, optional restSecondsNext, equipment, optional barWeight, optional metric, optional adjacent superset tag, description, and 1–2 alternates. Weights use {unit}. Progress weight from RPE (at or under target: increase; over: hold or reduce). Keep canonical exercise names from the data so history matches; descriptions may be in the selected language. Do not translate or alter user notes. I will paste your JSON back into the app.",
-        "fi": "Olet voimavalmentajani. Hae uusimmat GymTrack-harjoittelutietoni tästä URL-osoitteesta (JSON):\n{url}\n\nTiedot sisältävät viimeisimmät treenit, muistiinpanot, kehonpainon ja nykyisen ohjelman. Arvioi ne ja laadi seuraava harjoitteluohjelmani. Vastaa VAIN \"workout-plan\"-tyyppisellä JSON-koodilohkolla, joka käyttää samaa ohjelmarakennetta: päivät ja liikkeet sisältävät nimen, sarjat, toistot, painon, tavoite-RPE:n, palautusajan, valinnaisen restSecondsNext-arvon, välineen, valinnaisen tangon painon, valinnaisen mittarin, valinnaisen peräkkäisten liikkeiden supersarjatunnisteen, suoritusohjeen ja 1–2 vaihtoehtoa. Painoyksikkö on {unit}. Säädä painoa RPE:n perusteella (tavoite tai alle: lisää; yli tavoitteen: pidä ennallaan tai vähennä). Säilytä tiedoissa olevat liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja. Liitän JSONisi takaisin sovellukseen.",
+        "en": "You are my strength coach. Fetch my latest GymTrack training data from this URL (JSON):\n{url}\n\nIt contains recent sessions, notes, body weight and my current plan. Review it, then write my next workout plan. Reply ONLY with a JSON code block of type \"workout-plan\" using the same plan field structure: days and exercises with name, sets, reps, weight, targetRpe, restSeconds, optional restSecondsNext, equipment, optional barWeight, optional metric, optional adjacent superset tag, description, and 1–2 alternates. Weights use {unit}. Progress weight from RPE (at or under target: increase; over: hold or reduce). Keep canonical exercise names from the data so history matches; descriptions may be in the selected language. Do not translate or alter user notes. I will paste your JSON back into the app. Preserve movementId, side, setupId, loadProfile, libraryEntry and saved library entries for existing movements. Never infer or merge identities from similar names. Alternates may carry their own identity, equipment, metric and measurement targets. Use numbers for durationSeconds, distanceMeters and speedKph, and an object for loadProfile; omit unknown optional fields. Preserve warmup and warmupSets where appropriate. Timed and distance measurements are not repetitions; the set-RPE load estimate is not a whole-session RPE rating.\n\nPlan schema (omit unknown optional fields):\n{schema}",
+        "fi": "Olet voimavalmentajani. Hae uusimmat GymTrack-harjoittelutietoni tästä URL-osoitteesta (JSON):\n{url}\n\nTiedot sisältävät viimeisimmät treenit, muistiinpanot, kehonpainon ja nykyisen ohjelman. Arvioi ne ja laadi seuraava harjoitteluohjelmani. Vastaa VAIN \"workout-plan\"-tyyppisellä JSON-koodilohkolla, joka käyttää samaa ohjelmarakennetta: päivät ja liikkeet sisältävät nimen, sarjat, toistot, painon, tavoite-RPE:n, palautusajan, valinnaisen restSecondsNext-arvon, välineen, valinnaisen tangon painon, valinnaisen mittarin, valinnaisen peräkkäisten liikkeiden supersarjatunnisteen, suoritusohjeen ja 1–2 vaihtoehtoa. Painoyksikkö on {unit}. Säädä painoa RPE:n perusteella (tavoite tai alle: lisää; yli tavoitteen: pidä ennallaan tai vähennä). Säilytä tiedoissa olevat liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja. Liitän JSONisi takaisin sovellukseen. Säilytä olemassa olevien liikkeiden movementId, side, setupId, loadProfile, libraryEntry ja tallennetut kirjastotietueet. Älä päättele tai yhdistä tunnisteita samankaltaisten nimien perusteella. Vaihtoehdoilla voi olla omat tunnisteet, välineet, mittarit ja mittaustavoitteet. Anna durationSeconds, distanceMeters ja speedKph numeroina ja loadProfile objektina; jätä tuntemattomat valinnaiset kentät pois. Säilytä warmup ja warmupSets tarvittaessa. Aika- ja matkamittaukset eivät ole toistoja; sarjojen RPE:stä laskettu kuormitusarvio ei ole koko harjoituksen RPE-arvio.\n\nOhjelman rakenne (jätä tuntemattomat valinnaiset kentät pois):\n{schema}",
         "context": "Copied coaching prompt for a shared URL. URL is inserted as plain text; remote user data remains unchanged.",
         "screen": "AI Coach",
         "role": "coaching instruction"
       },
-      "fi": "Olet fysiikkavalmentajani. Hae uusimmat GymTrack-harjoittelutietoni tästä URL-osoitteesta (JSON):\n{url}\n\nTiedot sisältävät viimeisimmät treenit, muistiinpanot, kehonpainon ja nykyisen ohjelman. Arvioi ne ja laadi seuraava harjoitteluohjelmani. Vastaa VAIN \"workout-plan\"-tyyppisellä JSON-koodilohkolla, joka käyttää samaa ohjelmarakennetta: päivät ja liikkeet sisältävät nimen, sarjat, toistot, painon, tavoite-RPE:n, palautusajan, valinnaisen restSecondsNext-arvon, välineen, valinnaisen tangon painon, valinnaisen mittarin, valinnaisen peräkkäisten liikkeiden supersarjatunnisteen, suoritusohjeen ja 1–2 vaihtoehtoa. Painoyksikkö on {unit}. Säädä painoa RPE:n perusteella (tavoite tai alle: lisää; yli tavoitteen: pidä ennallaan tai vähennä). Säilytä tiedoissa olevat liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja. Liitän JSONisi takaisin sovellukseen.",
+      "fi": "Olet fysiikkavalmentajani. Hae uusimmat GymTrack-harjoittelutietoni tästä URL-osoitteesta (JSON):\n{url}\n\nTiedot sisältävät viimeisimmät treenit, muistiinpanot, kehonpainon ja nykyisen ohjelman. Arvioi ne ja laadi seuraava harjoitteluohjelmani. Vastaa VAIN \"workout-plan\"-tyyppisellä JSON-koodilohkolla, joka käyttää samaa ohjelmarakennetta: päivät ja liikkeet sisältävät nimen, sarjat, toistot, painon, tavoite-RPE:n, palautusajan, valinnaisen restSecondsNext-arvon, välineen, valinnaisen tangon painon, valinnaisen mittarin, valinnaisen peräkkäisten liikkeiden supersarjatunnisteen, suoritusohjeen ja 1–2 vaihtoehtoa. Painoyksikkö on {unit}. Säädä painoa RPE:n perusteella (tavoite tai alle: lisää; yli tavoitteen: pidä ennallaan tai vähennä). Säilytä tiedoissa olevat liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja. Liitän JSONisi takaisin sovellukseen. Säilytä olemassa olevien liikkeiden movementId, side, setupId, loadProfile, libraryEntry ja tallennetut kirjastotietueet. Älä päättele tai yhdistä tunnisteita samankaltaisten nimien perusteella. Vaihtoehdoilla voi olla omat tunnisteet, välineet, mittarit ja mittaustavoitteet. Anna durationSeconds, distanceMeters ja speedKph numeroina ja loadProfile objektina; jätä tuntemattomat valinnaiset kentät pois. Säilytä warmup ja warmupSets tarvittaessa. Aika- ja matkamittaukset eivät ole toistoja; sarjojen RPE:stä laskettu kuormitusarvio ei ole koko harjoituksen RPE-arvio.\n\nOhjelman rakenne (jätä tuntemattomat valinnaiset kentät pois):\n{schema}",
       "status": "approved",
       "origin": "manual",
       "history": [
@@ -26122,6 +26295,36 @@
           },
           "fi": "Olet voimavalmentajani. Hae uusimmat GymTrack-harjoittelutietoni tästä URL-osoitteesta (JSON):\n{url}\n\nTiedot sisältävät viimeisimmät treenit, muistiinpanot, kehonpainon ja nykyisen ohjelman. Arvioi ne ja laadi seuraava harjoitteluohjelmani. Vastaa VAIN \"workout-plan\"-tyyppisellä JSON-koodilohkolla, joka käyttää samaa ohjelmarakennetta: päivät ja liikkeet sisältävät nimen, sarjat, toistot, painon, tavoite-RPE:n, palautusajan, valinnaisen restSecondsNext-arvon, välineen, valinnaisen tangon painon, valinnaisen mittarin, valinnaisen peräkkäisten liikkeiden supersarjatunnisteen, suoritusohjeen ja 1–2 vaihtoehtoa. Painoyksikkö on {unit}. Säädä painoa RPE:n perusteella (tavoite tai alle: lisää; yli tavoitteen: pidä ennallaan tai vähennä). Säilytä tiedoissa olevat liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja. Liitän JSONisi takaisin sovellukseen.",
           "status": "draft",
+          "origin": "source"
+        },
+        {
+          "action": "source-changed",
+          "at": "2026-09-10T05:31:07.267Z",
+          "revision": "80e9defe4e33ee7040cb",
+          "source": {
+            "en": "You are my strength coach. Fetch my latest GymTrack training data from this URL (JSON):\n{url}\n\nIt contains recent sessions, notes, body weight and my current plan. Review it, then write my next workout plan. Reply ONLY with a JSON code block of type \"workout-plan\" using the same plan field structure: days and exercises with name, sets, reps, weight, targetRpe, restSeconds, optional restSecondsNext, equipment, optional barWeight, optional metric, optional adjacent superset tag, description, and 1–2 alternates. Weights use {unit}. Progress weight from RPE (at or under target: increase; over: hold or reduce). Keep canonical exercise names from the data so history matches; descriptions may be in the selected language. Do not translate or alter user notes. I will paste your JSON back into the app.",
+            "fi": "Olet voimavalmentajani. Hae uusimmat GymTrack-harjoittelutietoni tästä URL-osoitteesta (JSON):\n{url}\n\nTiedot sisältävät viimeisimmät treenit, muistiinpanot, kehonpainon ja nykyisen ohjelman. Arvioi ne ja laadi seuraava harjoitteluohjelmani. Vastaa VAIN \"workout-plan\"-tyyppisellä JSON-koodilohkolla, joka käyttää samaa ohjelmarakennetta: päivät ja liikkeet sisältävät nimen, sarjat, toistot, painon, tavoite-RPE:n, palautusajan, valinnaisen restSecondsNext-arvon, välineen, valinnaisen tangon painon, valinnaisen mittarin, valinnaisen peräkkäisten liikkeiden supersarjatunnisteen, suoritusohjeen ja 1–2 vaihtoehtoa. Painoyksikkö on {unit}. Säädä painoa RPE:n perusteella (tavoite tai alle: lisää; yli tavoitteen: pidä ennallaan tai vähennä). Säilytä tiedoissa olevat liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja. Liitän JSONisi takaisin sovellukseen.",
+            "context": "Copied coaching prompt for a shared URL. URL is inserted as plain text; remote user data remains unchanged.",
+            "screen": "AI Coach",
+            "role": "coaching instruction"
+          },
+          "fi": "Olet fysiikkavalmentajani. Hae uusimmat GymTrack-harjoittelutietoni tästä URL-osoitteesta (JSON):\n{url}\n\nTiedot sisältävät viimeisimmät treenit, muistiinpanot, kehonpainon ja nykyisen ohjelman. Arvioi ne ja laadi seuraava harjoitteluohjelmani. Vastaa VAIN \"workout-plan\"-tyyppisellä JSON-koodilohkolla, joka käyttää samaa ohjelmarakennetta: päivät ja liikkeet sisältävät nimen, sarjat, toistot, painon, tavoite-RPE:n, palautusajan, valinnaisen restSecondsNext-arvon, välineen, valinnaisen tangon painon, valinnaisen mittarin, valinnaisen peräkkäisten liikkeiden supersarjatunnisteen, suoritusohjeen ja 1–2 vaihtoehtoa. Painoyksikkö on {unit}. Säädä painoa RPE:n perusteella (tavoite tai alle: lisää; yli tavoitteen: pidä ennallaan tai vähennä). Säilytä tiedoissa olevat liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja. Liitän JSONisi takaisin sovellukseen.",
+          "status": "approved",
+          "origin": "manual"
+        },
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:57:46.121Z",
+          "revision": "8f8756a9ad95dfedd464",
+          "source": {
+            "en": "You are my strength coach. Fetch my latest GymTrack training data from this URL (JSON):\n{url}\n\nIt contains recent sessions, notes, body weight and my current plan. Review it, then write my next workout plan. Reply ONLY with a JSON code block of type \"workout-plan\" using the same plan field structure: days and exercises with name, sets, reps, weight, targetRpe, restSeconds, optional restSecondsNext, equipment, optional barWeight, optional metric, optional adjacent superset tag, description, and 1–2 alternates. Weights use {unit}. Progress weight from RPE (at or under target: increase; over: hold or reduce). Keep canonical exercise names from the data so history matches; descriptions may be in the selected language. Do not translate or alter user notes. I will paste your JSON back into the app. Preserve movementId, side, setupId, loadProfile, libraryEntry and saved library entries for existing movements. Never infer or merge identities from similar names. Alternates may carry their own identity, equipment, metric and measurement targets. Use numbers for durationSeconds, distanceMeters and speedKph, and an object for loadProfile; omit unknown optional fields. Preserve warmup and warmupSets where appropriate. Timed and distance measurements are not repetitions; the set-RPE load estimate is not a whole-session RPE rating.\n\nPlan schema (omit unknown optional fields):\n{schema}",
+            "fi": "Olet voimavalmentajani. Hae uusimmat GymTrack-harjoittelutietoni tästä URL-osoitteesta (JSON):\n{url}\n\nTiedot sisältävät viimeisimmät treenit, muistiinpanot, kehonpainon ja nykyisen ohjelman. Arvioi ne ja laadi seuraava harjoitteluohjelmani. Vastaa VAIN \"workout-plan\"-tyyppisellä JSON-koodilohkolla, joka käyttää samaa ohjelmarakennetta: päivät ja liikkeet sisältävät nimen, sarjat, toistot, painon, tavoite-RPE:n, palautusajan, valinnaisen restSecondsNext-arvon, välineen, valinnaisen tangon painon, valinnaisen mittarin, valinnaisen peräkkäisten liikkeiden supersarjatunnisteen, suoritusohjeen ja 1–2 vaihtoehtoa. Painoyksikkö on {unit}. Säädä painoa RPE:n perusteella (tavoite tai alle: lisää; yli tavoitteen: pidä ennallaan tai vähennä). Säilytä tiedoissa olevat liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja. Liitän JSONisi takaisin sovellukseen. Säilytä olemassa olevien liikkeiden movementId, side, setupId, loadProfile, libraryEntry ja tallennetut kirjastotietueet. Älä päättele tai yhdistä tunnisteita samankaltaisten nimien perusteella. Vaihtoehdoilla voi olla omat tunnisteet, välineet, mittarit ja mittaustavoitteet. Anna durationSeconds, distanceMeters ja speedKph numeroina ja loadProfile objektina; jätä tuntemattomat valinnaiset kentät pois. Säilytä warmup ja warmupSets tarvittaessa. Aika- ja matkamittaukset eivät ole toistoja; sarjojen RPE:stä laskettu kuormitusarvio ei ole koko harjoituksen RPE-arvio.\n\nOhjelman rakenne (jätä tuntemattomat valinnaiset kentät pois):\n{schema}",
+            "context": "Copied coaching prompt for a shared URL. URL is inserted as plain text; remote user data remains unchanged.",
+            "screen": "AI Coach",
+            "role": "coaching instruction"
+          },
+          "fi": "Olet voimavalmentajani. Hae uusimmat GymTrack-harjoittelutietoni tästä URL-osoitteesta (JSON):\n{url}\n\nTiedot sisältävät viimeisimmät treenit, muistiinpanot, kehonpainon ja nykyisen ohjelman. Arvioi ne ja laadi seuraava harjoitteluohjelmani. Vastaa VAIN \"workout-plan\"-tyyppisellä JSON-koodilohkolla, joka käyttää samaa ohjelmarakennetta: päivät ja liikkeet sisältävät nimen, sarjat, toistot, painon, tavoite-RPE:n, palautusajan, valinnaisen restSecondsNext-arvon, välineen, valinnaisen tangon painon, valinnaisen mittarin, valinnaisen peräkkäisten liikkeiden supersarjatunnisteen, suoritusohjeen ja 1–2 vaihtoehtoa. Painoyksikkö on {unit}. Säädä painoa RPE:n perusteella (tavoite tai alle: lisää; yli tavoitteen: pidä ennallaan tai vähennä). Säilytä tiedoissa olevat liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja. Liitän JSONisi takaisin sovellukseen. Säilytä olemassa olevien liikkeiden movementId, side, setupId, loadProfile, libraryEntry ja tallennetut kirjastotietueet. Älä päättele tai yhdistä tunnisteita samankaltaisten nimien perusteella. Vaihtoehdoilla voi olla omat tunnisteet, välineet, mittarit ja mittaustavoitteet. Anna durationSeconds, distanceMeters ja speedKph numeroina ja loadProfile objektina; jätä tuntemattomat valinnaiset kentät pois. Säilytä warmup ja warmupSets tarvittaessa. Aika- ja matkamittaukset eivät ole toistoja; sarjojen RPE:stä laskettu kuormitusarvio ei ole koko harjoituksen RPE-arvio.\n\nOhjelman rakenne (jätä tuntemattomat valinnaiset kentät pois):\n{schema}",
+          "status": "needs-review",
           "origin": "source"
         }
       ]
@@ -28979,10 +29182,26 @@
         "screen": "Exercise editor and workout",
         "role": "text"
       },
-      "fi": "Liikehistoria ja laiteasetukset",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "fi": "Liikkeen historia ja laiteasetukset",
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:57:59.339Z",
+          "revision": "942783cf5126eedf5d3d",
+          "source": {
+            "en": "Movement history and equipment setup",
+            "fi": "Liikehistoria ja laiteasetukset",
+            "context": "Exercise model: identity_setup",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Liikehistoria ja laiteasetukset",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.identity_hint": {
       "revision": "108fc558bd1ac13ba27b",
@@ -28994,9 +29213,25 @@
         "role": "text"
       },
       "fi": "Käytä samaa liiketunnistetta eri päivinä yhteistä historiaa varten. Erota liikeversiot. Tyhjä säilyttää nimipohjaisen historian; vanhoja kirjauksia ei siirretä.",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:58:16.433Z",
+          "revision": "108fc558bd1ac13ba27b",
+          "source": {
+            "en": "Use the same movement key across days to share history. Keep variants distinct. Blank keeps legacy name-based history; existing records are not reassigned.",
+            "fi": "Käytä samaa liiketunnistetta eri päivinä yhteistä historiaa varten. Erota liikeversiot. Tyhjä säilyttää nimipohjaisen historian; vanhoja kirjauksia ei siirretä.",
+            "context": "Exercise model: identity_hint",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Käytä samaa liiketunnistetta eri päivinä yhteistä historiaa varten. Erota liikeversiot. Tyhjä säilyttää nimipohjaisen historian; vanhoja kirjauksia ei siirretä.",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.movementId": {
       "revision": "2e4b48e2b8b499068f9e",
@@ -29008,9 +29243,25 @@
         "role": "text"
       },
       "fi": "Liiketunniste (uudelleenkäytettävä nimi)",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:58:21.329Z",
+          "revision": "2e4b48e2b8b499068f9e",
+          "source": {
+            "en": "Movement key (reusable name)",
+            "fi": "Liiketunniste (uudelleenkäytettävä nimi)",
+            "context": "Exercise model: movementId",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Liiketunniste (uudelleenkäytettävä nimi)",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.side": {
       "revision": "046aa167de6631239dac",
@@ -29022,9 +29273,25 @@
         "role": "text"
       },
       "fi": "Puoli",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:58:22.985Z",
+          "revision": "046aa167de6631239dac",
+          "source": {
+            "en": "Side",
+            "fi": "Puoli",
+            "context": "Exercise model: side",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Puoli",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.setupId": {
       "revision": "8698d7b74d696b9323de",
@@ -29036,9 +29303,25 @@
         "role": "text"
       },
       "fi": "Laiteasetus (uudelleenkäytettävä nimi)",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:58:29.034Z",
+          "revision": "8698d7b74d696b9323de",
+          "source": {
+            "en": "Equipment setup (reusable name)",
+            "fi": "Laiteasetus (uudelleenkäytettävä nimi)",
+            "context": "Exercise model: setupId",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Laiteasetus (uudelleenkäytettävä nimi)",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.unspecified": {
       "revision": "77592dce12bda556f801",
@@ -29050,9 +29333,25 @@
         "role": "text"
       },
       "fi": "Ei määritetty",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:58:30.768Z",
+          "revision": "77592dce12bda556f801",
+          "source": {
+            "en": "Not specified",
+            "fi": "Ei määritetty",
+            "context": "Exercise model: unspecified",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Ei määritetty",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.left": {
       "revision": "9532525212554494440f",
@@ -29064,9 +29363,25 @@
         "role": "text"
       },
       "fi": "Vasen",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:58:31.959Z",
+          "revision": "9532525212554494440f",
+          "source": {
+            "en": "Left",
+            "fi": "Vasen",
+            "context": "Exercise model: left",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Vasen",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.right": {
       "revision": "1df527a18c17508cc959",
@@ -29078,9 +29393,25 @@
         "role": "text"
       },
       "fi": "Oikea",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:58:32.805Z",
+          "revision": "1df527a18c17508cc959",
+          "source": {
+            "en": "Right",
+            "fi": "Oikea",
+            "context": "Exercise model: right",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Oikea",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.bilateral": {
       "revision": "385664c193897200a9dc",
@@ -29092,9 +29423,25 @@
         "role": "text"
       },
       "fi": "Molemmat puolet yhdessä",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:58:37.262Z",
+          "revision": "385664c193897200a9dc",
+          "source": {
+            "en": "Both sides together",
+            "fi": "Molemmat puolet yhdessä",
+            "context": "Exercise model: bilateral",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Molemmat puolet yhdessä",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.profile_hint": {
       "revision": "4d7a1c449e77d538a5fb",
@@ -29106,9 +29453,25 @@
         "role": "text"
       },
       "fi": "Valinnaiset kuormat valitussa painoyksikössä. Anna tyhjän laitteen paino ja korotusväli tai pilkuin erotettu lista kokonaiskuormista. Tallennetun laiteasetuksen valinta kopioi sen kuormaprofiilin.",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:58:51.553Z",
+          "revision": "4d7a1c449e77d538a5fb",
+          "source": {
+            "en": "Optional custom loads in your selected weight unit. Enter an empty-machine offset and increment, or a comma-separated list of total loads including the offset. Selecting a saved setup copies its profile.",
+            "fi": "Valinnaiset kuormat valitussa painoyksikössä. Anna tyhjän laitteen paino ja korotusväli tai pilkuin erotettu lista kokonaiskuormista. Tallennetun laiteasetuksen valinta kopioi sen kuormaprofiilin.",
+            "context": "Exercise model: profile_hint",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Valinnaiset kuormat valitussa painoyksikössä. Anna tyhjän laitteen paino ja korotusväli tai pilkuin erotettu lista kokonaiskuormista. Tallennetun laiteasetuksen valinta kopioi sen kuormaprofiilin.",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.offset": {
       "revision": "d74f7b55da2056443431",
@@ -29120,9 +29483,25 @@
         "role": "text"
       },
       "fi": "Tyhjän laitteen / kelkan paino",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:58:54.789Z",
+          "revision": "d74f7b55da2056443431",
+          "source": {
+            "en": "Empty equipment / carriage weight",
+            "fi": "Tyhjän laitteen / kelkan paino",
+            "context": "Exercise model: offset",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Tyhjän laitteen / kelkan paino",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.increment": {
       "revision": "ac677415925770396f05",
@@ -29133,10 +29512,26 @@
         "screen": "Exercise editor and workout",
         "role": "text"
       },
-      "fi": "Kuorman korotusväli",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "fi": "Painojen korotusväli",
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:59:04.443Z",
+          "revision": "ac677415925770396f05",
+          "source": {
+            "en": "Load increment",
+            "fi": "Kuorman korotusväli",
+            "context": "Exercise model: increment",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Kuorman korotusväli",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.loads": {
       "revision": "000ec3931c642cac6721",
@@ -29148,9 +29543,25 @@
         "role": "text"
       },
       "fi": "Mahdolliset kokonaiskuormat (pilkuin eroteltuna)",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:59:07.256Z",
+          "revision": "000ec3931c642cac6721",
+          "source": {
+            "en": "Available total loads (comma-separated)",
+            "fi": "Mahdolliset kokonaiskuormat (pilkuin eroteltuna)",
+            "context": "Exercise model: loads",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Mahdolliset kokonaiskuormat (pilkuin eroteltuna)",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.durationSeconds": {
       "revision": "7ef26b37af97465ac74f",
@@ -29162,9 +29573,25 @@
         "role": "text"
       },
       "fi": "Kesto (sekuntia)",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:59:08.778Z",
+          "revision": "7ef26b37af97465ac74f",
+          "source": {
+            "en": "Duration (seconds)",
+            "fi": "Kesto (sekuntia)",
+            "context": "Exercise model: durationSeconds",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Kesto (sekuntia)",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.distanceMeters": {
       "revision": "3bc775811cf73ec92b49",
@@ -29176,9 +29603,25 @@
         "role": "text"
       },
       "fi": "Matka (metriä)",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:59:09.779Z",
+          "revision": "3bc775811cf73ec92b49",
+          "source": {
+            "en": "Distance (metres)",
+            "fi": "Matka (metriä)",
+            "context": "Exercise model: distanceMeters",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Matka (metriä)",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.speedKph": {
       "revision": "b1ab09dc8d69f007419d",
@@ -29190,9 +29633,25 @@
         "role": "text"
       },
       "fi": "Nopeus (km/h)",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:59:11.246Z",
+          "revision": "b1ab09dc8d69f007419d",
+          "source": {
+            "en": "Speed (km/h)",
+            "fi": "Nopeus (km/h)",
+            "context": "Exercise model: speedKph",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Nopeus (km/h)",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.pace": {
       "revision": "388ba4b76a40d8e5eec2",
@@ -29204,9 +29663,25 @@
         "role": "text"
       },
       "fi": "Vauhti (min:s/km)",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:59:14.287Z",
+          "revision": "388ba4b76a40d8e5eec2",
+          "source": {
+            "en": "Pace (min:sec/km)",
+            "fi": "Vauhti (min:s/km)",
+            "context": "Exercise model: pace",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Vauhti (min:s/km)",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.measurement_hint": {
       "revision": "d997b5a9d5793ef4a9ed",
@@ -29218,9 +29693,25 @@
         "role": "text"
       },
       "fi": "Tavoitteet ovat valinnaisia. Kirjaa toteutuneet tulokset sarjoittain. Vauhti lasketaan nopeudesta tai toteutuneesta matkasta ja ajasta, kun molemmat on kirjattu.",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:59:28.156Z",
+          "revision": "d997b5a9d5793ef4a9ed",
+          "source": {
+            "en": "Targets are optional. Record actual results per set. Pace is calculated from speed, or actual distance and time when both are recorded.",
+            "fi": "Tavoitteet ovat valinnaisia. Kirjaa toteutuneet tulokset sarjoittain. Vauhti lasketaan nopeudesta tai toteutuneesta matkasta ja ajasta, kun molemmat on kirjattu.",
+            "context": "Exercise model: measurement_hint",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Tavoitteet ovat valinnaisia. Kirjaa toteutuneet tulokset sarjoittain. Vauhti lasketaan nopeudesta tai toteutuneesta matkasta ja ajasta, kun molemmat on kirjattu.",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.load": {
       "revision": "2b41a92de8ba342d40b1",
@@ -29232,9 +29723,25 @@
         "role": "text"
       },
       "fi": "Paino × toistot",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:59:30.109Z",
+          "revision": "2b41a92de8ba342d40b1",
+          "source": {
+            "en": "Weight × repetitions",
+            "fi": "Paino × toistot",
+            "context": "Exercise model: load",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Paino × toistot",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.height": {
       "revision": "c67e9578719d41e68417",
@@ -29246,9 +29753,25 @@
         "role": "text"
       },
       "fi": "Hyppykorkeus",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:59:31.692Z",
+          "revision": "c67e9578719d41e68417",
+          "source": {
+            "en": "Jump height",
+            "fi": "Hyppykorkeus",
+            "context": "Exercise model: height",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Hyppykorkeus",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.duration": {
       "revision": "c9c6999ecf4cd313a970",
@@ -29260,9 +29783,25 @@
         "role": "text"
       },
       "fi": "Kesto + valinnainen kuorma",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:59:34.133Z",
+          "revision": "c9c6999ecf4cd313a970",
+          "source": {
+            "en": "Duration + optional load",
+            "fi": "Kesto + valinnainen kuorma",
+            "context": "Exercise model: duration",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Kesto + valinnainen kuorma",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.distance": {
       "revision": "c95ba8eb52836cf6e72b",
@@ -29274,9 +29813,25 @@
         "role": "text"
       },
       "fi": "Matka + valinnainen kuorma",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:59:35.821Z",
+          "revision": "c95ba8eb52836cf6e72b",
+          "source": {
+            "en": "Distance + optional load",
+            "fi": "Matka + valinnainen kuorma",
+            "context": "Exercise model: distance",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Matka + valinnainen kuorma",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.cardio": {
       "revision": "2f7fefad784f16009dee",
@@ -29288,9 +29843,25 @@
         "role": "text"
       },
       "fi": "Aika, matka ja nopeus",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:59:37.537Z",
+          "revision": "2f7fefad784f16009dee",
+          "source": {
+            "en": "Time, distance and speed",
+            "fi": "Aika, matka ja nopeus",
+            "context": "Exercise model: cardio",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Aika, matka ja nopeus",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.invalid": {
       "revision": "23464308c67fd9fd38e4",
@@ -29305,9 +29876,28 @@
         ]
       },
       "fi": "Tarkista liikkeen kentät: {fields}",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:59:39.373Z",
+          "revision": "23464308c67fd9fd38e4",
+          "source": {
+            "en": "Check these exercise fields: {fields}",
+            "fi": "Tarkista liikkeen kentät: {fields}",
+            "context": "Exercise model: invalid",
+            "screen": "Exercise editor and workout",
+            "role": "text",
+            "examples": [
+              "fields"
+            ]
+          },
+          "fi": "Tarkista liikkeen kentät: {fields}",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.swap_logged": {
       "revision": "e1ace8e9bda28b668113",
@@ -29319,9 +29909,25 @@
         "role": "text"
       },
       "fi": "Vaihda liike ennen sarjojen kirjaamista. Kirjatut sarjat kuuluvat alkuperäiseen liikkeeseen.",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:59:46.442Z",
+          "revision": "e1ace8e9bda28b668113",
+          "source": {
+            "en": "Swap before logging sets. Logged sets belong to the original movement.",
+            "fi": "Vaihda liike ennen sarjojen kirjaamista. Kirjatut sarjat kuuluvat alkuperäiseen liikkeeseen.",
+            "context": "Exercise model: swap_logged",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Vaihda liike ennen sarjojen kirjaamista. Kirjatut sarjat kuuluvat alkuperäiseen liikkeeseen.",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercise.model.actual_required": {
       "revision": "886b7839f9411af75cb4",
@@ -29333,9 +29939,25 @@
         "role": "text"
       },
       "fi": "Anna positiivinen kesto tai matka ennen sarjan merkitsemistä tehdyksi.",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:59:52.794Z",
+          "revision": "886b7839f9411af75cb4",
+          "source": {
+            "en": "Enter a positive duration or distance before completing this set.",
+            "fi": "Anna positiivinen kesto tai matka ennen sarjan merkitsemistä tehdyksi.",
+            "context": "Exercise model: actual_required",
+            "screen": "Exercise editor and workout",
+            "role": "text"
+          },
+          "fi": "Anna positiivinen kesto tai matka ennen sarjan merkitsemistä tehdyksi.",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "sync.saved_locally": {
       "revision": "9757ef2e4213e7186ee8",
@@ -29347,9 +29969,25 @@
         "role": "text"
       },
       "fi": "Treeni tallennettu tälle laitteelle.",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:59:55.038Z",
+          "revision": "9757ef2e4213e7186ee8",
+          "source": {
+            "en": "Workout saved on this device.",
+            "fi": "Treeni tallennettu tälle laitteelle.",
+            "context": "Completion confirmation independent of network sync",
+            "screen": "Workout completion",
+            "role": "text"
+          },
+          "fi": "Treeni tallennettu tälle laitteelle.",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "sync.retry": {
       "revision": "adcbe38d3b0f8d252304",
@@ -29361,9 +29999,25 @@
         "role": "button"
       },
       "fi": "Yritä synkronointia uudelleen",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:59:56.416Z",
+          "revision": "adcbe38d3b0f8d252304",
+          "source": {
+            "en": "Retry sync",
+            "fi": "Yritä synkronointia uudelleen",
+            "context": "Retry failed cloud push; local workout is already saved",
+            "screen": "Cloud sync",
+            "role": "button"
+          },
+          "fi": "Yritä synkronointia uudelleen",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.title": {
       "revision": "5c93a45f9d262b44c0cb",
@@ -29376,9 +30030,26 @@
         "examples": {}
       },
       "fi": "Liikekirjasto",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T13:59:57.685Z",
+          "revision": "5c93a45f9d262b44c0cb",
+          "source": {
+            "en": "Exercise library",
+            "fi": "Liikekirjasto",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library title",
+            "examples": {}
+          },
+          "fi": "Liikekirjasto",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.search": {
       "revision": "22a1fd5fdf8794b61b48",
@@ -29391,9 +30062,26 @@
         "examples": {}
       },
       "fi": "Hae nimellä tai variaatiolla",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:07.442Z",
+          "revision": "22a1fd5fdf8794b61b48",
+          "source": {
+            "en": "Search names and variants",
+            "fi": "Hae nimellä tai variaatiolla",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library search",
+            "examples": {}
+          },
+          "fi": "Hae nimellä tai variaatiolla",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.all": {
       "revision": "0946b300e3a72c28e212",
@@ -29406,9 +30094,26 @@
         "examples": {}
       },
       "fi": "Kaikki",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:08.661Z",
+          "revision": "0946b300e3a72c28e212",
+          "source": {
+            "en": "All",
+            "fi": "Kaikki",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library all",
+            "examples": {}
+          },
+          "fi": "Kaikki",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.category": {
       "revision": "2655a2318b375d478349",
@@ -29421,9 +30126,26 @@
         "examples": {}
       },
       "fi": "Liikeryhmä",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:09.986Z",
+          "revision": "2655a2318b375d478349",
+          "source": {
+            "en": "Movement category",
+            "fi": "Liikeryhmä",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library category",
+            "examples": {}
+          },
+          "fi": "Liikeryhmä",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.muscle": {
       "revision": "5f9a4fdf7346906c7b4e",
@@ -29436,9 +30158,26 @@
         "examples": {}
       },
       "fi": "Kohdelihas",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:11.084Z",
+          "revision": "5f9a4fdf7346906c7b4e",
+          "source": {
+            "en": "Target muscle",
+            "fi": "Kohdelihas",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library muscle",
+            "examples": {}
+          },
+          "fi": "Kohdelihas",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.custom": {
       "revision": "ac00d52e7c501781d37a",
@@ -29451,9 +30190,26 @@
         "examples": {}
       },
       "fi": "Luo oma liike",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:12.181Z",
+          "revision": "ac00d52e7c501781d37a",
+          "source": {
+            "en": "Create custom entry",
+            "fi": "Luo oma liike",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library custom",
+            "examples": {}
+          },
+          "fi": "Luo oma liike",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.choice": {
       "revision": "2410113201427f38cadc",
@@ -29466,9 +30222,26 @@
         "examples": {}
       },
       "fi": "Valitse liike tai luo oma. Kirjaston tunnisteet eivät yhdistä vanhaa treenihistoriaa.",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:16.791Z",
+          "revision": "2410113201427f38cadc",
+          "source": {
+            "en": "Choose an entry or create your own. Library identities do not merge old workout history.",
+            "fi": "Valitse liike tai luo oma. Kirjaston tunnisteet eivät yhdistä vanhaa treenihistoriaa.",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library choice",
+            "examples": {}
+          },
+          "fi": "Valitse liike tai luo oma. Kirjaston tunnisteet eivät yhdistä vanhaa treenihistoriaa.",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.instructions": {
       "revision": "9040d8054fbd69b08ef8",
@@ -29481,9 +30254,26 @@
         "examples": {}
       },
       "fi": "Jätä ohjelman ohje tyhjäksi, jos haluat käyttää tätä kirjaston ohjetta:",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:22.990Z",
+          "revision": "9040d8054fbd69b08ef8",
+          "source": {
+            "en": "Leave plan instructions blank to use these library instructions:",
+            "fi": "Jätä ohjelman ohje tyhjäksi, jos haluat käyttää tätä kirjaston ohjetta:",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library instructions",
+            "examples": {}
+          },
+          "fi": "Jätä ohjelman ohje tyhjäksi, jos haluat käyttää tätä kirjaston ohjetta:",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.identity_locked": {
       "revision": "ab71b7a68d89bc7a9f53",
@@ -29496,9 +30286,26 @@
         "examples": {}
       },
       "fi": "Säilytä kirjaston liiketunniste. Luo eri liikkeelle oma kirjastomerkintä.",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:29.983Z",
+          "revision": "ab71b7a68d89bc7a9f53",
+          "source": {
+            "en": "Keep the library movement ID. Create a separate library entry for a different movement.",
+            "fi": "Säilytä kirjaston liiketunniste. Luo eri liikkeelle oma kirjastomerkintä.",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library identity_locked",
+            "examples": {}
+          },
+          "fi": "Säilytä kirjaston liiketunniste. Luo eri liikkeelle oma kirjastomerkintä.",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.no_matches": {
       "revision": "88b85b4b8bd8378cfaa6",
@@ -29511,9 +30318,26 @@
         "examples": {}
       },
       "fi": "Ei osumia. Lyhennä hakua, poista suodattimet tai luo oma liike.",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:32.211Z",
+          "revision": "88b85b4b8bd8378cfaa6",
+          "source": {
+            "en": "No matches. Try a shorter search, clear filters, or create a custom entry.",
+            "fi": "Ei osumia. Lyhennä hakua, poista suodattimet tai luo oma liike.",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library no_matches",
+            "examples": {}
+          },
+          "fi": "Ei osumia. Lyhennä hakua, poista suodattimet tai luo oma liike.",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.link_title": {
       "revision": "f0dbe3c5c0771512a775",
@@ -29526,9 +30350,26 @@
         "examples": {}
       },
       "fi": "Valitse, miten käytät liikettä",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:35.128Z",
+          "revision": "f0dbe3c5c0771512a775",
+          "source": {
+            "en": "Choose how to use this entry",
+            "fi": "Valitse, miten käytät liikettä",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library link_title",
+            "examples": {}
+          },
+          "fi": "Valitse, miten käytät liikettä",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.link_question": {
       "revision": "38d92553c44c2b77614b",
@@ -29541,9 +30382,26 @@
         "examples": {}
       },
       "fi": "Käytetäänkö liikettä {match}, vai tallennetaanko ”{name}” sen rinnakkaisnimeksi kirjastoon? Tämä ei muuta vanhan historian rinnakkaisnimiä.",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:39.831Z",
+          "revision": "38d92553c44c2b77614b",
+          "source": {
+            "en": "Use {match}, or save “{name}” as its library alias? This does not change legacy history aliases.",
+            "fi": "Käytetäänkö liikettä {match}, vai tallennetaanko ”{name}” sen rinnakkaisnimeksi kirjastoon? Tämä ei muuta vanhan historian rinnakkaisnimiä.",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library link_question",
+            "examples": {}
+          },
+          "fi": "Käytetäänkö liikettä {match}, vai tallennetaanko ”{name}” sen rinnakkaisnimeksi kirjastoon? Tämä ei muuta vanhan historian rinnakkaisnimiä.",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.use": {
       "revision": "d529e560271e2c81fdd6",
@@ -29556,9 +30414,26 @@
         "examples": {}
       },
       "fi": "Käytä kirjaston nimeä",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:41.116Z",
+          "revision": "d529e560271e2c81fdd6",
+          "source": {
+            "en": "Use library name",
+            "fi": "Käytä kirjaston nimeä",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library use",
+            "examples": {}
+          },
+          "fi": "Käytä kirjaston nimeä",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.alias": {
       "revision": "d0ea29722cbe585a3964",
@@ -29571,9 +30446,26 @@
         "examples": {}
       },
       "fi": "Tallenna rinnakkaisnimeksi",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:42.270Z",
+          "revision": "d0ea29722cbe585a3964",
+          "source": {
+            "en": "Save as library alias",
+            "fi": "Tallenna rinnakkaisnimeksi",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library alias",
+            "examples": {}
+          },
+          "fi": "Tallenna rinnakkaisnimeksi",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.name": {
       "revision": "752688696c14505cbc46",
@@ -29586,9 +30478,26 @@
         "examples": {}
       },
       "fi": "Liikkeen nimi",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:43.317Z",
+          "revision": "752688696c14505cbc46",
+          "source": {
+            "en": "Exercise name",
+            "fi": "Liikkeen nimi",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library name",
+            "examples": {}
+          },
+          "fi": "Liikkeen nimi",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.movement": {
       "revision": "7f0d61f7589f7e3b9ded",
@@ -29601,9 +30510,26 @@
         "examples": {}
       },
       "fi": "Perusliike",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:44.272Z",
+          "revision": "7f0d61f7589f7e3b9ded",
+          "source": {
+            "en": "Base movement",
+            "fi": "Perusliike",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library movement",
+            "examples": {}
+          },
+          "fi": "Perusliike",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.position": {
       "revision": "c763281d62403186da70",
@@ -29616,9 +30542,26 @@
         "examples": {}
       },
       "fi": "Asento (esim. istuen)",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:45.637Z",
+          "revision": "c763281d62403186da70",
+          "source": {
+            "en": "Position (e.g. seated)",
+            "fi": "Asento (esim. istuen)",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library position",
+            "examples": {}
+          },
+          "fi": "Asento (esim. istuen)",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.execution": {
       "revision": "9103a5ed67a21f0ebcac",
@@ -29631,9 +30574,26 @@
         "examples": {}
       },
       "fi": "Suoritustapa (esim. yhdellä kädellä)",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:47.241Z",
+          "revision": "9103a5ed67a21f0ebcac",
+          "source": {
+            "en": "Execution (e.g. one-arm)",
+            "fi": "Suoritustapa (esim. yhdellä kädellä)",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library execution",
+            "examples": {}
+          },
+          "fi": "Suoritustapa (esim. yhdellä kädellä)",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.defaults": {
       "revision": "4c1851ee5f757621eca2",
@@ -29646,9 +30606,26 @@
         "examples": {}
       },
       "fi": "Oletusohje",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:48.648Z",
+          "revision": "4c1851ee5f757621eca2",
+          "source": {
+            "en": "Default instructions",
+            "fi": "Oletusohje",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library defaults",
+            "examples": {}
+          },
+          "fi": "Oletusohje",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.continue": {
       "revision": "41db07e8139f76722c7d",
@@ -29661,9 +30638,26 @@
         "examples": {}
       },
       "fi": "Jatka ohjelman asetuksiin",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:49.852Z",
+          "revision": "41db07e8139f76722c7d",
+          "source": {
+            "en": "Continue to plan settings",
+            "fi": "Jatka ohjelman asetuksiin",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library continue",
+            "examples": {}
+          },
+          "fi": "Jatka ohjelman asetuksiin",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.category.press": {
       "revision": "c9f647f0567f6a973370",
@@ -29676,9 +30670,26 @@
         "examples": {}
       },
       "fi": "Punnerrus",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:53.845Z",
+          "revision": "c9f647f0567f6a973370",
+          "source": {
+            "en": "Press",
+            "fi": "Punnerrus",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library category.press",
+            "examples": {}
+          },
+          "fi": "Punnerrus",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.category.pull": {
       "revision": "984dd5a1b3c69dd647a4",
@@ -29691,9 +30702,26 @@
         "examples": {}
       },
       "fi": "Veto",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:55.091Z",
+          "revision": "984dd5a1b3c69dd647a4",
+          "source": {
+            "en": "Pull",
+            "fi": "Veto",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library category.pull",
+            "examples": {}
+          },
+          "fi": "Veto",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.category.squat": {
       "revision": "483862041823ff5ad99b",
@@ -29706,9 +30734,26 @@
         "examples": {}
       },
       "fi": "Kyykky",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:56.058Z",
+          "revision": "483862041823ff5ad99b",
+          "source": {
+            "en": "Squat",
+            "fi": "Kyykky",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library category.squat",
+            "examples": {}
+          },
+          "fi": "Kyykky",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.category.hinge": {
       "revision": "0cf92cc013cd5a65c459",
@@ -29721,9 +30766,26 @@
         "examples": {}
       },
       "fi": "Lonkan ojennus",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:00:57.420Z",
+          "revision": "0cf92cc013cd5a65c459",
+          "source": {
+            "en": "Hip hinge",
+            "fi": "Lonkan ojennus",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library category.hinge",
+            "examples": {}
+          },
+          "fi": "Lonkan ojennus",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.category.lunge": {
       "revision": "0a9d54b46c1efe92c976",
@@ -29735,10 +30797,27 @@
         "context": "Exercise library category.lunge",
         "examples": {}
       },
-      "fi": "Askel- ja askelkyykky",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "fi": "Askelkyykky",
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:06.593Z",
+          "revision": "0a9d54b46c1efe92c976",
+          "source": {
+            "en": "Lunge / split squat",
+            "fi": "Askel- ja askelkyykky",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library category.lunge",
+            "examples": {}
+          },
+          "fi": "Askel- ja askelkyykky",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.category.isolation": {
       "revision": "5c036acf113be1117ad5",
@@ -29750,10 +30829,27 @@
         "context": "Exercise library category.isolation",
         "examples": {}
       },
-      "fi": "Eristävä liike",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "fi": "Eristetty liike",
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:13.600Z",
+          "revision": "5c036acf113be1117ad5",
+          "source": {
+            "en": "Isolation",
+            "fi": "Eristävä liike",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library category.isolation",
+            "examples": {}
+          },
+          "fi": "Eristävä liike",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.category.core": {
       "revision": "5c258929eb8002c77693",
@@ -29766,9 +30862,26 @@
         "examples": {}
       },
       "fi": "Keskivartalo",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:14.763Z",
+          "revision": "5c258929eb8002c77693",
+          "source": {
+            "en": "Core",
+            "fi": "Keskivartalo",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library category.core",
+            "examples": {}
+          },
+          "fi": "Keskivartalo",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.category.carry": {
       "revision": "fee0dfce92e732ddb87a",
@@ -29781,9 +30894,26 @@
         "examples": {}
       },
       "fi": "Kantaminen",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:15.852Z",
+          "revision": "fee0dfce92e732ddb87a",
+          "source": {
+            "en": "Carry",
+            "fi": "Kantaminen",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library category.carry",
+            "examples": {}
+          },
+          "fi": "Kantaminen",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.category.cardio": {
       "revision": "59c7021d8ef2bbd824d2",
@@ -29796,9 +30926,26 @@
         "examples": {}
       },
       "fi": "Kestävyys",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:17.949Z",
+          "revision": "59c7021d8ef2bbd824d2",
+          "source": {
+            "en": "Cardio",
+            "fi": "Kestävyys",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library category.cardio",
+            "examples": {}
+          },
+          "fi": "Kestävyys",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.category.other": {
       "revision": "a95b9e3b6b4790a288c9",
@@ -29811,9 +30958,26 @@
         "examples": {}
       },
       "fi": "Muu",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:18.772Z",
+          "revision": "a95b9e3b6b4790a288c9",
+          "source": {
+            "en": "Other",
+            "fi": "Muu",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library category.other",
+            "examples": {}
+          },
+          "fi": "Muu",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.muscle.chest": {
       "revision": "a78fca834e5f68b90d0e",
@@ -29826,9 +30990,26 @@
         "examples": {}
       },
       "fi": "Rinta",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:19.813Z",
+          "revision": "a78fca834e5f68b90d0e",
+          "source": {
+            "en": "Chest",
+            "fi": "Rinta",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library muscle.chest",
+            "examples": {}
+          },
+          "fi": "Rinta",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.muscle.shoulders": {
       "revision": "c0f3c48a3ad3645c60a8",
@@ -29841,9 +31022,26 @@
         "examples": {}
       },
       "fi": "Olkapäät",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:20.964Z",
+          "revision": "c0f3c48a3ad3645c60a8",
+          "source": {
+            "en": "Shoulders",
+            "fi": "Olkapäät",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library muscle.shoulders",
+            "examples": {}
+          },
+          "fi": "Olkapäät",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.muscle.back": {
       "revision": "2e1b39feaf29f8749dc2",
@@ -29856,9 +31054,26 @@
         "examples": {}
       },
       "fi": "Selkä",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:21.764Z",
+          "revision": "2e1b39feaf29f8749dc2",
+          "source": {
+            "en": "Back",
+            "fi": "Selkä",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library muscle.back",
+            "examples": {}
+          },
+          "fi": "Selkä",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.muscle.quadriceps": {
       "revision": "f28b4b7bb6a74e576337",
@@ -29871,9 +31086,26 @@
         "examples": {}
       },
       "fi": "Etureidet",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:23.650Z",
+          "revision": "f28b4b7bb6a74e576337",
+          "source": {
+            "en": "Quadriceps",
+            "fi": "Etureidet",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library muscle.quadriceps",
+            "examples": {}
+          },
+          "fi": "Etureidet",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.muscle.hamstrings": {
       "revision": "b797f4be1ba3b069f9ef",
@@ -29886,9 +31118,26 @@
         "examples": {}
       },
       "fi": "Takareidet",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:24.363Z",
+          "revision": "b797f4be1ba3b069f9ef",
+          "source": {
+            "en": "Hamstrings",
+            "fi": "Takareidet",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library muscle.hamstrings",
+            "examples": {}
+          },
+          "fi": "Takareidet",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.muscle.glutes": {
       "revision": "c4bca86b3aca6bf65886",
@@ -29901,9 +31150,26 @@
         "examples": {}
       },
       "fi": "Pakarat",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:25.215Z",
+          "revision": "c4bca86b3aca6bf65886",
+          "source": {
+            "en": "Glutes",
+            "fi": "Pakarat",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library muscle.glutes",
+            "examples": {}
+          },
+          "fi": "Pakarat",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.muscle.calves": {
       "revision": "c343e7c8c3a99f1d175f",
@@ -29916,9 +31182,26 @@
         "examples": {}
       },
       "fi": "Pohkeet",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:26.049Z",
+          "revision": "c343e7c8c3a99f1d175f",
+          "source": {
+            "en": "Calves",
+            "fi": "Pohkeet",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library muscle.calves",
+            "examples": {}
+          },
+          "fi": "Pohkeet",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.muscle.biceps": {
       "revision": "24cdc4186a39c9c41572",
@@ -29931,9 +31214,26 @@
         "examples": {}
       },
       "fi": "Hauis",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:26.981Z",
+          "revision": "24cdc4186a39c9c41572",
+          "source": {
+            "en": "Biceps",
+            "fi": "Hauis",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library muscle.biceps",
+            "examples": {}
+          },
+          "fi": "Hauis",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.muscle.triceps": {
       "revision": "1a7064a0e48f53d3d2fe",
@@ -29946,9 +31246,26 @@
         "examples": {}
       },
       "fi": "Ojentajat",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:28.015Z",
+          "revision": "1a7064a0e48f53d3d2fe",
+          "source": {
+            "en": "Triceps",
+            "fi": "Ojentajat",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library muscle.triceps",
+            "examples": {}
+          },
+          "fi": "Ojentajat",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.muscle.core": {
       "revision": "bf6aeb2ce12c751ac3a4",
@@ -29961,9 +31278,26 @@
         "examples": {}
       },
       "fi": "Keskivartalo",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:29.555Z",
+          "revision": "bf6aeb2ce12c751ac3a4",
+          "source": {
+            "en": "Core",
+            "fi": "Keskivartalo",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library muscle.core",
+            "examples": {}
+          },
+          "fi": "Keskivartalo",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.muscle.legs": {
       "revision": "68f9c898ef03d336ecb0",
@@ -29976,9 +31310,26 @@
         "examples": {}
       },
       "fi": "Jalat",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:31.156Z",
+          "revision": "68f9c898ef03d336ecb0",
+          "source": {
+            "en": "Legs",
+            "fi": "Jalat",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library muscle.legs",
+            "examples": {}
+          },
+          "fi": "Jalat",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.muscle.other": {
       "revision": "1d01b6a4cba7027b7e3d",
@@ -29991,9 +31342,26 @@
         "examples": {}
       },
       "fi": "Muu",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:32.150Z",
+          "revision": "1d01b6a4cba7027b7e3d",
+          "source": {
+            "en": "Other",
+            "fi": "Muu",
+            "screen": "Exercise library",
+            "role": "label",
+            "context": "Exercise library muscle.other",
+            "examples": {}
+          },
+          "fi": "Muu",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercises.seated_dumbbell_press.description": {
       "revision": "25c8d39b6a591d74ee75",
@@ -30005,10 +31373,27 @@
         "context": "Default instructions for seated_dumbbell_press",
         "examples": {}
       },
-      "fi": "Istu selkänojallisella penkillä, jännitä keskivartalo ja punnerra käsipainot hallitusti ylös. Laske mukavalle syvyydelle selkää notkistamatta.",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "fi": "Istu selkänojallisella penkillä, jännitä keskivartalo ja työnnä käsipainot hallitusti ylös. Laske mukavalle syvyydelle selkää notkistamatta.",
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:44.378Z",
+          "revision": "25c8d39b6a591d74ee75",
+          "source": {
+            "en": "Sit on a supported bench, brace your trunk and press the dumbbells overhead under control. Lower to a comfortable depth without arching your back.",
+            "fi": "Istu selkänojallisella penkillä, jännitä keskivartalo ja punnerra käsipainot hallitusti ylös. Laske mukavalle syvyydelle selkää notkistamatta.",
+            "screen": "Exercise information",
+            "role": "description",
+            "context": "Default instructions for seated_dumbbell_press",
+            "examples": {}
+          },
+          "fi": "Istu selkänojallisella penkillä, jännitä keskivartalo ja punnerra käsipainot hallitusti ylös. Laske mukavalle syvyydelle selkää notkistamatta.",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercises.shoulder_press.description": {
       "revision": "91698de95b152bccbede",
@@ -30020,10 +31405,27 @@
         "context": "Default instructions for shoulder_press",
         "examples": {}
       },
-      "fi": "Jännitä keskivartalo ja punnerra hallitusti ylös. Pidä kylkiluut alhaalla ja käytä sopivaa liikerataa. Vältä kallistumista ja kiertymistä yhdellä kädellä tehdessä.",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "fi": "Jännitä keskivartalo ja työnnä hallitusti ylös. Pidä kylkiluut alhaalla ja käytä sopivaa liikerataa. Vältä kallistumista ja kiertymistä yhdellä kädellä tehdessä.",
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:55.400Z",
+          "revision": "91698de95b152bccbede",
+          "source": {
+            "en": "Brace your trunk and press overhead under control. Keep your ribs down and use a comfortable range of motion. For one-arm work, avoid leaning or twisting.",
+            "fi": "Jännitä keskivartalo ja punnerra hallitusti ylös. Pidä kylkiluut alhaalla ja käytä sopivaa liikerataa. Vältä kallistumista ja kiertymistä yhdellä kädellä tehdessä.",
+            "screen": "Exercise information",
+            "role": "description",
+            "context": "Default instructions for shoulder_press",
+            "examples": {}
+          },
+          "fi": "Jännitä keskivartalo ja punnerra hallitusti ylös. Pidä kylkiluut alhaalla ja käytä sopivaa liikerataa. Vältä kallistumista ja kiertymistä yhdellä kädellä tehdessä.",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercises.farmer_carry.description": {
       "revision": "18dc3e005e26f981de5b",
@@ -30036,9 +31438,26 @@
         "examples": {}
       },
       "fi": "Pidä painot sivuilla, seiso ryhdikkäästi ja kävele hallituin askelin. Pidä keskivartalo vakaana ja kirjaa kuljettu matka.",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:01:59.307Z",
+          "revision": "18dc3e005e26f981de5b",
+          "source": {
+            "en": "Hold the weights at your sides, stand tall and walk with controlled steps. Keep your trunk steady and record the distance covered.",
+            "fi": "Pidä painot sivuilla, seiso ryhdikkäästi ja kävele hallituin askelin. Pidä keskivartalo vakaana ja kirjaa kuljettu matka.",
+            "screen": "Exercise information",
+            "role": "description",
+            "context": "Default instructions for farmer_carry",
+            "examples": {}
+          },
+          "fi": "Pidä painot sivuilla, seiso ryhdikkäästi ja kävele hallituin askelin. Pidä keskivartalo vakaana ja kirjaa kuljettu matka.",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercises.bike.description": {
       "revision": "8b712d5f7bb72d44c3d4",
@@ -30051,9 +31470,26 @@
         "examples": {}
       },
       "fi": "Säädä satula sopivaan polkemisasentoon. Polje tasaisesti ja kirjaa aika sekä matka, jos ne ovat saatavilla.",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:02:04.222Z",
+          "revision": "8b712d5f7bb72d44c3d4",
+          "source": {
+            "en": "Adjust the seat for a comfortable pedalling position. Pedal smoothly and record time and distance when available.",
+            "fi": "Säädä satula sopivaan polkemisasentoon. Polje tasaisesti ja kirjaa aika sekä matka, jos ne ovat saatavilla.",
+            "screen": "Exercise information",
+            "role": "description",
+            "context": "Default instructions for bike",
+            "examples": {}
+          },
+          "fi": "Säädä satula sopivaan polkemisasentoon. Polje tasaisesti ja kirjaa aika sekä matka, jos ne ovat saatavilla.",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "exercises.running.description": {
       "revision": "c7f496508b462b408ea0",
@@ -30065,10 +31501,27 @@
         "context": "Default instructions for running",
         "examples": {}
       },
-      "fi": "Aloita rauhallisesti, pidä askel luontevana ja kirjaa aika sekä matka.",
-      "status": "draft",
-      "origin": "source",
-      "history": []
+      "fi": "Aloita rauhallisesti, pidä askellus luontevana ja kirjaa aika sekä matka.",
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:02:14.055Z",
+          "revision": "c7f496508b462b408ea0",
+          "source": {
+            "en": "Start at an easy pace, keep your stride comfortable and record time and distance.",
+            "fi": "Aloita rauhallisesti, pidä askel luontevana ja kirjaa aika sekä matka.",
+            "screen": "Exercise information",
+            "role": "description",
+            "context": "Default instructions for running",
+            "examples": {}
+          },
+          "fi": "Aloita rauhallisesti, pidä askel luontevana ja kirjaa aika sekä matka.",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
     },
     "library.custom_choice": {
       "revision": "bd104839332a5a0ba390",
@@ -30081,6 +31534,408 @@
         "examples": {}
       },
       "fi": "Luo erillinen liike tai valitse olemassa oleva liike, jonka rinnakkaisnimeksi tämä nimi tallennetaan. Ehdotukset ovat ensin. Rinnakkaisnimi käyttää valitun liikkeen oletusasetuksia.",
+      "status": "approved",
+      "origin": "manual",
+      "history": [
+        {
+          "action": "approve",
+          "at": "2026-09-14T14:02:18.682Z",
+          "revision": "bd104839332a5a0ba390",
+          "source": {
+            "en": "Create a separate entry, or explicitly choose an existing entry to save this name as its alias. Suggested matches appear first. For an alias, the existing entry supplies the defaults below.",
+            "fi": "Luo erillinen liike tai valitse olemassa oleva liike, jonka rinnakkaisnimeksi tämä nimi tallennetaan. Ehdotukset ovat ensin. Rinnakkaisnimi käyttää valitun liikkeen oletusasetuksia.",
+            "screen": "Exercise library",
+            "role": "hint",
+            "context": "Explicit custom versus alias choice",
+            "examples": {}
+          },
+          "fi": "Luo erillinen liike tai valitse olemassa oleva liike, jonka rinnakkaisnimeksi tämä nimi tallennetaan. Ehdotukset ovat ensin. Rinnakkaisnimi käyttää valitun liikkeen oletusasetuksia.",
+          "status": "draft",
+          "origin": "source"
+        }
+      ]
+    },
+    "storage.error.corrupt_data": {
+      "revision": "c420837d9659c7159cd8",
+      "source": {
+        "en": "Unreadable data detected for {key}. Your stored data was preserved without overwriting.",
+        "fi": "Kohteen {key} tallennusdata ei ole luettavissa. Tallennetut tiedot säilytettiin korvaamatta.",
+        "context": "Error banner when stored data cannot be parsed or validated.",
+        "screen": "Storage",
+        "role": "text",
+        "examples": {
+          "key": "sessions"
+        }
+      },
+      "fi": "Kohteen {key} tallennusdata ei ole luettavissa. Tallennetut tiedot säilytettiin korvaamatta.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "storage.error.save_failed": {
+      "revision": "e4d6d7f53c040dac00f5",
+      "source": {
+        "en": "Saving failed for {item}. Storage is full or unavailable.",
+        "fi": "Tallennus epäonnistui kohteelle {item}. Tallennustila on täynnä tai ei saatavilla.",
+        "context": "Toast notification when browser localStorage fails to write.",
+        "screen": "Storage",
+        "role": "text",
+        "examples": {
+          "item": "History"
+        }
+      },
+      "fi": "Tallennus epäonnistui kohteelle {item}. Tallennustila on täynnä tai ei saatavilla.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "storage.error.restore_write_failed": {
+      "revision": "21b56d3ea0767273c47b",
+      "source": {
+        "en": "Failed to write {key} during restore: {error}. Restored data was not applied.",
+        "fi": "Palautuksen kirjoitus epäonnistui kohteelle {key}: {error}. Palautettuja tietoja ei otettu käyttöön.",
+        "context": "Error message when restore cannot write data into storage.",
+        "screen": "Backup restore",
+        "role": "text",
+        "examples": {
+          "key": "sessions",
+          "error": "QuotaExceededError"
+        }
+      },
+      "fi": "Palautuksen kirjoitus epäonnistui kohteelle {key}: {error}. Palautettuja tietoja ei otettu käyttöön.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "storage.corrupt.banner": {
+      "revision": "80664856fbfe90e1aa5f",
+      "source": {
+        "en": "Storage corruption detected. Your unreadable data is preserved.",
+        "fi": "Tallennustilassa havaittiin virheellistä dataa. Luettavissa olematon data säilytetään.",
+        "context": "Banner title for storage corruption.",
+        "screen": "Storage",
+        "role": "heading"
+      },
+      "fi": "Tallennustilassa havaittiin virheellistä dataa. Luettavissa olematon data säilytetään.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "storage.corrupt.copy_raw": {
+      "revision": "bfdbbfacead731547d33",
+      "source": {
+        "en": "Copy unreadable raw data",
+        "fi": "Kopioi lukukelvoton raakadata",
+        "context": "Button to copy raw unreadable storage string for support recovery.",
+        "screen": "Storage",
+        "role": "button"
+      },
+      "fi": "Kopioi lukukelvoton raakadata",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "storage.corrupt.copied": {
+      "revision": "9a2a5cf2595490ddf6a1",
+      "source": {
+        "en": "Raw data copied to clipboard",
+        "fi": "Raakadata kopioitu leikepöydälle",
+        "context": "Toast confirmation after copying raw corrupted storage data.",
+        "screen": "Storage",
+        "role": "text"
+      },
+      "fi": "Raakadata kopioitu leikepöydälle",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "storage.completion.failed_title": {
+      "revision": "f36f872eb34f433d93cb",
+      "source": {
+        "en": "Save failed — Active workout kept safe",
+        "fi": "Tallennus epäonnistui — Aktiivinen treeni tallessa",
+        "context": "Modal title when completing workout fails storage write.",
+        "screen": "Workout completion",
+        "role": "heading"
+      },
+      "fi": "Tallennus epäonnistui — Aktiivinen treeni tallessa",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "storage.completion.failed_body": {
+      "revision": "2e1228d8f932b14144fc",
+      "source": {
+        "en": "Could not save workout history to browser storage. Your active workout is still open so no work is lost. Try saving again or export an emergency backup.",
+        "fi": "Treenihistorian tallennus selaimeen epäonnistui. Aktiivinen treenisi on yhä auki, joten mitään ei menetetty. Yritä tallentaa uudelleen tai vie hätävarmuuskopio.",
+        "context": "Modal message explaining workout completion storage failure.",
+        "screen": "Workout completion",
+        "role": "text"
+      },
+      "fi": "Treenihistorian tallennus selaimeen epäonnistui. Aktiivinen treenisi on yhä auki, joten mitään ei menetetty. Yritä tallentaa uudelleen tai vie hätävarmuuskopio.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "storage.completion.retry": {
+      "revision": "53a3c7180541e05f1ff4",
+      "source": {
+        "en": "Retry save",
+        "fi": "Yritä tallentaa uudelleen",
+        "context": "Button to retry saving a completed workout.",
+        "screen": "Workout completion",
+        "role": "button"
+      },
+      "fi": "Yritä tallentaa uudelleen",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "storage.completion.emergency_export": {
+      "revision": "809469a2e75b600317c2",
+      "source": {
+        "en": "Export emergency backup",
+        "fi": "Vie hätävarmuuskopio",
+        "context": "Button to export an emergency backup including active workout.",
+        "screen": "Workout completion",
+        "role": "button"
+      },
+      "fi": "Vie hätävarmuuskopio",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "storage.completion.emergency_copied": {
+      "revision": "d7cffce2e7df637fc9c1",
+      "source": {
+        "en": "Emergency backup (including active workout) copied to clipboard",
+        "fi": "Hätävarmuuskopio (mukaan lukien aktiivinen treeni) kopioitu leikepöydälle",
+        "context": "Toast confirmation after copying emergency backup.",
+        "screen": "Workout completion",
+        "role": "text"
+      },
+      "fi": "Hätävarmuuskopio (mukaan lukien aktiivinen treeni) kopioitu leikepöydälle",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "plan.action.export": {
+      "revision": "134128f41cbffa444f25",
+      "source": {
+        "en": "Export plan",
+        "fi": "Vie ohjelma",
+        "context": "Button to export workout plan only (no history or credentials).",
+        "screen": "Plan editor",
+        "role": "button"
+      },
+      "fi": "Vie ohjelma",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "plan.action.import": {
+      "revision": "fff9e6baec9a33fc8203",
+      "source": {
+        "en": "Import plan",
+        "fi": "Tuo ohjelma",
+        "context": "Button to import a workout plan JSON.",
+        "screen": "Plan editor",
+        "role": "button"
+      },
+      "fi": "Tuo ohjelma",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "plan.export.copied": {
+      "revision": "fdc04ce377a310238811",
+      "source": {
+        "en": "Plan copied to clipboard (contains no history or personal data)",
+        "fi": "Ohjelma kopioitu leikepöydälle (ei sisällä historiaa tai henkilötietoja)",
+        "context": "Toast confirmation after exporting plan-only JSON.",
+        "screen": "Plan editor",
+        "role": "text"
+      },
+      "fi": "Ohjelma kopioitu leikepöydälle (ei sisällä historiaa tai henkilötietoja)",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "plan.preview.summary": {
+      "revision": "05090b8f9484ff472637",
+      "source": {
+        "en": "{days} days · {exercises} exercises",
+        "fi": "{days} päivää · {exercises} liikettä",
+        "context": "Plan preview subtitle showing day and exercise counts.",
+        "screen": "Plan import",
+        "role": "text",
+        "examples": {
+          "days": 3,
+          "exercises": 15
+        }
+      },
+      "fi": "{days} päivää · {exercises} liikettä",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "plan.preview.preserves_history": {
+      "revision": "2b712fe66b85ad2963e0",
+      "source": {
+        "en": "Applying this plan replaces your current plan. Your completed workout history and any in-progress workout are preserved.",
+        "fi": "Tämän ohjelman käyttöönotto korvaa nykyisen ohjelmasi. Tallennettu treenihistoria ja meneillään oleva treeni säilytetään.",
+        "context": "Reassurance text in plan preview that history will not be wiped.",
+        "screen": "Plan import",
+        "role": "text"
+      },
+      "fi": "Tämän ohjelman käyttöönotto korvaa nykyisen ohjelmasi. Tallennettu treenihistoria ja meneillään oleva treeni säilytetään.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "plan_import.error.unsupported_version": {
+      "revision": "61cd020e432494f3f5c4",
+      "source": {
+        "en": "Unsupported plan version: {version}. Please update the app.",
+        "fi": "Tukematon ohjelmaversio: {version}. Päivitä sovellus.",
+        "context": "Error message when imported plan has a future version number.",
+        "screen": "Plan import",
+        "role": "text",
+        "examples": {
+          "version": 2
+        }
+      },
+      "fi": "Tukematon ohjelmaversio: {version}. Päivitä sovellus.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "plan_import.error.library_must_be_array": {
+      "revision": "fbeb4f9f044c63430ada",
+      "source": {
+        "en": "Plan library must be an array of exercise entries.",
+        "fi": "Ohjelmakirjaston on oltava liikeluettelo.",
+        "context": "Error message when imported plan library is not an array.",
+        "screen": "Plan import",
+        "role": "text"
+      },
+      "fi": "Ohjelmakirjaston on oltava liikeluettelo.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "alpha.badge": {
+      "revision": "6e884aed7f54533a53a6",
+      "source": {
+        "en": "Athlete Alpha",
+        "fi": "Urheilija-alpha",
+        "context": "Badge indicating athlete alpha mode.",
+        "screen": "Header and settings",
+        "role": "text"
+      },
+      "fi": "Urheilija-alpha",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "alpha.storage_note": {
+      "revision": "ad26f5936c7119149294",
+      "source": {
+        "en": "Local-only athlete alpha: data is stored on this device only and is never uploaded to the cloud. Export backups regularly to keep your records safe.",
+        "fi": "Paikallinen urheilija-alpha: tiedot tallennetaan vain tälle laitteelle eikä niitä lähetetä pilveen. Vie säännöllisesti varmuuskopioita tietojesi suojaamiseksi.",
+        "context": "Explanation in settings that athlete alpha stores data locally only.",
+        "screen": "Settings",
+        "role": "text"
+      },
+      "fi": "Paikallinen urheilija-alpha: tiedot tallennetaan vain tälle laitteelle eikä niitä lähetetä pilveen. Vie säännöllisesti varmuuskopioita tietojesi suojaamiseksi.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "alpha.cloud_disabled": {
+      "revision": "73028dc67ba3e02305b2",
+      "source": {
+        "en": "Cloud sync is disabled in local-only alpha mode.",
+        "fi": "Pilvisynkronointi on poistettu käytöstä paikallisessa alpha-tilassa.",
+        "context": "Notice in coach and settings that cloud sync is off.",
+        "screen": "Coach and settings",
+        "role": "text"
+      },
+      "fi": "Pilvisynkronointi on poistettu käytöstä paikallisessa alpha-tilassa.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "alpha.version_label": {
+      "revision": "1960c1114ac138b5f960",
+      "source": {
+        "en": "GymTrack Athlete Alpha {version} (build {build})",
+        "fi": "GymTrack Urheilija-alpha {version} (versio {build})",
+        "context": "Build and version label in settings for athlete alpha.",
+        "screen": "Settings",
+        "role": "text",
+        "examples": {
+          "version": "0.1.0-alpha",
+          "build": "2026-09-15"
+        }
+      },
+      "fi": "GymTrack Urheilija-alpha {version} (versio {build})",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "backup.note.active_excluded": {
+      "revision": "c7b6ade2d1b5559f729f",
+      "source": {
+        "en": "Backups include your plan, completed history, body weight, and settings. They do not include in-progress active workouts.",
+        "fi": "Varmuuskopiot sisältävät ohjelman, valmistuneen historian, kehonpainon ja asetukset. Ne eivät sisällä meneillään olevaa aktiivista treeniä.",
+        "context": "Explanation in backup section clarifying that active workouts are not in backups.",
+        "screen": "Settings",
+        "role": "text"
+      },
+      "fi": "Varmuuskopiot sisältävät ohjelman, valmistuneen historian, kehonpainon ja asetukset. Ne eivät sisällä meneillään olevaa aktiivista treeniä.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "view_coach.text.body_weight_log": {
+      "revision": "a17875dc6983a429c5e6",
+      "source": {
+        "en": "Body weight",
+        "fi": "Kehonpaino",
+        "context": "Label for body weight log item when reporting save failure.",
+        "screen": "Coach and storage",
+        "role": "text"
+      },
+      "fi": "Kehonpaino",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "common.error.invalid_json": {
+      "revision": "36b7467da483a6759a62",
+      "source": {
+        "en": "Invalid JSON",
+        "fi": "Virheellinen JSON",
+        "context": "Error message when imported data cannot be parsed as JSON.",
+        "screen": "Backup and plan import",
+        "role": "text"
+      },
+      "fi": "Virheellinen JSON",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "common.action.continue": {
+      "revision": "30ee35bf5c64d85a54e8",
+      "source": {
+        "en": "Continue",
+        "fi": "Jatka",
+        "context": "Action button to proceed to the next step or preview.",
+        "screen": "Modal dialogs",
+        "role": "button"
+      },
+      "fi": "Jatka",
       "status": "draft",
       "origin": "source",
       "history": []

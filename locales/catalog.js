@@ -54,8 +54,8 @@ globalThis.GYM_I18N_CATALOG = {
       "fi": "{done} sarjaa kirjattu ajassa {fmtClock_Date_now_active_sta}."
     },
     "action_copy-coach.message.coaching_prompt_copied_paste_it_to_claude": {
-      "en": "Coaching prompt copied — paste it to Claude",
-      "fi": "Valmennus-prompti kopioitu — liitä se Claudeen"
+      "en": "Coaching prompt copied — paste it into your AI chat",
+      "fi": "Prompti kopioitu — liitä se tekoälykeskusteluun"
     },
     "action_copy-data.message.data_copied": {
       "en": "Data copied",
@@ -145,6 +145,22 @@ globalThis.GYM_I18N_CATALOG = {
       "en": "That's the rest-timer cue",
       "fi": "Tämä on palautusajastimen merkkiääni"
     },
+    "alpha.badge": {
+      "en": "Athlete Alpha",
+      "fi": "Urheilija-alpha"
+    },
+    "alpha.cloud_disabled": {
+      "en": "Cloud sync is disabled in local-only alpha mode.",
+      "fi": "Pilvisynkronointi on poistettu käytöstä paikallisessa alpha-tilassa."
+    },
+    "alpha.storage_note": {
+      "en": "Local-only athlete alpha: data is stored on this device only and is never uploaded to the cloud. Export backups regularly to keep your records safe.",
+      "fi": "Paikallinen urheilija-alpha: tiedot tallennetaan vain tälle laitteelle eikä niitä lähetetä pilveen. Vie säännöllisesti varmuuskopioita tietojesi suojaamiseksi."
+    },
+    "alpha.version_label": {
+      "en": "GymTrack Athlete Alpha {version} (build {build})",
+      "fi": "GymTrack Urheilija-alpha {version} (versio {build})"
+    },
     "app.message.1_2_reps_left": {
       "en": "1–2 reps left",
       "fi": "1–2 toistoa varastossa"
@@ -192,6 +208,10 @@ globalThis.GYM_I18N_CATALOG = {
     "backup.error.restore": {
       "en": "Restore failed: {error}",
       "fi": "Palautus epäonnistui: {error}"
+    },
+    "backup.note.active_excluded": {
+      "en": "Backups include your plan, completed history, body weight, and settings. They do not include in-progress active workouts.",
+      "fi": "Varmuuskopiot sisältävät ohjelman, valmistuneen historian, kehonpainon ja asetukset. Ne eivät sisällä meneillään olevaa aktiivista treeniä."
     },
     "check_for_updates.button.not_now": {
       "en": "Not now",
@@ -418,12 +438,12 @@ globalThis.GYM_I18N_CATALOG = {
       "fi": "Kuvaa ensin kameran slow-mo-tilassa (1080p/240 fps: Asetukset › Kamera › Tallenna hidastettua). Palaa sitten tänne ja valitse video Kuvakirjastosta."
     },
     "coach_prompt.copy_data": {
-      "en": "You are my strength coach. Below is my recent GymTrack training data (JSON). Review my actual sets, reps, weights, RPE, notes and body weight, then write my next workout plan.\n\nOutput ONLY a JSON code block matching this exact schema (weights in {unit}):\n{schema}\n\nRules: progress weights from logged RPE (at or below target: increase; above target: hold or reduce). Always include 1–2 alternates per exercise for busy equipment and a short description for every exercise and alternate. Keep rest realistic. Set restSecondsNext only when rest before changing movements differs from between-set rest. Set equipment accurately because it controls the plate calculator and bodyweight weight field. Use metric \"height\" only for jump-height tests logged in cm, with bodyweight and weight 0. Use the same superset tag only for adjacent exercises that form one alternating superset. Preserve canonical exercise names where supplied so history matches; descriptions may be in the selected language. Do not translate or alter user notes.\n\nMy data:\n",
-      "fi": "Olet fysiikkavalmentajani. Alla ovat GymTrackista tuodut viimeisimmät harjoittelutietoni (JSON). Arvioi toteutuneet sarjat, toistot, painot, RPE:t, muistiinpanot ja kehonpaino, ja laadi seuraava harjoitteluohjelmani.\n\nVastaa VAIN JSON-koodilohkolla, joka noudattaa täsmälleen tätä rakennetta (painot yksikössä {unit}):\n{schema}\n\nSäännöt: säädä painoja kirjatun RPE:n perusteella (tavoite-RPE tai alle: lisää painoa; yli tavoitteen: pidä ennallaan tai vähennä). Lisää aina 1–2 vaihtoehtoista liikettä ruuhkaisia välineitä varten sekä lyhyt suoritusohje jokaiselle liikkeelle ja vaihtoehdolle. Pidä palautusajat liikkeeseen sopivina. Aseta restSecondsNext vain, kun palautus ennen seuraavaan liikkeeseen siirtymistä eroaa sarjojen välisestä palautuksesta. Aseta equipment oikein, koska se ohjaa levypainolaskuria ja kehonpainoliikkeiden painokenttää. Käytä metric-arvoa \"height\" vain senttimetreinä kirjattaville hyppykorkeustesteille sekä silloin equipment-arvoa \"bodyweight\" ja weight-arvoa 0. Käytä samaa superset-tunnistetta vain peräkkäisille liikkeille, jotka kirjataan yhtenä vuorottelevana supersarjana. Säilytä annetut liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja.\n\nTietoni:\n"
+      "en": "You are my strength coach. Below is my recent GymTrack training data (JSON). Review my actual sets, reps, weights, RPE, notes and body weight, then write my next workout plan.\n\nOutput ONLY a JSON code block matching this exact schema (weights in {unit}):\n{schema}\n\nRules: progress weights from logged RPE (at or below target: increase; above target: hold or reduce). Always include 1–2 alternates per exercise for busy equipment and a short description for every exercise and alternate. Keep rest realistic. Set restSecondsNext only when rest before changing movements differs from between-set rest. Set equipment accurately because it controls the plate calculator and bodyweight weight field. Use metric \"height\" only for jump-height tests logged in cm, with bodyweight and weight 0. Use the same superset tag only for adjacent exercises that form one alternating superset. Preserve canonical exercise names where supplied so history matches; descriptions may be in the selected language. Do not translate or alter user notes. Preserve movementId, side, setupId, loadProfile, libraryEntry and saved library entries for existing movements. Never infer or merge identities from similar names. Alternates may carry their own identity, equipment, metric and measurement targets. Use numbers for durationSeconds, distanceMeters and speedKph, and an object for loadProfile; omit unknown optional fields. Preserve warmup and warmupSets where appropriate. Timed and distance measurements are not repetitions; the set-RPE load estimate is not a whole-session RPE rating.\n\nMy data:\n",
+      "fi": "Olet fysiikkavalmentajani. Alla ovat GymTrack-sovelluksesta tuodut viimeisimmät harjoittelutietoni (JSON). Arvioi toteutuneet sarjat, toistot, painot, RPE:t, muistiinpanot ja kehonpaino, ja laadi seuraava harjoitteluohjelmani.\n\nVastaa VAIN JSON-koodilohkolla, joka noudattaa täsmälleen tätä rakennetta (painot yksikössä {unit}):\n{schema}\n\nSäännöt: säädä painoja kirjatun RPE:n perusteella (tavoite-RPE tai alle: lisää painoa; yli tavoitteen: pidä ennallaan tai vähennä). Lisää aina 1–2 vaihtoehtoista liikettä ruuhkaisia välineitä varten sekä lyhyt suoritusohje jokaiselle liikkeelle ja vaihtoehdolle. Pidä palautusajat liikkeeseen sopivina. Aseta restSecondsNext vain, kun palautus ennen seuraavaan liikkeeseen siirtymistä eroaa sarjojen välisestä palautuksesta. Aseta equipment oikein, koska se ohjaa levypainolaskuria ja kehonpainoliikkeiden painokenttää. Käytä metric-arvoa \"height\" vain senttimetreinä kirjattaville hyppykorkeustesteille sekä silloin equipment-arvoa \"bodyweight\" ja weight-arvoa 0. Käytä samaa superset-tunnistetta vain peräkkäisille liikkeille, jotka kirjataan yhtenä vuorottelevana supersarjana. Säilytä annetut liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja. Säilytä olemassa olevien liikkeiden movementId, side, setupId, loadProfile, libraryEntry ja tallennetut kirjastotietueet. Älä päättele tai yhdistä tunnisteita samankaltaisten nimien perusteella. Vaihtoehdoilla voi olla omat tunnisteet, välineet, mittarit ja mittaustavoitteet. Anna durationSeconds, distanceMeters ja speedKph numeroina ja loadProfile objektina; jätä tuntemattomat valinnaiset kentät pois. Säilytä warmup ja warmupSets tarvittaessa. Aika- ja matkamittaukset eivät ole toistoja; sarjojen RPE:stä laskettu kuormitusarvio ei ole koko harjoituksen RPE-arvio.\n\nTietoni:\n"
     },
     "coach_prompt.share_url": {
-      "en": "You are my strength coach. Fetch my latest GymTrack training data from this URL (JSON):\n{url}\n\nIt contains recent sessions, notes, body weight and my current plan. Review it, then write my next workout plan. Reply ONLY with a JSON code block of type \"workout-plan\" using the same plan field structure: days and exercises with name, sets, reps, weight, targetRpe, restSeconds, optional restSecondsNext, equipment, optional barWeight, optional metric, optional adjacent superset tag, description, and 1–2 alternates. Weights use {unit}. Progress weight from RPE (at or under target: increase; over: hold or reduce). Keep canonical exercise names from the data so history matches; descriptions may be in the selected language. Do not translate or alter user notes. I will paste your JSON back into the app.",
-      "fi": "Olet fysiikkavalmentajani. Hae uusimmat GymTrack-harjoittelutietoni tästä URL-osoitteesta (JSON):\n{url}\n\nTiedot sisältävät viimeisimmät treenit, muistiinpanot, kehonpainon ja nykyisen ohjelman. Arvioi ne ja laadi seuraava harjoitteluohjelmani. Vastaa VAIN \"workout-plan\"-tyyppisellä JSON-koodilohkolla, joka käyttää samaa ohjelmarakennetta: päivät ja liikkeet sisältävät nimen, sarjat, toistot, painon, tavoite-RPE:n, palautusajan, valinnaisen restSecondsNext-arvon, välineen, valinnaisen tangon painon, valinnaisen mittarin, valinnaisen peräkkäisten liikkeiden supersarjatunnisteen, suoritusohjeen ja 1–2 vaihtoehtoa. Painoyksikkö on {unit}. Säädä painoa RPE:n perusteella (tavoite tai alle: lisää; yli tavoitteen: pidä ennallaan tai vähennä). Säilytä tiedoissa olevat liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja. Liitän JSONisi takaisin sovellukseen."
+      "en": "You are my strength coach. Fetch my latest GymTrack training data from this URL (JSON):\n{url}\n\nIt contains recent sessions, notes, body weight and my current plan. Review it, then write my next workout plan. Reply ONLY with a JSON code block of type \"workout-plan\" using the same plan field structure: days and exercises with name, sets, reps, weight, targetRpe, restSeconds, optional restSecondsNext, equipment, optional barWeight, optional metric, optional adjacent superset tag, description, and 1–2 alternates. Weights use {unit}. Progress weight from RPE (at or under target: increase; over: hold or reduce). Keep canonical exercise names from the data so history matches; descriptions may be in the selected language. Do not translate or alter user notes. I will paste your JSON back into the app. Preserve movementId, side, setupId, loadProfile, libraryEntry and saved library entries for existing movements. Never infer or merge identities from similar names. Alternates may carry their own identity, equipment, metric and measurement targets. Use numbers for durationSeconds, distanceMeters and speedKph, and an object for loadProfile; omit unknown optional fields. Preserve warmup and warmupSets where appropriate. Timed and distance measurements are not repetitions; the set-RPE load estimate is not a whole-session RPE rating.\n\nPlan schema (omit unknown optional fields):\n{schema}",
+      "fi": "Olet fysiikkavalmentajani. Hae uusimmat GymTrack-harjoittelutietoni tästä URL-osoitteesta (JSON):\n{url}\n\nTiedot sisältävät viimeisimmät treenit, muistiinpanot, kehonpainon ja nykyisen ohjelman. Arvioi ne ja laadi seuraava harjoitteluohjelmani. Vastaa VAIN \"workout-plan\"-tyyppisellä JSON-koodilohkolla, joka käyttää samaa ohjelmarakennetta: päivät ja liikkeet sisältävät nimen, sarjat, toistot, painon, tavoite-RPE:n, palautusajan, valinnaisen restSecondsNext-arvon, välineen, valinnaisen tangon painon, valinnaisen mittarin, valinnaisen peräkkäisten liikkeiden supersarjatunnisteen, suoritusohjeen ja 1–2 vaihtoehtoa. Painoyksikkö on {unit}. Säädä painoa RPE:n perusteella (tavoite tai alle: lisää; yli tavoitteen: pidä ennallaan tai vähennä). Säilytä tiedoissa olevat liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja. Liitän JSONisi takaisin sovellukseen. Säilytä olemassa olevien liikkeiden movementId, side, setupId, loadProfile, libraryEntry ja tallennetut kirjastotietueet. Älä päättele tai yhdistä tunnisteita samankaltaisten nimien perusteella. Vaihtoehdoilla voi olla omat tunnisteet, välineet, mittarit ja mittaustavoitteet. Anna durationSeconds, distanceMeters ja speedKph numeroina ja loadProfile objektina; jätä tuntemattomat valinnaiset kentät pois. Säilytä warmup ja warmupSets tarvittaessa. Aika- ja matkamittaukset eivät ole toistoja; sarjojen RPE:stä laskettu kuormitusarvio ei ole koko harjoituksen RPE-arvio.\n\nOhjelman rakenne (jätä tuntemattomat valinnaiset kentät pois):\n{schema}"
     },
     "common.action.add": {
       "en": "Add",
@@ -440,6 +460,10 @@ globalThis.GYM_I18N_CATALOG = {
     "common.action.collapse": {
       "en": "Collapse",
       "fi": "Pienennä"
+    },
+    "common.action.continue": {
+      "en": "Continue",
+      "fi": "Jatka"
     },
     "common.action.delete": {
       "en": "Delete",
@@ -460,6 +484,10 @@ globalThis.GYM_I18N_CATALOG = {
     "common.error.copy_failed": {
       "en": "Copy failed",
       "fi": "Kopiointi epäonnistui"
+    },
+    "common.error.invalid_json": {
+      "en": "Invalid JSON",
+      "fi": "Virheellinen JSON"
     },
     "complete_set.message.rest_next_movement": {
       "en": "Rest — next movement",
@@ -691,11 +719,11 @@ globalThis.GYM_I18N_CATALOG = {
     },
     "exercise.model.identity_setup": {
       "en": "Movement history and equipment setup",
-      "fi": "Liikehistoria ja laiteasetukset"
+      "fi": "Liikkeen historia ja laiteasetukset"
     },
     "exercise.model.increment": {
       "en": "Load increment",
-      "fi": "Kuorman korotusväli"
+      "fi": "Painojen korotusväli"
     },
     "exercise.model.invalid": {
       "en": "Check these exercise fields: {fields}",
@@ -1455,7 +1483,7 @@ globalThis.GYM_I18N_CATALOG = {
     },
     "exercises.running.description": {
       "en": "Start at an easy pace, keep your stride comfortable and record time and distance.",
-      "fi": "Aloita rauhallisesti, pidä askel luontevana ja kirjaa aika sekä matka."
+      "fi": "Aloita rauhallisesti, pidä askellus luontevana ja kirjaa aika sekä matka."
     },
     "exercises.running.name": {
       "en": "Running",
@@ -1471,7 +1499,7 @@ globalThis.GYM_I18N_CATALOG = {
     },
     "exercises.seated_dumbbell_press.description": {
       "en": "Sit on a supported bench, brace your trunk and press the dumbbells overhead under control. Lower to a comfortable depth without arching your back.",
-      "fi": "Istu selkänojallisella penkillä, jännitä keskivartalo ja punnerra käsipainot hallitusti ylös. Laske mukavalle syvyydelle selkää notkistamatta."
+      "fi": "Istu selkänojallisella penkillä, jännitä keskivartalo ja työnnä käsipainot hallitusti ylös. Laske mukavalle syvyydelle selkää notkistamatta."
     },
     "exercises.seated_dumbbell_press.name": {
       "en": "Seated Dumbbell Press",
@@ -1487,7 +1515,7 @@ globalThis.GYM_I18N_CATALOG = {
     },
     "exercises.shoulder_press.description": {
       "en": "Brace your trunk and press overhead under control. Keep your ribs down and use a comfortable range of motion. For one-arm work, avoid leaning or twisting.",
-      "fi": "Jännitä keskivartalo ja punnerra hallitusti ylös. Pidä kylkiluut alhaalla ja käytä sopivaa liikerataa. Vältä kallistumista ja kiertymistä yhdellä kädellä tehdessä."
+      "fi": "Jännitä keskivartalo ja työnnä hallitusti ylös. Pidä kylkiluut alhaalla ja käytä sopivaa liikerataa. Vältä kallistumista ja kiertymistä yhdellä kädellä tehdessä."
     },
     "exercises.shoulder_press.name": {
       "en": "Shoulder Press",
@@ -1627,7 +1655,7 @@ globalThis.GYM_I18N_CATALOG = {
     },
     "finish_session.text.session_rpe": {
       "en": "Set-RPE average · load estimate",
-      "fi": "Sarja-RPE:n keskiarvo · kuormitusarvio"
+      "fi": "Sarjan RPE-keskiarvo · arvio kuormituksesta"
     },
     "finish_session.text.working_set_in": {
       "en": "— working sets: {setCount}{warmCount_tr_finish_session_} · duration: {fmtDur_durationMin}.",
@@ -1711,11 +1739,11 @@ globalThis.GYM_I18N_CATALOG = {
     },
     "library.category.isolation": {
       "en": "Isolation",
-      "fi": "Eristävä liike"
+      "fi": "Eristetty liike"
     },
     "library.category.lunge": {
       "en": "Lunge / split squat",
-      "fi": "Askel- ja askelkyykky"
+      "fi": "Askelkyykky"
     },
     "library.category.other": {
       "en": "Other",
@@ -1925,9 +1953,21 @@ globalThis.GYM_I18N_CATALOG = {
       "en": "Plan needs a non-empty \"days\" array.",
       "fi": "Ohjelma tarvitsee vähintään yhden päivän \"days\"-taulukossa."
     },
+    "plan.action.export": {
+      "en": "Export plan",
+      "fi": "Vie ohjelma"
+    },
+    "plan.action.import": {
+      "en": "Import plan",
+      "fi": "Tuo ohjelma"
+    },
     "plan.day.delete.title": {
       "en": "Delete {day}?",
       "fi": "Poistetaanko {day}?"
+    },
+    "plan.export.copied": {
+      "en": "Plan copied to clipboard (contains no history or personal data)",
+      "fi": "Ohjelma kopioitu leikepöydälle (ei sisällä historiaa tai henkilötietoja)"
     },
     "plan.form.day_name": {
       "en": "Day name",
@@ -1937,9 +1977,25 @@ globalThis.GYM_I18N_CATALOG = {
       "en": "Import “{plan}”?",
       "fi": "Tuodaanko ”{plan}”?"
     },
+    "plan.preview.preserves_history": {
+      "en": "Applying this plan replaces your current plan. Your completed workout history and any in-progress workout are preserved.",
+      "fi": "Tämän ohjelman käyttöönotto korvaa nykyisen ohjelmasi. Tallennettu treenihistoria ja meneillään oleva treeni säilytetään."
+    },
+    "plan.preview.summary": {
+      "en": "{days} days · {exercises} exercises",
+      "fi": "{days} päivää · {exercises} liikettä"
+    },
     "plan_import.error.invalid": {
       "en": "Invalid plan: {error}",
       "fi": "Virheellinen ohjelma: {error}"
+    },
+    "plan_import.error.library_must_be_array": {
+      "en": "Plan library must be an array of exercise entries.",
+      "fi": "Ohjelmakirjaston on oltava liikeluettelo."
+    },
+    "plan_import.error.unsupported_version": {
+      "en": "Unsupported plan version: {version}. Please update the app.",
+      "fi": "Tukematon ohjelmaversio: {version}. Päivitä sovellus."
     },
     "plate_calculator.title": {
       "en": "Plate calculator",
@@ -2186,8 +2242,8 @@ globalThis.GYM_I18N_CATALOG = {
       "fi": "Sarjat, toistot ja RPE — lepoajastin toimii automaattisesti."
     },
     "show_onboarding.text.share_your_training_data_with_claude_chatgpt_or_": {
-      "en": "Share your training data with Claude, ChatGPT or Gemini in one tap.",
-      "fi": "Jaa treenitietosi Claudelle, ChatGPT:lle tai Geminille yhdellä painalluksella."
+      "en": "Share your training data with your AI coach in one tap.",
+      "fi": "Jaa treenitietosi tekoälyvalmentajallesi yhdellä painalluksella."
     },
     "show_onboarding.text.your_ai_coach_writes_the_next_plan": {
       "en": "Your AI coach writes the next plan",
@@ -2256,6 +2312,50 @@ globalThis.GYM_I18N_CATALOG = {
     "stepper_info.button.reps": {
       "en": "reps",
       "fi": "toistoa"
+    },
+    "storage.completion.emergency_copied": {
+      "en": "Emergency backup (including active workout) copied to clipboard",
+      "fi": "Hätävarmuuskopio (mukaan lukien aktiivinen treeni) kopioitu leikepöydälle"
+    },
+    "storage.completion.emergency_export": {
+      "en": "Export emergency backup",
+      "fi": "Vie hätävarmuuskopio"
+    },
+    "storage.completion.failed_body": {
+      "en": "Could not save workout history to browser storage. Your active workout is still open so no work is lost. Try saving again or export an emergency backup.",
+      "fi": "Treenihistorian tallennus selaimeen epäonnistui. Aktiivinen treenisi on yhä auki, joten mitään ei menetetty. Yritä tallentaa uudelleen tai vie hätävarmuuskopio."
+    },
+    "storage.completion.failed_title": {
+      "en": "Save failed — Active workout kept safe",
+      "fi": "Tallennus epäonnistui — Aktiivinen treeni tallessa"
+    },
+    "storage.completion.retry": {
+      "en": "Retry save",
+      "fi": "Yritä tallentaa uudelleen"
+    },
+    "storage.corrupt.banner": {
+      "en": "Storage corruption detected. Your unreadable data is preserved.",
+      "fi": "Tallennustilassa havaittiin virheellistä dataa. Luettavissa olematon data säilytetään."
+    },
+    "storage.corrupt.copied": {
+      "en": "Raw data copied to clipboard",
+      "fi": "Raakadata kopioitu leikepöydälle"
+    },
+    "storage.corrupt.copy_raw": {
+      "en": "Copy unreadable raw data",
+      "fi": "Kopioi lukukelvoton raakadata"
+    },
+    "storage.error.corrupt_data": {
+      "en": "Unreadable data detected for {key}. Your stored data was preserved without overwriting.",
+      "fi": "Kohteen {key} tallennusdata ei ole luettavissa. Tallennetut tiedot säilytettiin korvaamatta."
+    },
+    "storage.error.restore_write_failed": {
+      "en": "Failed to write {key} during restore: {error}. Restored data was not applied.",
+      "fi": "Palautuksen kirjoitus epäonnistui kohteelle {key}: {error}. Palautettuja tietoja ei otettu käyttöön."
+    },
+    "storage.error.save_failed": {
+      "en": "Saving failed for {item}. Storage is full or unavailable.",
+      "fi": "Tallennus epäonnistui kohteelle {item}. Tallennustila on täynnä tai ei saatavilla."
     },
     "superset_card.heading": {
       "en": "Superset {group_tag}",
@@ -2342,8 +2442,8 @@ globalThis.GYM_I18N_CATALOG = {
       "fi": "kirjaa CMJ tai vireys napauttamalla"
     },
     "view_active_session.placeholder.how_did_it_go_anything_claude_should_know_sleep_": {
-      "en": "How did it go? Anything Claude should know? (sleep, pain, energy…)",
-      "fi": "Miten meni? Mitä valmentajan tulisi tietää? (uni, kipu, vireys…)"
+      "en": "How did it go? Anything your AI coach should know? (sleep, pain, energy…)",
+      "fi": "Miten meni? Mitä tekoälyvalmentajan olisi hyvä tietää? (uni, kipu, vireys…)"
     },
     "view_active_session.text.add_exercise": {
       "en": "+ Add exercise",
@@ -2401,6 +2501,10 @@ globalThis.GYM_I18N_CATALOG = {
       "en": "Paste the workout-plan JSON code block from your AI coach. It replaces your current plan; your history is kept.",
       "fi": "Liitä tekoälyvalmentajasi antama workout-plan-JSON-koodilohko. Se korvaa nykyisen ohjelmasi, mutta historia säilyy."
     },
+    "view_coach.text.body_weight_log": {
+      "en": "Body weight",
+      "fi": "Kehonpaino"
+    },
     "view_coach.text.copies_a_coaching_prompt_your_last_15_sessions_b": {
       "en": "Copies a coaching prompt + your last 15 sessions, body weight and current plan. Paste it into any AI chat.",
       "fi": "Kopioi valmennus-promptin, 15 viimeisintä treeniäsi, kehonpainon ja nykyisen ohjelman. Liitä ne mihin tahansa tekoälykeskusteluun."
@@ -2455,7 +2559,7 @@ globalThis.GYM_I18N_CATALOG = {
     },
     "view_history.message.rpe_au": {
       "en": "· Set-RPE average {sl_rpe} · estimated load {sl_load} AU{sl_partial}",
-      "fi": "· Sarja-RPE:n keskiarvo {sl_rpe} · kuormitusarvio {sl_load} AU{sl_partial}"
+      "fi": "· Sarjojen RPE-keskiarvo {sl_rpe} · arvio kuormituksesta {sl_load} AU{sl_partial}"
     },
     "view_history.text.best_est_1rm": {
       "en": "Best est. 1RM:",
@@ -2507,7 +2611,7 @@ globalThis.GYM_I18N_CATALOG = {
     },
     "view_history.text.session_rpe_from_only_of_sets_the_rest_were_logg": {
       "en": "* Set-RPE estimate from only {Math_round_sl_coverage_100}% of repetition sets. This is not a whole-session effort rating.",
-      "fi": "* Sarja-RPE:n arvio perustuu vain {Math_round_sl_coverage_100} %:iin toistosarjoista. Se ei ole koko treenin rasittavuusarvio."
+      "fi": "* Sarjojen arvioitu RPE perustuu vain {Math_round_sl_coverage_100} %:iin toistosarjoista. Se ei ole koko treenin rasittavuusarvio."
     },
     "view_history.text.sessions": {
       "en": "Sessions ({sessions_length})",
@@ -2790,5 +2894,5 @@ globalThis.GYM_I18N_CATALOG = {
       "fi": "hyppykorkeus"
     }
   },
-  "version": "276b3061806fd07091c4"
+  "version": "42e0f433a01abd67c472"
 };

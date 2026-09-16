@@ -1,4 +1,4 @@
-# Claude Code handoff — GymTrack closed alpha
+# Development handoff — GymTrack closed alpha
 
 ## What this is
 
@@ -8,7 +8,7 @@ Local preview: `python -m http.server 8765` then open `http://localhost:8765`.
 
 **Files:**
 - `index.html` — app shell and tab bar
-- `app.js` — all logic: state, session tracking, rest timer, plan editing, history, Claude import/export, sync
+- `app.js` — all logic: state, session tracking, rest timer, plan editing, history, AI import/export, sync
 - `styles.css` — dark, mobile-first
 - `sw.js` — offline cache (stale-while-revalidate)
 - `tools/push-plan.mjs` — Node script to push a plan from desktop to the cloud so the phone picks it up on next launch
@@ -95,7 +95,7 @@ Remove all GitHub token / Gist ID logic. Replace with Worker calls that mirror t
 
 Keep the sync status line ("✓ Synced …") — just point it at the Worker.
 
-### Claude tab UI changes
+### AI Coach tab UI changes
 
 Remove: GitHub token input, Gist ID input, their labels and save buttons.
 
@@ -138,7 +138,7 @@ New flow:
 5. Same console output format as current script
 
 Add a comment at the top explaining how to find the UUID:
-- From the app: Claude tab → copy the "Your backup code" value
+- From the app: AI Coach tab → copy the "Your backup code" value
 - Or: `localStorage.getItem('gymtrack_uuid')` in browser devtools on the installed app
 
 ---
@@ -147,7 +147,7 @@ Add a comment at the top explaining how to find the UUID:
 
 - Remove the GitHub token / Gist setup section entirely
 - "No setup required — sync starts automatically" replaces it
-- Update "Using it with Claude": describe the Share URL flow (tap Share → paste into any LLM)
+- Update "Using it with AI assistants": describe the Share URL flow (tap Share → paste into any LLM)
 - Update `tools/push-plan.mjs` docs to reflect UUID-based auth
 - Add a "Data recovery" section: save your backup code; paste it into Restore on a new device
 
@@ -170,7 +170,7 @@ Add a comment at the top explaining how to find the UUID:
 3. `wrangler deploy` from `worker/` — note the `*.workers.dev` URL
 4. Update `WORKER_URL` constant in `app.js`
 5. `git add -A && git commit -m "Replace Gist sync with Cloudflare Worker" && git push`
-6. Test: install on phone, log a session, check sync, tap Share, paste URL into Claude
+6. Test: install on phone, log a session, check sync, tap Share, paste URL into an AI chat
 
 ---
 

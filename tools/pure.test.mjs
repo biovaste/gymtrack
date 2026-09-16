@@ -354,3 +354,27 @@ test('sessionLoad falls back to counting sets when reps are missing', () => {
   ] });
   assert.equal(out.rpe, 7);
 });
+
+
+test('plan endpoint rejects invalid identity and measurement metadata without a library snapshot', async () => {
+  const original = JSON.stringify({type:'gymtrack-backup',plan:{days:[]},sessions:[{id:'keep'}]});
+  for (const bad of [{movementId:''}, {side:'front'}, {metric:'unknown'}, {durationSeconds:'30'}, {loadProfile:{unit:'kg',offset:0,increment:0}}]) {
+    for (const exercise of [{name:'Test',...bad}, {name:'Test',alternates:[{name:'Alternate',...bad}]}]) {
+      const env = {GYMTRACK_DATA:kv(original)};
+      const res = await worker.default.fetch(new Request('https://api.example/data/'+UUID+'/plan', {
+        method:'POST',body:JSON.stringify({days:[{exercises:[exercise]}]})
+      }),env);
+      assert.equal(res.status,400,JSON.stringify(exercise));
+      assert.equal(await env.GYMTRACK_DATA.get(UUID),original);
+    }
+  }
+});
+
+test('forced backup writes still reject malformed JSON and wrong backup type', async () => {
+  for (const body of ['{broken','null','[]','{"type":"workout-plan"}']) {
+    const original=backup(5),env={GYMTRACK_DATA:kv(original)};
+    const res=await worker.default.fetch(new Request('https://api.example/data/'+UUID+'?force=1',{method:'POST',body}),env);
+    assert.equal(res.status,400);
+    assert.equal(await env.GYMTRACK_DATA.get(UUID),original);
+  }
+});

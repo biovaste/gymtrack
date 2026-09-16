@@ -8,7 +8,7 @@
  * so the app knows the cloud copy is newer and pulls it.
  *
  * How to find your UUID:
- *   - From the app: Claude tab → copy the "Your backup code" value
+ *   - From the app: Settings → copy the "Your backup code" value
  *   - Or: localStorage.getItem('gymtrack_uuid') in browser devtools on the installed app
  *
  * UUID resolution order:
@@ -41,7 +41,7 @@ function resolveUUID() {
   try { return readFileSync('.gymtrack-uuid', 'utf8').trim(); } catch {}
   console.error(
     '✗ UUID not found.\n' +
-    '  From the app: Claude tab → copy "Your backup code".\n' +
+    '  From the app: Settings → copy "Your backup code".\n' +
     '  Then: set GYMTRACK_UUID=<uuid>, pass --uuid <uuid>, or save it in .gymtrack-uuid'
   );
   process.exit(1);

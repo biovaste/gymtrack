@@ -1,6 +1,6 @@
 # Schema Reference — GymTrack Skills (Shared)
 
-## GymTrack Claude Export Format (`workout-log`)
+## GymTrack AI Export Format (`workout-log`)
 
 The primary input format produced by the app's "Copy coaching prompt + data" button.
 
@@ -13,7 +13,7 @@ The primary input format produced by the app's "Copy coaching prompt + data" but
   "bodyWeight": [
     { "date": "YYYY-MM-DD", "weight": 82.5 }
   ],
-  "sessions": [ /* last 15 sessions, newest first */ ],
+  "sessions": [ /* last 15 sessions, oldest first */ ],
   "currentPlan": { /* see plan schema below */ }
 }
 ```
@@ -175,21 +175,21 @@ The plan embedded in a `workout-log` export (`currentPlan`) and the format for i
 
 Two constraints on any plan written for the app. Both have already reached the phone broken, and both are now enforced by `tools/push-plan.mjs`, which refuses to push a plan that violates them.
 
-### 1. Exercise names must be unique across the entire plan
+### 1. Legacy names must be unique; explicit movement IDs may repeat
 
-Exercise history, "last time" lookups and the `aliases` map are keyed on the exercise **name globally** — not per day. Two different movements sharing a name silently merge into one progression history, so their loads and RPEs get compared against each other.
+Legacy exercise history and the `aliases` map use canonical exercise names across days. Explicit identities instead use `movementId`, `side`, `setupId`, `metric` and `equipment`; display names may differ across days without splitting that history. Two different movements sharing a name silently merge into one progression history, so their loads and RPEs get compared against each other.
 
 *What this looked like in practice:* `Cable Triceps Extension` sat on both Day A (single-arm, 20 kg) and Day B (two-arm, 40 kg). One name, two movements, one polluted history — and auto-regulation reading a 20 → 40 kg jump as progress.
 
 Disambiguate in the name itself: `… — Single-Arm` / `… — Two-Arm`, `Incline …`, `… (Paused)`.
 
-**Renaming an exercise orphans its history.** When you rename, add an `aliases` entry — `{ "old name lowercased": "New Canonical Name" }` — so past sessions still resolve. Where one old name covers two movements, alias it to whichever has the most history and relabel the minority's session records so each lands on the right canonical name.
+Renaming a legacy exercise requires an explicit history alias if old records should follow the new name. Never infer aliases or rewrite historical records from similar names. Renaming an explicitly identified exercise only changes its display label. Adding a movementId to legacy data starts a separate history; it does not migrate old records.
 
 ### 2. Every weight must be loadable on the actual equipment
 
 Set `equipment` accurately **first** — the weight check depends on it, and it also drives the stepper's increments, whether the plate calculator appears, and whether the weight field is grayed. A cable exercise mislabelled `barbell` defeats all of it.
 
-**The ladder has breakpoints — "round to the nearest 2.5 kg" is wrong.** Dumbbells step 1 kg below 10 kg and 2 kg above it; cable and machine stacks step 2.5 kg below 25 kg and 5 kg above it. So 22.5 kg is a valid cable weight but not a valid dumbbell, and 27.5 kg is neither. The authoritative table is in the project's CLAUDE.md, and `tools/weights.test.mjs` is its executable form.
+**The ladder has breakpoints — "round to the nearest 2.5 kg" is wrong.** Dumbbells step 1 kg below 10 kg and 2 kg above it; cable and machine stacks step 2.5 kg below 25 kg and 5 kg above it. So 22.5 kg is a valid cable weight but not a valid dumbbell, and 27.5 kg is neither. The executable ladder is in app.js and tools/push-plan.mjs, and `tools/weights.test.mjs` is its executable form.
 
 *Signature of this bug in the data:* a `plannedWeight` the athlete never logs, with a nearby value logged instead — planned 22.5 kg → logged 22 kg, twice. Since 2026-07-30 session records carry `equipment`, so this is now **checkable** rather than inferable: compare the planned weight against that equipment's ladder before reading a planned-vs-actual gap as auto-regulation. But `equipment` being *present* doesn't mean it was *declared* — see the field note above. Before trusting the comparison, sanity-check a `barbell` entry against its own weight: a "barbell" load under ~20 kg is the stamped default, not a fact, and belongs in the unknown bucket rather than fed into the barbell ladder.
 
@@ -218,8 +218,9 @@ What the Cloudflare Worker stores and returns on `GET /data/:uuid`.
   "exportedAt": "ISO 8601 timestamp",
   "updatedAt": 1719563400000,
   "plan": { /* workout-plan */ },
-  "sessions": [ /* all sessions, newest first */ ],
+  "sessions": [ /* all sessions, oldest first */ ],
   "bodyWeight": [ /* all entries */ ],
+  "aliases": { "old name lowercased": "Canonical Name" },
   "settings": { "unit": "kg", "sound": true, "vibrate": true }
 }
 ```
@@ -248,9 +249,9 @@ Computed at analysis time — not stored in the JSON.
 | `neuromuscularFatigueIndex` | VLA > 0.20 OR rpeEscalation ≥ 1.5 → High; else derived from magnitude | |
 | `cmjDelta` | `current_cmjCm − previous_session_cmjCm` | Requires readiness block in both sessions |
 | `bwTrend` | `(latest_bw − mean_of_7d_bw) / mean_of_7d_bw` | Context modifier only |
-| `sessionRpe` | Rep-weighted mean of working-set `rpe`: `Σ(rpe × reps) / Σreps`, rounded to 1dp | Foster's sRPE. Exclude warm-ups and height-metric exercises entirely. A rep-less set weighs 1, not 0 |
-| `sessionLoad` | `sessionRpe × durationMin`, rounded to an integer (AU) | The comparable unit across sessions and the one to sum for weekly load |
-| `rpeCoverage` | `working_sets_with_rpe / working_sets` (height exercises excluded from both) | **< 0.60 → report the number as partial and do not draw fatigue conclusions from it.** 0 → no session RPE exists; say so rather than substituting a guess |
+| `sessionRpe` | Rep-weighted mean of working-set `rpe`: `Σ(rpe × reps) / Σreps`, rounded to 1dp | This is a set-RPE proxy, not a whole-session RPE rating. Exclude warm-ups and all non-load exercises. A rep-less set weighs 1, not 0 |
+| `sessionLoad` | `sessionRpe × durationMin`, rounded to an integer (AU) | Estimated load proxy only; compare sessions with similar measurement coverage |
+| `rpeCoverage` | `working_sets_with_rpe / working_sets` (all non-load exercises excluded from both) | **< 0.60 → report the number as partial and do not draw fatigue conclusions from it.** 0 → no session RPE exists; say so rather than substituting a guess |
 | `jumpBest` | `max(sets[].heightCm)` per `"height"` exercise per session | Training output, **not** a readiness signal — see `periodization.md §D` |
 
 ---
@@ -278,3 +279,14 @@ RPE and notes are optional but unlock Medium/High confidence. All `planned*` fie
 | `/data/:uuid/plan` | POST | Safe plan-only update (preserves sessions + BW) |
 
 **Plan-only update** (`POST /data/:uuid/plan`) is the preferred path when only the plan changes — it fetches the existing backup, replaces `plan`, updates `updatedAt`, and writes back. Sessions and body weight are never touched.
+
+## Current optional schema fields
+
+The version remains 1: these are additive fields, not a migration that rewrites history. See [the current model and library documentation](../../../README.md#movement-equipment-and-measurement-fields).
+
+- Exercises and alternates may carry `movementId`, `side` (`unspecified`, `left`, `right`, `bilateral`), `setupId`, `loadProfile` and `libraryEntry`. New session exercise records snapshot these fields and their descriptions.
+- `loadProfile` is an object with `unit`, nonnegative `offset`, and either positive `increment` or ascending total `loads`. Preserve the recorded profile when comparing historical sessions.
+- `metric` supports `load`, `height`, `duration`, `distance` and `cardio`. Planned and actual timed/distance fields are numeric `durationSeconds`, `distanceMeters` and `speedKph`; actual values live in `sets`. Pace derives from actual time and distance when both exist. Never reinterpret these as repetitions or include non-load sets in volume, estimated 1RM or the rep-weighted RPE proxy.
+- `plan.library` saves reusable entries with `id`, `name`, `movement`, `category`, `muscles`, `equipment`, `position`, `execution`, `metric`, `description` and `aliases`. A selected exercise stores a full `libraryEntry` snapshot and matching `movementId === libraryEntry.id`. Preserve IDs and metadata, including in alternates. Library aliases aid discovery and are separate from backup-level historical aliases.
+- Blank exercise descriptions inherit library instructions; nonempty descriptions override them. Plan replacements merge saved library entries by explicit ID; full backup restores replace the backup.
+- AI exports include `measurementNotes`, the last 20 body-weight entries, the last 15 sessions in chronological order, and `currentPlan`. Full backups include all records and the historical `aliases` map.

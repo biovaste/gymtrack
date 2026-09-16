@@ -1,0 +1,166 @@
+{
+  "type": "workout-plan",
+  "version": 1,
+  "name": "Prototype • all measurements",
+  "library": [
+    {
+      "id": "custom:prototype-press",
+      "name": "Prototype press",
+      "movement": "Shoulder press",
+      "category": "press",
+      "muscles": [
+        "shoulders"
+      ],
+      "equipment": "machine",
+      "position": "Seated",
+      "execution": "One arm",
+      "metric": "load",
+      "description": "Use a comfortable range.",
+      "aliases": [
+        "Test press"
+      ]
+    }
+  ],
+  "days": [
+    {
+      "id": "all",
+      "name": "All measurements",
+      "warmup": [
+        {
+          "name": "Easy bike",
+          "detail": "Optional preparation"
+        }
+      ],
+      "exercises": [
+        {
+          "name": "Press left",
+          "sets": 2,
+          "reps": "8-10",
+          "weight": 28,
+          "targetRpe": 8,
+          "restSeconds": 30,
+          "metric": "load",
+          "equipment": "machine",
+          "movementId": "custom:prototype-press",
+          "libraryEntry": {
+            "id": "custom:prototype-press",
+            "name": "Prototype press",
+            "movement": "Shoulder press",
+            "category": "press",
+            "muscles": [
+              "shoulders"
+            ],
+            "equipment": "machine",
+            "position": "Seated",
+            "execution": "One arm",
+            "metric": "load",
+            "description": "Use a comfortable range.",
+            "aliases": [
+              "Test press"
+            ]
+          },
+          "side": "left",
+          "setupId": "Stack A",
+          "loadProfile": {
+            "unit": "kg",
+            "offset": 0,
+            "increment": 7
+          },
+          "warmupSets": 1,
+          "superset": "A",
+          "alternates": [
+            {
+              "name": "Dumbbell press",
+              "movementId": "db-press",
+              "side": "left",
+              "metric": "load",
+              "equipment": "dumbbell",
+              "weight": 12
+            }
+          ]
+        },
+        {
+          "name": "Press right",
+          "sets": 2,
+          "reps": "8-10",
+          "weight": 28,
+          "targetRpe": 8,
+          "restSeconds": 30,
+          "metric": "load",
+          "equipment": "machine",
+          "movementId": "custom:prototype-press",
+          "libraryEntry": {
+            "id": "custom:prototype-press",
+            "name": "Prototype press",
+            "movement": "Shoulder press",
+            "category": "press",
+            "muscles": [
+              "shoulders"
+            ],
+            "equipment": "machine",
+            "position": "Seated",
+            "execution": "One arm",
+            "metric": "load",
+            "description": "Use a comfortable range.",
+            "aliases": [
+              "Test press"
+            ]
+          },
+          "side": "right",
+          "setupId": "Stack A",
+          "loadProfile": {
+            "unit": "kg",
+            "offset": 0,
+            "increment": 7
+          },
+          "superset": "A"
+        },
+        {
+          "name": "Jump",
+          "sets": 2,
+          "reps": "8-10",
+          "weight": 0,
+          "targetRpe": 8,
+          "restSeconds": 30,
+          "metric": "height",
+          "equipment": "bodyweight"
+        },
+        {
+          "name": "Hold",
+          "sets": 2,
+          "reps": "8-10",
+          "weight": 0,
+          "targetRpe": 8,
+          "restSeconds": 30,
+          "metric": "duration",
+          "equipment": "bodyweight",
+          "durationSeconds": 30
+        },
+        {
+          "name": "Carry",
+          "sets": 2,
+          "reps": "8-10",
+          "weight": 12,
+          "targetRpe": 8,
+          "restSeconds": 30,
+          "metric": "distance",
+          "equipment": "dumbbell",
+          "distanceMeters": 20
+        },
+        {
+          "name": "Treadmill",
+          "sets": 2,
+          "reps": "8-10",
+          "weight": 0,
+          "targetRpe": 8,
+          "restSeconds": 30,
+          "metric": "cardio",
+          "equipment": "bodyweight",
+          "durationSeconds": 300,
+          "distanceMeters": 1000,
+          "speedKph": 12
+        }
+      ]
+    }
+  ]
+}

@@ -34,7 +34,7 @@ Before any interaction with the user, gather the following from available source
 - The gym's **loadable-weight ladder** (plate, dumbbell and stack increments) — every weight you write must land on it. See "Plan Authoring Constraints" in `../shared/schema-reference.md`
 - Whether any exercise uses `metric: "height"` — **jumps do not progress by adding load.** Report the height trend and adjust attempt count or placement; never write a weight onto a height-metric exercise
 
-**From the file system (Claude Code only):**
+**From the file system (with file and shell access):**
 - Search for a phase-level training plan file (e.g. `phase2-training-plan.md`, `training-plan.md`, or similar in `Physical Training/` or the project root)
 - If found: read it — it is the **source of truth** for exercises, starting weights, progression scheme, and any movement restrictions
 - If not found: note this; you will rely on `currentPlan` from the workout-log data instead
@@ -50,7 +50,7 @@ Accept any of:
 | Source | How to access |
 |--------|--------------|
 | `workout-log` JSON block | User pastes it — parse directly |
-| Cloudflare share URL | Fetch via shell: `curl "https://api.gymtrack.hithitpull.fi/data/{uuid}"` (Claude Code only) |
+| Cloudflare share URL | Fetch via shell: `curl "https://api.gymtrack.hithitpull.fi/data/{uuid}"` (with file and shell access) |
 | Plain UUID | Fetch from `https://api.gymtrack.hithitpull.fi/data/{uuid}` |
 | Verbal or text description | Standalone mode — flag **Low confidence** explicitly in output |
 
@@ -65,6 +65,10 @@ Extract from the data:
 ## Phase 2 — Last Week Analysis
 
 Compute only from signals that were actually logged. **Never infer a missing signal.**
+
+**Sessions not logged in GymTrack cannot be summarised.** Runs and any other non-gym training
+aren't in this data source at all — mark them `[not logged — ask]` and carry the gap into Phase 3
+rather than filling it from the training plan.
 
 | Signal | How to compute | Flag threshold |
 |--------|----------------|----------------|
@@ -95,6 +99,7 @@ To plan next week well, I need a few quick answers:
 1. How many gym/training sessions can you fit? (1–N)
 2. Other physical activity: which days, and what type/intensity?
    (e.g. sport practice, matches, bike commutes, hikes — whatever competes for recovery)
+   If you ran or trained outside the gym last week: distance, time and pace for each?
 3. Any schedule constraints? (travel, early mornings off, social commitments, etc.)
 4. How are you feeling today — energy (1–10) and soreness (1–10)?
 5. Anything from last week worth flagging? (niggles, a session you skipped for a reason, etc.)
@@ -217,14 +222,14 @@ Generate the complete updated `workout-plan` JSON in a code fence:
 }
 ```
 
-- **Claude Code:** Offer to push automatically:
+- **AI assistant with shell access:** Offer to push automatically:
   ```bash
   node tools/push-plan.mjs <path-to-json>
   ```
   Write the JSON to the scratchpad directory first, then run the push. The plan-only Worker endpoint (`POST /data/:uuid/plan`) preserves all sessions and body weight.
 
   The script **validates before it pushes** and exits non-zero on duplicate exercise names or weights that are not loadable on the declared `equipment`. If it refuses, fix the plan — do not reach for `--force`, and never present a refused plan to the user as pushed. Warnings (alternate weights, non-kg units) do not block the push but are worth reading.
-- **Standalone / Cowork:** Instruct the user to paste the JSON block into the app's Claude tab → "Import a plan from Claude".
+- **Chat-only assistant:** Instruct the user to paste the JSON block into the app's AI Coach tab → "Import a plan".
 - Always show the JSON regardless of mode (transparency + manual fallback).
 
 **2. Create a weekly plan file?**

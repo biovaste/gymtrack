@@ -19,7 +19,7 @@ const fixture = await mkdtemp(path.join(tmp, 'i18n-browser-'));
 await cp(path.join(root, 'locales'), path.join(fixture, 'locales'), {
   recursive: true, filter: src => !src.endsWith('.review.lock')
 });
-const files = ['index.html', 'app.js', 'workout-model.js', 'exercise-library.js', 'styles.css', 'i18n.js', 'exercises.js', 'sw.js',
+const files = ['index.html', 'app-config.js', 'app.js', 'workout-model.js', 'exercise-library.js', 'styles.css', 'i18n.js', 'exercises.js', 'sw.js',
   'manifest.webmanifest', 'icon-180.png', 'icon-512.png', 'locales/catalog.js'];
 const server = createServer(async (req, res) => {
   const pathname = new URL(req.url, 'http://localhost').pathname;

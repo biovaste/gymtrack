@@ -101,12 +101,14 @@ export default {
       const body = await request.text();
       if (body.length > MAX_BODY) return json({ error: 'Payload too large' }, 413);
 
+      let incoming;
+      try { incoming = JSON.parse(body); } catch { return json({ error: 'Invalid JSON' }, 400); }
+      if (!incoming || incoming.type !== 'gymtrack-backup') return json({ error: 'Invalid backup' }, 400);
+
       // Stale-write guard: a device sitting on old state must not clobber a
       // newer backup. The client answers a 409 by reconciling and retrying.
       // ?force=1 is the deliberate-overwrite escape hatch for the CLI.
       if (url.searchParams.get('force') !== '1') {
-        let incoming = null;
-        try { incoming = JSON.parse(body); } catch { return json({ error: 'Invalid JSON' }, 400); }
         const existing = await env.GYMTRACK_DATA.get(uuid);
         if (existing) {
           let stored = null;
@@ -147,9 +149,9 @@ export default {
         if (!newPlan || typeof newPlan !== 'object' || !Array.isArray(newPlan.days)) return json({ error: 'Invalid plan' }, 400);
         const invalid = newPlan.library == null ? [] : WorkoutModel.libraryListErrors(newPlan.library);
         for (const day of newPlan.days) for (const e of day.exercises || []) {
-          for (const x of [e, ...(e.alternates || [])]) if (x.libraryEntry != null) invalid.push(...WorkoutModel.errors(x));
+          for (const x of [e, ...(e.alternates || [])]) invalid.push(...WorkoutModel.errors(x));
         }
-        if (invalid.length) return json({ error: 'Invalid library data' }, 400);
+        if (invalid.length) return json({ error: 'Invalid plan data: ' + invalid.join(', ') }, 400);
         newPlan.library = ExerciseLibrary.importLibrary(backup.plan || {}, newPlan);
       } catch { return json({ error: 'Invalid library data' }, 400); }
       backup.plan = newPlan;

@@ -3,6 +3,31 @@
 Known bugs and deferred cleanups, each verified present in `main` as of the commit that added it
 here.
 
+## Open — The sync API still accepts unauthenticated writes (2026-09-12)
+
+**`GYMTRACK_WRITE_SECRET` is not set on the Worker, so `checkWrite()` is inert.** Any
+`POST /data/<uuid>` succeeds with no token, for any UUID. The README describes this as the
+rollout window that lets the API deploy ahead of the phone; that window is still open, and
+the phone has been live for weeks. Until the secret is set, anyone who learns a share URL —
+which is deliberately pasted into AI chats — can also overwrite that training history.
+
+Found on 2026-09-12 while verifying demo mode: two accidental non-demo page loads against a
+local server created a real KV entry with no write token presented.
+
+Fix: `cd worker && wrangler secret put GYMTRACK_WRITE_SECRET`, then derive the token with
+`node tools/write-token.mjs <uuid>` and paste it into Settings → **Write token** on the
+phone, and set `GYMTRACK_WRITE_TOKEN` on the desktop. Do the phone and desktop first, or the
+next sync fails with a 401 mid-workout. See README, "The write token".
+
+### Stray KV entry — leave it alone for now
+
+`ee88b033-af5d-427f-9200-dbc3faa33cdf` is junk, created by those same two page loads on
+2026-09-12. It holds the default starter plan, 0 sessions, 0 body-weight entries,
+`updatedAt: 0`. It is **not** Henri's data and nothing references it. Deliberately not
+deleted — recorded here so a future session doesn't rediscover it and mistake it for a real
+account, or delete something else by guessing. The sync API has no delete route; removing it
+means `wrangler kv key delete` against the `GYMTRACK_DATA` namespace.
+
 ## Open — Exercise library entry paths (2026-09-08)
 
 **Unknown exercises bypass the library choice on import and mid-workout entry.**
@@ -20,6 +45,7 @@ import cancellation, active-workout safety and all persistence paths with focuse
 tests. Entry points: normalizePlan/import-plan and sessionAddExerciseModal in app.js.
 
 Deferred explicitly by Henri for the library v1 release; not fixed in this release.
+Scheduled in `ROADMAP.md` Phase 2, before native exercise-entry screens are finalized.
 
 ## Resolved
 
@@ -43,7 +69,7 @@ bug is and what it costs — not just what to change.
 
 - **Locked-screen rest audio.** iOS suspends Web Audio when the screen locks. The current fix
   covers foreground/screen-on only. The real answer is a notification or the native wrapper in
-  `ROADMAP.md` Phase 3.
+  `ROADMAP.md` Phase 1 prototype and Phase 3 delivery.
 - **The weight ladder is duplicated** in `app.js` and `tools/push-plan.mjs`. A classic browser
   script and a Node ESM module with no build step between them cannot share a module.
   `tools/weights.test.mjs` sweeps both copies and fails on any disagreement — that is the
