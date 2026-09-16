@@ -310,3 +310,40 @@ code.inline { background: var(--bg2); border: 1px solid var(--border); border-ra
 
 /* Keep library actions within reach while browsing a long result list. */
 #library-results { max-height: 32vh; overflow-y: auto; overscroll-behavior: contain; }
+
+/* ----- exercise reordering ----- */
+/* The handle is the only drag origin; touch-action:none lets a press-and-hold drag
+   start without the browser claiming the gesture for scrolling. */
+.drag-handle { color: var(--muted); padding: 8px 4px; touch-action: none; cursor: grab;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; flex: none; }
+.drag-handle:focus-visible, .move-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.move-btn { padding: 6px 8px; min-width: 32px; color: var(--muted); flex: none; }
+.plan-group { border-left: 2px solid var(--border); padding-left: 6px; }
+.reorder-unit.drag-source { opacity: .35; }
+.drag-preview { position: fixed; z-index: 45; pointer-events: none; max-height: 180px; overflow: hidden;
+  opacity: .94; transform: scale(1.02); box-shadow: 0 14px 40px rgba(0,0,0,.6); border-radius: var(--radius);
+  background: var(--card); }
+.drop-indicator { position: fixed; z-index: 46; height: 4px; border-radius: 99px; background: var(--accent);
+  pointer-events: none; box-shadow: 0 0 0 3px rgba(79,140,255,.25); }
+.drop-indicator.noop { background: var(--border); box-shadow: none; }
+body.dragging { -webkit-user-select: none; user-select: none; cursor: grabbing; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ----- exercise timer (sets prescribed by time) ----- */
+.ex-timer { margin-top: 10px; }
+.ex-timer.idle { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ex-timer-start { white-space: nowrap; }
+.ex-timer-start { display: flex; align-items: center; gap: 6px; }
+.ex-timer.running, .ex-timer.paused, .ex-timer.expired { border: 1px solid var(--accent); border-radius: 10px; padding: 10px; background: rgba(79,140,255,.06); }
+.ex-timer.paused { border-color: var(--amber); background: rgba(255,176,46,.06); }
+.ex-timer.expired { border-color: var(--green); background: rgba(62,207,142,.08); }
+.ex-timer-clock { font-size: 32px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.ex-timer-actions { gap: 8px; flex-wrap: wrap; }
+.reorder-cluster { display: flex; flex-direction: column; align-items: center; flex: none; margin-left: -6px; }
+.reorder-cluster .move-btn { padding: 2px 8px; min-height: 30px; border: 0; }
+.reorder-cluster .drag-handle { padding: 4px 8px; }
+/* Day actions wrap instead of clipping with long Finnish labels or larger text. */
+.wrap-row { flex-wrap: wrap; row-gap: 8px; }
+/* Grip + label + round + move buttons wrap on narrow phones / larger text. */
+.superset-head { flex-wrap: wrap; row-gap: 4px; }
+.superset-head .grow { min-width: auto; } /* wrap the row instead of squeezing the label */

@@ -31939,6 +31939,441 @@
       "status": "draft",
       "origin": "source",
       "history": []
+    },
+    "reorder.handle.label": {
+      "revision": "57cd640b1bc250af418b",
+      "source": {
+        "en": "Reorder {exercise}: hold and drag, or use the arrow keys",
+        "fi": "Järjestä {exercise}: pidä pohjassa ja vedä tai käytä nuolinäppäimiä",
+        "context": "Accessible name of the drag handle on an exercise or superset card; the placeholder is the exercise or superset being moved",
+        "screen": "Plan editor and active workout",
+        "role": "button label",
+        "examples": [
+          "exercise"
+        ]
+      },
+      "fi": "Järjestä {exercise}: pidä pohjassa ja vedä tai käytä nuolinäppäimiä",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "reorder.handle.title": {
+      "revision": "80e84b5f5068be392308",
+      "source": {
+        "en": "Hold and drag to reorder",
+        "fi": "Pidä pohjassa ja vedä järjestääksesi",
+        "context": "Tooltip on the drag handle that reorders exercises",
+        "screen": "Plan editor and active workout",
+        "role": "tooltip"
+      },
+      "fi": "Pidä pohjassa ja vedä järjestääksesi",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "reorder.move_up.label": {
+      "revision": "a780f7c1541439d64ee6",
+      "source": {
+        "en": "Move {exercise} up",
+        "fi": "Siirrä {exercise} ylös",
+        "context": "Accessible alternative to dragging: move this exercise or whole superset one position earlier",
+        "screen": "Plan editor and active workout",
+        "role": "button label",
+        "examples": [
+          "exercise"
+        ]
+      },
+      "fi": "Siirrä {exercise} ylös",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "reorder.move_down.label": {
+      "revision": "7f32504f8780dc915aa5",
+      "source": {
+        "en": "Move {exercise} down",
+        "fi": "Siirrä {exercise} alas",
+        "context": "Accessible alternative to dragging: move this exercise or whole superset one position later",
+        "screen": "Plan editor and active workout",
+        "role": "button label",
+        "examples": [
+          "exercise"
+        ]
+      },
+      "fi": "Siirrä {exercise} alas",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "reorder.error.not_saved": {
+      "revision": "c307b9a245f67b55e872",
+      "source": {
+        "en": "Order not saved. The previous order is back.",
+        "fi": "Järjestystä ei tallennettu. Aiempi järjestys palautettiin.",
+        "context": "Shown when saving a new exercise order fails and the previous order is restored",
+        "screen": "Plan editor and active workout",
+        "role": "error message"
+      },
+      "fi": "Järjestystä ei tallennettu. Aiempi järjestys palautettiin.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "reorder.announce.moved": {
+      "revision": "c297119e4a5d62ce6cf4",
+      "source": {
+        "en": "{exercise} moved to position {position} of {total}",
+        "fi": "{exercise} siirretty kohtaan {position}/{total}",
+        "context": "Screen reader announcement after an exercise or superset has been moved",
+        "screen": "Plan editor and active workout",
+        "role": "status message",
+        "examples": [
+          "exercise",
+          "position",
+          "total"
+        ]
+      },
+      "fi": "{exercise} siirretty kohtaan {position}/{total}",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "timer.action.start": {
+      "revision": "e92c327d2a910dd35cd1",
+      "source": {
+        "en": "Start timer",
+        "fi": "Käynnistä ajastin",
+        "context": "Starts the countdown for a set prescribed by time (not the rest timer)",
+        "screen": "Active workout",
+        "role": "button"
+      },
+      "fi": "Käynnistä ajastin",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "timer.text.target": {
+      "revision": "93c9f875d80a52d7e1eb",
+      "source": {
+        "en": "Target {time}",
+        "fi": "Tavoite {time}",
+        "context": "Target duration for a timed set, formatted as minutes:seconds",
+        "screen": "Active workout",
+        "role": "text",
+        "examples": [
+          "time"
+        ]
+      },
+      "fi": "Tavoite {time}",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "timer.status.running": {
+      "revision": "a4447e67d2ab76bf7948",
+      "source": {
+        "en": "Counting down from {time}",
+        "fi": "Lasketaan alas ajasta {time}",
+        "context": "Status under the exercise timer while it runs",
+        "screen": "Active workout",
+        "role": "status message",
+        "examples": [
+          "time"
+        ]
+      },
+      "fi": "Lasketaan alas ajasta {time}",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "timer.status.paused": {
+      "revision": "38b1fbdde521e834a85c",
+      "source": {
+        "en": "Paused · target {time}",
+        "fi": "Tauolla · tavoite {time}",
+        "context": "Status under the exercise timer while paused",
+        "screen": "Active workout",
+        "role": "status message",
+        "examples": [
+          "time"
+        ]
+      },
+      "fi": "Tauolla · tavoite {time}",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "timer.status.finished": {
+      "revision": "5b51c9a424f3faaf60b3",
+      "source": {
+        "en": "Time's up: {time} done. Log the set when ready.",
+        "fi": "Aika täynnä: {time} tehty. Kirjaa sarja, kun olet valmis.",
+        "context": "Exercise timer reached its target. The set is NOT logged automatically; the athlete confirms it",
+        "screen": "Active workout",
+        "role": "status message",
+        "examples": [
+          "time"
+        ]
+      },
+      "fi": "Aika täynnä: {time} tehty. Kirjaa sarja, kun olet valmis.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "timer.label": {
+      "revision": "c31f587da19cb34ed824",
+      "source": {
+        "en": "Exercise timer for {exercise}",
+        "fi": "Liikkeen ajastin: {exercise}",
+        "context": "Accessible group label for the exercise timer controls",
+        "screen": "Active workout",
+        "role": "accessible label",
+        "examples": [
+          "exercise"
+        ]
+      },
+      "fi": "Liikkeen ajastin: {exercise}",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "timer.action.pause": {
+      "revision": "301cc26987b5f058ca00",
+      "source": {
+        "en": "Pause",
+        "fi": "Tauko",
+        "context": "Pauses the exercise timer",
+        "screen": "Active workout",
+        "role": "button"
+      },
+      "fi": "Tauko",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "timer.action.resume": {
+      "revision": "31f7d6c23ceb819bf288",
+      "source": {
+        "en": "Resume",
+        "fi": "Jatka",
+        "context": "Resumes a paused exercise timer",
+        "screen": "Active workout",
+        "role": "button"
+      },
+      "fi": "Jatka",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "timer.action.reset": {
+      "revision": "5cb4b0bb7c7c310933c0",
+      "source": {
+        "en": "Reset",
+        "fi": "Nollaa",
+        "context": "Resets a paused exercise timer back to its full target without starting it",
+        "screen": "Active workout",
+        "role": "button"
+      },
+      "fi": "Nollaa",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "timer.action.cancel": {
+      "revision": "7b7b9c32c95da329ee9b",
+      "source": {
+        "en": "Cancel timer",
+        "fi": "Peru ajastin",
+        "context": "Removes the exercise timer without logging anything",
+        "screen": "Active workout",
+        "role": "button label"
+      },
+      "fi": "Peru ajastin",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "timer.action.log": {
+      "revision": "3118b923d385cfe57b4f",
+      "source": {
+        "en": "Log {time}",
+        "fi": "Kirjaa {time}",
+        "context": "Writes the elapsed time into the set and logs it; starts rest as usual",
+        "screen": "Active workout",
+        "role": "button",
+        "examples": [
+          "time"
+        ]
+      },
+      "fi": "Kirjaa {time}",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "timer.text.foreground_only": {
+      "revision": "7fd72157ebf5b2c69414",
+      "source": {
+        "en": "Keep the app open. A locked or backgrounded phone may not play the alarm.",
+        "fi": "Pidä sovellus auki. Lukittu tai taustalla oleva puhelin ei välttämättä soita hälytystä.",
+        "context": "Limitation of the web app: no guaranteed alarm while the phone is locked or the app is suspended",
+        "screen": "Active workout",
+        "role": "help text"
+      },
+      "fi": "Pidä sovellus auki. Lukittu tai taustalla oleva puhelin ei välttämättä soita hälytystä.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "timer.error.nothing_elapsed": {
+      "revision": "96b8707d6e66c93a2f59",
+      "source": {
+        "en": "No time has elapsed yet. Start the timer or enter the duration.",
+        "fi": "Aikaa ei ole vielä kulunut. Käynnistä ajastin tai syötä kesto.",
+        "context": "Log was pressed on an exercise timer with zero elapsed time",
+        "screen": "Active workout",
+        "role": "error message"
+      },
+      "fi": "Aikaa ei ole vielä kulunut. Käynnistä ajastin tai syötä kesto.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "exercise.added_load.chip": {
+      "revision": "afef6e126759d8dc3e4b",
+      "source": {
+        "en": "added weight",
+        "fi": "lisäpaino",
+        "context": "Short chip suffix on a bodyweight exercise logged with external load added (belt, vest)",
+        "screen": "Exercise cards and plan",
+        "role": "chip"
+      },
+      "fi": "lisäpaino",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "exercise.added_load.label": {
+      "revision": "db7f4b4e1d68ad119f34",
+      "source": {
+        "en": "Added weight ({unit})",
+        "fi": "Lisäpaino ({unit})",
+        "context": "Field label: external load added on top of body weight; 0 means bodyweight only",
+        "screen": "Exercise editor and workout",
+        "role": "field label",
+        "examples": [
+          "unit"
+        ]
+      },
+      "fi": "Lisäpaino ({unit})",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "exercise.added_load.negative": {
+      "revision": "08e762795c4eb7478664",
+      "source": {
+        "en": "Added weight cannot be negative. Assisted variations are not supported yet.",
+        "fi": "Lisäpaino ei voi olla negatiivinen. Avustettuja versioita ei vielä tueta.",
+        "context": "Validation error for a negative added load; assistance is deliberately not represented as negative weight",
+        "screen": "Exercise editor",
+        "role": "error message"
+      },
+      "fi": "Lisäpaino ei voi olla negatiivinen. Avustettuja versioita ei vielä tueta.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "exercise.added_load.hint": {
+      "revision": "c7e5c8f3dc5f38360def",
+      "source": {
+        "en": "Only the extra load. 0 = bodyweight only. Steps of {step} {unit}.",
+        "fi": "Vain lisäkuorma. 0 = pelkkä kehonpaino. Askel {step} {unit}.",
+        "context": "Hint under the added weight field; body weight is never added to this number",
+        "screen": "Exercise editor",
+        "role": "help text",
+        "examples": [
+          "step",
+          "unit"
+        ]
+      },
+      "fi": "Vain lisäkuorma. 0 = pelkkä kehonpaino. Askel {step} {unit}.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "exercise.added_load.toggle": {
+      "revision": "4627f391d972b4ad45e2",
+      "source": {
+        "en": "Log added weight",
+        "fi": "Kirjaa lisäpaino",
+        "context": "Checkbox for a bodyweight exercise (weighted pull-up, dip) to record external load",
+        "screen": "Exercise editor",
+        "role": "checkbox label"
+      },
+      "fi": "Kirjaa lisäpaino",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "exercise.added_load.toggle_hint": {
+      "revision": "18348edad96f0ef923b9",
+      "source": {
+        "en": "Belt, vest or dumbbell. Tracked separately from bodyweight-only history.",
+        "fi": "Vyö, liivi tai käsipaino. Seurataan erillään pelkän kehonpainon historiasta.",
+        "context": "Explains that enabling added weight starts a separate history from earlier bodyweight-only records",
+        "screen": "Exercise editor",
+        "role": "help text"
+      },
+      "fi": "Vyö, liivi tai käsipaino. Seurataan erillään pelkän kehonpainon historiasta.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "history.added_load.best": {
+      "revision": "f52b020f61995ea31b1f",
+      "source": {
+        "en": "Heaviest added weight",
+        "fi": "Suurin lisäpaino",
+        "context": "Progress headline for a bodyweight exercise with added load",
+        "screen": "History",
+        "role": "text"
+      },
+      "fi": "Suurin lisäpaino",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "history.added_load.no_e1rm": {
+      "revision": "6c4d16a7f4f7acab4667",
+      "source": {
+        "en": "(no estimated 1RM: body weight is not included)",
+        "fi": "(ei arvioitua 1RM:ää: kehonpainoa ei lasketa mukaan)",
+        "context": "Explains why estimated one-rep max is not shown for added-load exercises",
+        "screen": "History",
+        "role": "text"
+      },
+      "fi": "(ei arvioitua 1RM:ää: kehonpainoa ei lasketa mukaan)",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "history.added_load.top": {
+      "revision": "49cb40d69ef2b8368164",
+      "source": {
+        "en": "top +{weight} {unit}",
+        "fi": "paras +{weight} {unit}",
+        "context": "Per-session heaviest added load in the history list",
+        "screen": "History",
+        "role": "text",
+        "examples": [
+          "weight",
+          "unit"
+        ]
+      },
+      "fi": "paras +{weight} {unit}",
+      "status": "draft",
+      "origin": "source",
+      "history": []
     }
   }
 }

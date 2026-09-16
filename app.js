@@ -349,7 +349,9 @@ const ICONS = {
   chevUp: '<path d="M6 15l6-6 6 6"/>',
   video: '<rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="M15.5 11l6-3.5v9l-6-3.5"/>',
   copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
-  link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>'
+  link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+  grip: '<circle cx="9" cy="6" r="1.2"/><circle cx="15" cy="6" r="1.2"/><circle cx="9" cy="12" r="1.2"/><circle cx="15" cy="12" r="1.2"/><circle cx="9" cy="18" r="1.2"/><circle cx="15" cy="18" r="1.2"/>',
+  timer: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/>'
 };
 const icon = (name, size = 20) =>
   `<svg class="icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
@@ -434,6 +436,21 @@ function resolvedBarWeight(e) {
   if (e.barWeight != null) return e.barWeight;
   return BAR_WEIGHT_DEFAULTS[e.equipment]?.[unit()] ?? (unit() === 'lb' ? 45 : 20);
 }
+/*
+ * Bodyweight lifts with added external load (weighted pull-ups, dips). The movement
+ * stays classified as bodyweight; `weight` is the added load only, 0 = bodyweight
+ * only. The athlete's body weight is never added in. Legacy bodyweight records have
+ * no flag and keep their meaning — nothing is inferred from 0 or a missing weight.
+ * Estimated 1RM and kg × reps volume need the total moved mass, which is not
+ * recorded, so they are not calculated for these; progress and PRs use the heaviest
+ * added load instead.
+ */
+const isAddedLoad = e => WorkoutModel.isAddedLoad(e);
+const ADDED_LOAD_STEP = { kg: 1.25, lb: 2.5 }; // default stepper increment; a loadProfile overrides it
+const loadText = (e, w) => isAddedLoad(e) ? '+' + (w || 0) : w;
+function addedLoadBest(sets) {
+  return sets.reduce((a, b) => !a || (b.weight || 0) > (a.weight || 0) || ((b.weight || 0) === (a.weight || 0) && (b.reps || 0) > (a.reps || 0)) ? b : a, null);
+}
 // Compact equipment label for exercise cards, plan rows and swap sheets.
 // Bar weight is shown only when it is meaningful and non-default.
 function equipChip(e) {
@@ -441,6 +458,7 @@ function equipChip(e) {
   if (!eq) return '';
   let label = equipmentLabel(eq) || eq;
   if (BAR_WEIGHT_EQUIPMENT.has(eq) && e.barWeight != null) label += ` · ${e.barWeight}${unit()}`;
+  if (isAddedLoad(e)) label += ` · ${tr('exercise.added_load.chip')}`;
   if (e.side && e.side !== 'unspecified') label += ` · ${modelLabel(e.side)}`;
   if (e.setupId) label += ` · ${e.setupId}`;
   return `<span class="equip-chip">${esc(label)}</span>`;
@@ -697,7 +715,7 @@ let prevTab = 'workout';      // where the settings view returns to
 let expandedDay = null;       // plan view expansion
 let expandedSession = null;   // history view expansion
 let historyExercise = '';     // history exercise picker
-let exExpanded = new Set();   // manually re-expanded completed exercises in the active session
+let exExpanded = new Set();   // re-expanded completed exercises (exercise objects) and supersets ('ss:'+tag)
 let readinessOpen = null;     // null = auto (open until data/sets exist), true/false = manual override
 let warmupOpen = null;        // null = auto (open until every item is checked), true/false = manual override
 
@@ -935,6 +953,7 @@ setInterval(() => {
     if (remain <= -30) { cancelCue(); rest = null; saveRest(); }  // auto-dismiss 30s after firing
     renderRest();
   }
+  tickExerciseTimer();
   // live session clock
   const chip = document.getElementById('session-chip');
   if (active) {
@@ -945,6 +964,207 @@ setInterval(() => {
   const sEl = document.getElementById('sync-status');
   if (sEl && syncState !== 'syncing') sEl.innerHTML = syncStatusHtml();
 }, 1000);
+
+/* ================= exercise timer (sets prescribed by time) ================= */
+/*
+ * Distinct from the rest timer. The state lives on the set row it times
+ * (`set.timer`), so it persists with the active workout, moves with a reordered
+ * exercise, disappears with a removed set, swap, discard or finish, and can never
+ * leak into a session record (recordSet copies measurement fields only).
+ *
+ *   { targetSec, state: 'running' | 'paused' | 'expired', endsAt?, remainingMs?, alerted }
+ *
+ * Rules:
+ * - At most one exercise timer exists. Starting one replaces any other and ends a
+ *   running rest, so two countdowns can never alarm over each other.
+ * - Expiry never logs the set or writes a measurement. "Log" is an explicit tap that
+ *   writes the elapsed time into the editable duration field, then follows the normal
+ *   set-completion path (rest, warm-up and superset rules unchanged).
+ * - Logging any set ends the exercise timer before a rest can start.
+ * - The deadline is wall-clock based: reloads and backgrounding neither reset nor
+ *   stretch it. An expiry discovered more than TIMER_STALE_MS late (app was
+ *   suspended) is shown as finished without sounding a stale alarm; `alerted` is
+ *   persisted so the cue can never repeat.
+ */
+const TIMER_STALE_MS = 5000;
+let exTimerCue = null; // { endsAt, nodes, delivered } — live AudioNodes, never persisted
+function timerTargetSec(e, s) {
+  if (!e || !s || s.done || (e.metric !== 'duration' && e.metric !== 'cardio')) return null;
+  if (s.durationSeconds > 0) return s.durationSeconds;
+  return e.durationSeconds > 0 ? e.durationSeconds : null;
+}
+function findExerciseTimer() {
+  if (!active) return null;
+  for (let ei = 0; ei < active.exercises.length; ei++) {
+    const sets = active.exercises[ei].sets;
+    for (let si = 0; si < sets.length; si++) if (sets[si].timer) return { ei, si, e: active.exercises[ei], s: sets[si], t: sets[si].timer };
+  }
+  return null;
+}
+function timerRemainingMs(t, now = Date.now()) {
+  if (t.state === 'running') return Math.max(0, t.endsAt - now);
+  if (t.state === 'paused') return Math.max(0, t.remainingMs);
+  return 0;
+}
+function timerElapsedSec(t, now = Date.now()) {
+  return Math.max(0, Math.round((t.targetSec * 1000 - timerRemainingMs(t, now)) / 1000));
+}
+// Remove every exercise timer; returns what was removed so a failed save can restore it.
+function takeExerciseTimers() {
+  const taken = [];
+  if (!active) return taken;
+  for (const e of active.exercises) for (const s of e.sets) if (s.timer) { taken.push([s, s.timer]); delete s.timer; }
+  return taken;
+}
+const restoreExerciseTimers = taken => taken.forEach(([s, t]) => { s.timer = t; });
+// Apply a timer mutation atomically: persisted or fully reverted.
+function mutateExerciseTimer(fn) {
+  const before = active.exercises.flatMap(e => e.sets.map(s => [s, s.timer ? { ...s.timer } : null]));
+  fn();
+  if (!saveActive()) {
+    for (const [s, t] of before) { if (t) s.timer = t; else delete s.timer; }
+    render();
+    return false;
+  }
+  render();
+  return true;
+}
+function startExerciseTimer(ei, si) {
+  const e = active && active.exercises[ei], s = e && e.sets[si];
+  const target = timerTargetSec(e, s);
+  if (!target) return;
+  unlockAudio(); // the tap is the user gesture that lets the alarm play later
+  const ok = mutateExerciseTimer(() => {
+    takeExerciseTimers();
+    s.timer = { targetSec: target, state: 'running', endsAt: Date.now() + target * 1000, alerted: false };
+  });
+  if (ok && rest) stopRest();
+}
+function pauseExerciseTimer(ei, si) {
+  const s = active.exercises[ei].sets[si], t = s.timer;
+  if (!t || t.state !== 'running') return;
+  mutateExerciseTimer(() => { s.timer = { targetSec: t.targetSec, state: 'paused', remainingMs: timerRemainingMs(t), alerted: false }; });
+}
+function resumeExerciseTimer(ei, si) {
+  const s = active.exercises[ei].sets[si], t = s.timer;
+  if (!t || t.state !== 'paused') return;
+  unlockAudio();
+  mutateExerciseTimer(() => { s.timer = { targetSec: t.targetSec, state: 'running', endsAt: Date.now() + t.remainingMs, alerted: false }; });
+}
+function resetExerciseTimer(ei, si) {
+  const s = active.exercises[ei].sets[si], t = s.timer;
+  if (!t) return;
+  mutateExerciseTimer(() => { s.timer = { targetSec: t.targetSec, state: 'paused', remainingMs: t.targetSec * 1000, alerted: false }; });
+}
+function cancelExerciseTimer(ei, si) {
+  const s = active.exercises[ei].sets[si];
+  if (!s.timer) return;
+  mutateExerciseTimer(() => { delete s.timer; });
+}
+function logExerciseTimer(ei, si) {
+  const e = active.exercises[ei], s = e.sets[si], t = s.timer;
+  if (!t || s.done) return;
+  const elapsed = timerElapsedSec(t);
+  if (!(elapsed > 0)) { toast(tr('timer.error.nothing_elapsed'), 'err'); return; }
+  const prevDuration = s.durationSeconds;
+  s.durationSeconds = elapsed;
+  delete s.timer;
+  s.done = true;
+  if (completeSet(ei, si) === false) {
+    s.durationSeconds = prevDuration;
+    s.timer = t;
+    render();
+  }
+}
+function cancelExerciseTimerCue() {
+  if (!exTimerCue) return;
+  for (const o of exTimerCue.nodes) { try { o.onended = null; o.stop(); } catch (e) {} }
+  exTimerCue = null;
+}
+// Keep exactly one scheduled alarm matching the running timer (or none).
+function syncExerciseTimerCue() {
+  const f = findExerciseTimer();
+  const endsAt = f && f.t.state === 'running' && settings.sound ? f.t.endsAt : null;
+  if (exTimerCue && exTimerCue.endsAt === endsAt) return;
+  cancelExerciseTimerCue();
+  if (!endsAt || endsAt <= Date.now()) return;
+  unlockAudio();
+  if (!audioCtx) return;
+  try {
+    const cue = { endsAt, nodes: [], delivered: false };
+    const t0 = audioCtx.currentTime + (endsAt - Date.now()) / 1000;
+    for (let i = 0; i < 2; i++) {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'square'; o.frequency.value = 660;       // lower and longer than the rest cue
+      o.connect(g); g.connect(audioCtx.destination);
+      const t = t0 + i * 0.7;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+      o.start(t); o.stop(t + 0.6);
+      if (i === 0) o.onended = () => { if (exTimerCue === cue) cue.delivered = true; };
+      cue.nodes.push(o);
+    }
+    exTimerCue = cue;
+  } catch (e) {}
+}
+function tickExerciseTimer() {
+  const f = findExerciseTimer();
+  if (!f) return;
+  const now = Date.now();
+  if (f.t.state === 'running' && now >= f.t.endsAt) {
+    const late = now - f.t.endsAt;
+    const delivered = !!(exTimerCue && exTimerCue.delivered && exTimerCue.endsAt === f.t.endsAt);
+    f.s.timer = { targetSec: f.t.targetSec, state: 'expired', alerted: true };
+    if (!f.t.alerted && late < TIMER_STALE_MS) {
+      if (!delivered) beep(2, 660);
+      buzz([300, 120, 300]);
+    }
+    exTimerCue = null;
+    saveActive(); // best effort: the deadline is already persisted, so a failed write re-derives the same state
+    // Swap only this timer's block. A full render() here would steal focus from whatever
+    // field the athlete is typing in (closing the phone keyboard) or cancel a drag.
+    const block = document.querySelector(`[data-extimer-clock="${f.ei}-${f.si}"]`)?.closest('.ex-timer');
+    if (block) block.outerHTML = exerciseTimerControls(f.e, f.ei, f.s, f.si);
+    return;
+  }
+  const remain = Math.ceil(timerRemainingMs(f.t, now) / 1000);
+  const clock = document.querySelector(`[data-extimer-clock="${f.ei}-${f.si}"]`);
+  if (clock) clock.textContent = fmtClock(remain);
+  const elapsed = document.querySelector(`[data-extimer-elapsed="${f.ei}-${f.si}"]`);
+  if (elapsed) elapsed.textContent = tr('timer.action.log', { time: fmtClock(timerElapsedSec(f.t, now)) });
+}
+function exerciseTimerControls(e, ei, s, si) {
+  const target = timerTargetSec(e, s);
+  if (!target) return '';
+  const t = s.timer;
+  const attrs = `data-ei="${ei}" data-si="${si}"`;
+  if (!t) {
+    return `<div class="ex-timer idle">
+      <button class="primary ex-timer-start" data-action="extimer-start" ${attrs}>${icon('timer', 18)} ${esc(tr('timer.action.start'))}</button>
+      <span class="muted small">${esc(tr('timer.text.target', { time: fmtClock(target) }))}</span>
+    </div>`;
+  }
+  const expired = t.state === 'expired';
+  const status = expired ? tr('timer.status.finished', { time: fmtClock(t.targetSec) })
+    : t.state === 'paused' ? tr('timer.status.paused', { time: fmtClock(t.targetSec) })
+    : tr('timer.status.running', { time: fmtClock(t.targetSec) });
+  return `<div class="ex-timer ${t.state}" role="group" aria-label="${esc(tr('timer.label', { exercise: I18n.exercise(e.name) }))}">
+    <div class="row between">
+      <div class="grow">
+        <div class="ex-timer-clock" role="timer" data-extimer-clock="${ei}-${si}">${expired ? '0:00' : fmtClock(Math.ceil(timerRemainingMs(t) / 1000))}</div>
+        <div class="small ${expired ? 'green bold' : 'muted'}" aria-live="polite">${esc(status)}</div>
+      </div>
+      <button class="icon-btn ghost" data-action="extimer-cancel" ${attrs} aria-label="${esc(tr('timer.action.cancel'))}" title="${esc(tr('timer.action.cancel'))}">✕</button>
+    </div>
+    <div class="row ex-timer-actions mt8">
+      ${t.state === 'running' ? `<button class="ghost" data-action="extimer-pause" ${attrs}>${esc(tr('timer.action.pause'))}</button>` : ''}
+      ${t.state === 'paused' ? `<button class="ghost" data-action="extimer-resume" ${attrs}>${esc(tr('timer.action.resume'))}</button><button class="ghost" data-action="extimer-reset" ${attrs}>${esc(tr('timer.action.reset'))}</button>` : ''}
+      <button class="success grow" data-action="extimer-log" ${attrs} data-extimer-elapsed="${ei}-${si}">${esc(tr('timer.action.log', { time: fmtClock(timerElapsedSec(t)) }))}</button>
+    </div>
+    ${expired ? '' : `<p class="small muted mt8">${esc(tr('timer.text.foreground_only'))}</p>`}
+  </div>`;
+}
 
 /* ================= toast + modal ================= */
 function toast(msg, kind = 'ok') {
@@ -1032,6 +1252,11 @@ function normalizePlan(raw) {
         exercises: d.exercises.map(e => {
           if (!e.name) throw new Error(tr("normalize_plan.message.every_exercise_needs_a_name"));
           const problems = [e, ...(e.alternates || [])].flatMap(WorkoutModel.errors);
+          // Main exercises default to barbell/load when omitted, and alternates inherit from
+          // the main exercise, so the combination is checked on the resolved values.
+          const addedLoadMismatch = x => x.addedLoad === true && (x.equipment !== 'bodyweight' || (x.metric || 'load') !== 'load');
+          if (addedLoadMismatch(e) || (e.alternates || []).some(a => a && addedLoadMismatch({ addedLoad: a.addedLoad, equipment: a.equipment || e.equipment, metric: a.metric || e.metric }))) problems.push('addedLoad / equipment');
+          if ([e, ...(e.alternates || [])].some(x => x && x.addedLoad === true && Number(x.weight) < 0)) problems.push('addedLoad / weight');
           if (problems.length) throw new Error(tr('exercise.model.invalid', { fields: problems.join(', ') }));
           return {
             ...WorkoutModel.metadata(e),
@@ -1118,7 +1343,7 @@ function readModelFields(prefix, metric) {
 }
 function measurementText(e, s) {
   if (e.metric === 'height') return `${s.heightCm ?? '—'} cm`;
-  if (!WorkoutModel.timed(e)) return `${s.weight ?? '—'}${unit()}×${s.reps ?? '—'}${s.rpe != null ? '@' + s.rpe : ''}`;
+  if (!WorkoutModel.timed(e)) return `${s.weight != null ? loadText(e, s.weight) : '—'}${unit()}×${s.reps ?? '—'}${s.rpe != null ? '@' + s.rpe : ''}`;
   const parts = [];
   if (s.weight) parts.push(`${s.weight}${unit()}`);
   if (s.durationSeconds != null) parts.push(`${s.durationSeconds} s`);
@@ -1135,7 +1360,8 @@ function measurementGrid(e, ei) {
     <button class="rpe-btn" data-action="rpe-pick" data-ei="${ei}" data-si="${si}">RPE ${s.rpe ?? '—'}</button>
     <button class="set-done-btn ${s.done ? 'success' : ''}" data-action="set-done" data-ei="${ei}" data-si="${si}">${s.done ? '✓' : '○'}</button></div>
     <div class="measurement-fields">${fields.map(f => `<label class="field"><span>${esc(f === 'weight' ? unit() : modelLabel(f))}</span><input type="number" min="0" step="any" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="${f}" value="${s[f] ?? ''}"></label>`).join('')}</div>
-    <div class="muted small" data-measurement-summary="${ei}-${si}">${esc(measurementText(e, s))}</div></div>`).join('');
+    <div class="muted small" data-measurement-summary="${ei}-${si}">${esc(measurementText(e, s))}</div>
+    ${exerciseTimerControls(e, ei, s, si)}</div>`).join('');
 }
 function historyLabel(e) {
   return [I18n.exercise(e.name), e.side && e.side !== 'unspecified' ? modelLabel(e.side) : '', e.setupId || '', modelLabel(e.metric || 'load')].filter(Boolean).join(' · ');
@@ -1156,7 +1382,7 @@ function lastPerformance(name) {
       const ws = workingSets(e.sets); // "Last:" is a comparison line — ramp-ups aren't
       if (ws.length) {
         // Missing metric = pre-jump-feature record; treat as 'load' (backward compat).
-        return { date: sessions[i].date, sets: ws, jump: e.metric === 'height', metric: e.metric };
+        return { date: sessions[i].date, sets: ws, jump: e.metric === 'height', metric: e.metric, equipment: e.equipment, addedLoad: e.addedLoad };
       }
     }
   }
@@ -1431,6 +1657,7 @@ function detectPRs(record) {
     const score = ex => {
       if (jump) return bestHeight(ex.sets);
       const ws = workingSets(ex.sets);
+      if (isAddedLoad(ex)) return ws.length ? Math.max(...ws.map(s => s.weight || 0)) : 0;
       return ws.length ? Math.max(...ws.map(s => est1RM(s.weight, s.reps))) : 0;
     };
     const newBest = score(e);
@@ -1456,10 +1683,14 @@ function completeSet(ei, si) {
   const group = groupOf(active.exercises, ei);
   const exerciseDone = ex.sets.every(y => y.done);
   // Inside a group the whole group collapses together, so don't collapse a member.
-  if (exerciseDone && !group) exExpanded.delete(ei);
+  const wasExpanded = exExpanded.has(ex);
+  if (exerciseDone && !group) exExpanded.delete(ex);
+  // An exercise timer never overlaps a rest: logging any set ends it first.
+  const takenTimers = takeExerciseTimers();
   if (!saveActive()) {
     ex.sets[si].done = false;
-    if (exerciseDone && !group) exExpanded.add(ei);
+    restoreExerciseTimers(takenTimers);
+    if (wasExpanded) exExpanded.add(ex);
     render();
     return false;
   }
@@ -1497,7 +1728,7 @@ function completeSet(ei, si) {
 function buildExport() {
   return JSON.stringify({
     type: 'workout-log', version: 1, exportedAt: new Date().toISOString(), unit: unit(),
-    measurementNotes: 'movementId + side + setupId + metric + equipment identify comparable history. durationSeconds and distanceMeters are actual set measurements, never repetitions. The derived rep-weighted set-RPE load estimate is not a whole-session RPE rating.',
+    measurementNotes: 'movementId + side + setupId + metric + equipment identify comparable history. durationSeconds and distanceMeters are actual set measurements, never repetitions. addedLoad: true marks a bodyweight lift whose weight is external load added to body weight (0 = bodyweight only); body weight is not included, so no estimated 1RM or tonnage is derived for it. The derived rep-weighted set-RPE load estimate is not a whole-session RPE rating.',
     bodyWeight: bodyWeight.slice(-20),
     sessions: sessions.slice(-15),
     currentPlan: plan
@@ -1644,6 +1875,7 @@ const coachPlanSchema = () => `{
           "libraryEntry": <optional full entry snapshot; preserve id, name, movement, category, muscles, equipment, position, execution, metric, description, aliases; movementId must equal its id>,
           "side": "<unspecified, left, right, or bilateral>",
           "setupId": "<optional reusable equipment/setup name; different machines have separate history>",
+          "addedLoad": <optional true only for a bodyweight load exercise logged with added external load (weighted pull-up/dip); weight is then the added load, 0 = bodyweight only. Omit otherwise; never use negative weight for assistance>,
           "loadProfile": <optional object for custom equipment loads: {unit: '${unit()}', offset: empty-equipment weight, increment: step}; alternatively use loads: [total loads] instead of increment. Omit unless known>,
           "durationSeconds": <optional positive number for duration/cardio>,
           "distanceMeters": <optional positive number for distance/cardio>,
@@ -1946,6 +2178,7 @@ function initServiceWorkerUpdates() {
 
 /* ================= views ================= */
 function render() {
+  if (drag) endDrag(); // the dragged nodes are about to be replaced: cancel rather than drop blind
   hideStepper(); // any focused set input is about to be replaced
   const app = document.getElementById('app');
   document.querySelectorAll('#tabbar .tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
@@ -1969,6 +2202,7 @@ function render() {
   else content = viewCoach();
 
   app.innerHTML = corruptBanner + content;
+  syncExerciseTimerCue();
 }
 
 /* ---- workout: pick a day ---- */
@@ -2044,9 +2278,14 @@ function viewActiveSession() {
       </div>
     </div>`}
     ${warmupCard()}
-    ${supersetGroups(active.exercises).map(g => isRealGroup(g)
-      ? supersetCard(g)
-      : exerciseCard(active.exercises[g.idx[0]], g.idx[0])).join('')}
+    <div data-reorder-list="session">
+    ${supersetGroups(active.exercises).map((g, gi, groups) => {
+      const pos = { first: gi === 0, last: gi === groups.length - 1 };
+      return `<div class="reorder-unit" data-reorder-unit="${gi}">${isRealGroup(g)
+        ? supersetCard(g, pos)
+        : exerciseCard(active.exercises[g.idx[0]], g.idx[0], pos)}</div>`;
+    }).join('')}
+    </div>
     <button class="ghost wide mt8" data-action="session-ex-add">${esc(tr("view_active_session.text.add_exercise"))}</button>
     <h2 class="section">${esc(tr("view_active_session.text.session_notes"))}</h2>
     <div class="card">
@@ -2084,8 +2323,9 @@ function warmupCard() {
         </label>`).join('')}
     </div>`;
 }
-function supersetCard(group) {
+function supersetCard(group, pos = {}) {
   const list = active.exercises;
+  const groupName = tr("superset_card.heading", { group_tag: group.tag });
   const rounds = Math.max(...group.idx.map(j => list[j].sets.length));
   const doneRounds = Array.from({ length: rounds }, (_, si) =>
     group.idx.every(j => !list[j].sets[si] || list[j].sets[si].done)).filter(Boolean).length;
@@ -2095,8 +2335,10 @@ function supersetCard(group) {
     return `
     <div class="card collapsed-ex tappable" data-action="ex-toggle" data-key="${esc(key)}">
       <div class="row between">
-        <div class="grow"><span class="green bold">✓</span> <span class="bold">${esc(tr("superset_card.heading", { group_tag: group.tag }))}</span>
+        ${reorderHandle('session', '', group.idx[0], groupName)}
+        <div class="grow"><span class="green bold">✓</span> <span class="bold">${esc(groupName)}</span>
           <span class="muted small">· ${group.idx.map(j => esc(I18n.exercise(list[j].name))).join(' + ')}</span></div>
+        ${moveButtons('session', '', group.idx[0], pos, groupName)}
         <span class="chev">${icon('chevDown', 18)}</span>
       </div>
     </div>`;
@@ -2105,8 +2347,10 @@ function supersetCard(group) {
   return `
   <div class="card superset-card">
     <div class="superset-head row between">
-      <span class="bold">${esc(tr("superset_card.heading", { group_tag: group.tag }))}</span>
+      ${reorderHandle('session', '', group.idx[0], groupName)}
+      <span class="bold grow">${esc(groupName)}</span>
       <span class="muted small">${complete ? tr("workout.superset.complete") : tr("superset_card.message.round_of", { Math_min_doneRounds_1_rounds: Math.min(doneRounds + 1, rounds), rounds: rounds })}</span>
+      ${moveButtons('session', '', group.idx[0], pos, groupName)}
       ${complete ? `<button class="icon-btn" data-action="ex-toggle" data-key="${esc(key)}" title="${esc(tr("common.action.collapse"))}">${icon('chevUp', 18)}</button>` : ''}
     </div>
     ${group.idx.map(j => `<div class="superset-member${slot && slot.ei === j ? ' ss-next' : ''}">${exerciseCard(list[j], j, { inGroup: true })}</div>`).join('')}
@@ -2121,11 +2365,12 @@ function setLabels(sets) {
 }
 function exerciseCard(e, ei, opts) {
   const inGroup = !!(opts && opts.inGroup);
+  const exName = I18n.exercise(e.name);
   const doneCount = e.sets.filter(s => s.done).length;
   const allDone = doneCount === e.sets.length && e.sets.length > 0;
   // Inside a superset the whole group collapses as a unit, so a member never
   // collapses on its own — the athlete still needs its rows for the next round.
-  if (allDone && !inGroup && !exExpanded.has(ei)) {
+  if (allDone && !inGroup && !exExpanded.has(e)) {
     // The summary reports the working sets; warm-ups are acknowledged in the
     // count but never chosen as the "best" set.
     const ws = workingSets(e.sets);
@@ -2137,8 +2382,8 @@ function exerciseCard(e, ei, opts) {
     } else if (WorkoutModel.timed(e)) {
       summary = ws.map(s => measurementText(e, s)).join(' · ');
     } else if (ws.length) {
-      const best = ws.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
-      summary = tr("exercise_card.message.set_best", { ws_length: ws.length, ws_length_1_s: ws.length === 1 ? '' : 's', warmTag: warmTag, best_weight: best.weight, best_reps: best.reps });
+      const best = isAddedLoad(e) ? addedLoadBest(ws) : ws.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
+      summary = tr("exercise_card.message.set_best", { ws_length: ws.length, ws_length_1_s: ws.length === 1 ? '' : 's', warmTag: warmTag, best_weight: loadText(e, best.weight), best_reps: best.reps });
     } else {
       summary = tr("exercise_card.message.warm_up_set_only", { warmN: warmN, warmN_1_s: warmN === 1 ? '' : 's' });
     }
@@ -2148,10 +2393,12 @@ function exerciseCard(e, ei, opts) {
     return `
     <div class="card collapsed-ex tappable" data-action="ex-toggle" data-ei="${ei}">
       <div class="row between">
-        <div class="grow"><span class="green bold">✓</span> <span class="bold">${esc(I18n.exercise(e.name))}</span>
+        ${reorderHandle('session', '', ei, exName)}
+        <div class="grow"><span class="green bold">✓</span> <span class="bold">${esc(exName)}</span>
           <span class="muted small">· ${esc(summary)}</span>
           ${e.notes ? `<div class="small amber collapsed-note">${icon('note', 13)} ${esc(e.notes.slice(0, 60))}${e.notes.length > 60 ? '…' : ''}</div>` : ''}</div>
         <button class="icon-btn" data-action="ex-note" data-ei="${ei}" title="${esc(tr("exercise_card.title.note"))}">${icon('note', 16)}</button>
+        ${moveButtons('session', '', ei, opts || {}, exName)}
         <span class="chev">${icon('chevDown', 18)}</span>
       </div>
     </div>`;
@@ -2161,12 +2408,13 @@ function exerciseCard(e, ei, opts) {
   return `
   <div class="${inGroup ? 'ss-body' : 'card'}">
     <div class="row between">
+      ${inGroup ? '' : reorderCluster('session', '', ei, opts || {}, exName)}
       <div class="grow">
-        <div class="ex-name">${allDone ? '✅ ' : ''}${esc(I18n.exercise(e.name))}</div>
+        <div class="ex-name">${allDone ? '✅ ' : ''}${esc(exName)}</div>
         <div class="target-line">${WorkoutModel.timed(e) ? esc(`${e.plannedSets} × ${measurementText(e, { ...e, weight: e.plannedWeight })}`) : isJump(e)
           ? tr("exercise_card.message.plan_attempt_rest", { e_plannedSets: e.plannedSets, e_plannedSets_1_s: e.plannedSets === 1 ? '' : 's', fmtClock_e_restSeconds: fmtClock(e.restSeconds) })
-          : tr("exercise_card.message.plan_rest", { e_plannedSets: e.plannedSets, e_plannedReps: e.plannedReps, e_plannedWeight: e.plannedWeight, unit: unit(), e_targetRpe_tr_exercise_card: e.targetRpe ? tr("format.rpe_suffix", { rpe: e.targetRpe }) : '', fmtClock_e_restSeconds: fmtClock(e.restSeconds) })} ${equipChip(e)}</div>
-        ${lastP ? `<div class="last-line">${esc(tr("exercise_card.text.last", { lastP_jump_tr_exercise_card_: WorkoutModel.timed(lastP) ? lastP.sets.map(s => measurementText(lastP, s)).join(' · ') : lastP.jump ? tr("exercise_card.message.best_cm", { bestHeight_lastP_sets: bestHeight(lastP.sets) }) : lastP.sets.map(s => `${s.weight}×${s.reps}`).join(' · ') + (lastRpe ? ` ${tr("exercise_card.message.rpe_2", { lastRpe: lastRpe })}` : ''), fmtDate_lastP_date: fmtDate(lastP.date) }))}</div>` : ''}
+          : tr("exercise_card.message.plan_rest", { e_plannedSets: e.plannedSets, e_plannedReps: e.plannedReps, e_plannedWeight: loadText(e, e.plannedWeight), unit: unit(), e_targetRpe_tr_exercise_card: e.targetRpe ? tr("format.rpe_suffix", { rpe: e.targetRpe }) : '', fmtClock_e_restSeconds: fmtClock(e.restSeconds) })} ${equipChip(e)}</div>
+        ${lastP ? `<div class="last-line">${esc(tr("exercise_card.text.last", { lastP_jump_tr_exercise_card_: WorkoutModel.timed(lastP) ? lastP.sets.map(s => measurementText(lastP, s)).join(' · ') : lastP.jump ? tr("exercise_card.message.best_cm", { bestHeight_lastP_sets: bestHeight(lastP.sets) }) : lastP.sets.map(s => `${loadText(lastP, s.weight)}×${s.reps}`).join(' · ') + (lastRpe ? ` ${tr("exercise_card.message.rpe_2", { lastRpe: lastRpe })}` : ''), fmtDate_lastP_date: fmtDate(lastP.date) }))}</div>` : ''}
         ${e.swappedFrom ? `<div class="swap-note">${esc(tr("exercise_card.text.swapped_from", { e_swappedFrom: I18n.exercise(e.swappedFrom) }))}</div>` : ''}
       </div>
       <button class="icon-btn" data-action="ex-info" data-ei="${ei}" title="${esc(tr("exercise_card.title.explain"))}">${icon('info', 18)}</button>
@@ -2183,10 +2431,10 @@ function exerciseCard(e, ei, opts) {
         <button class="set-done-btn ${s.done ? 'success' : ''}" data-action="set-done" data-ei="${ei}" data-si="${si}">${s.done ? '✓' : '○'}</button>`).join('')}
     </div>` : `
     <div class="set-grid">
-      <div class="head">#</div><div class="head">${unit()}</div><div class="head">${esc(tr("exercise_card.text.reps"))}</div><div class="head">RPE</div><div class="head">✓</div>
+      <div class="head">#</div><div class="head"${isAddedLoad(e) ? ` title="${esc(tr('exercise.added_load.label', { unit: unit() }))}"` : ''}>${isAddedLoad(e) ? '+' : ''}${unit()}</div><div class="head">${esc(tr("exercise_card.text.reps"))}</div><div class="head">RPE</div><div class="head">✓</div>
       ${setLabels(e.sets).map(({ s, si, label }) => `
         <button class="set-no-btn${s.warmup ? ' warm' : ''}" data-action="set-warmup" data-ei="${ei}" data-si="${si}" title="${esc(tr("exercise_card.action.mark_warmup"))}">${label}</button>
-        <input class="${s.done ? 'set-row-done-i' : ''}${e.equipment === 'bodyweight' ? ' bw-weight-i' : ''}${s.warmup ? ' warm-i' : ''}" type="number" inputmode="decimal" step="0.5" value="${s.weight != null ? s.weight : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="weight" ${s.done ? 'style="border-color:var(--green)"' : ''}>
+        <input class="${s.done ? 'set-row-done-i' : ''}${e.equipment === 'bodyweight' && !isAddedLoad(e) ? ' bw-weight-i' : ''}${s.warmup ? ' warm-i' : ''}" type="number" inputmode="decimal" step="any" min="0" value="${s.weight != null ? s.weight : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="weight" ${isAddedLoad(e) ? `aria-label="${esc(tr('exercise.added_load.label', { unit: unit() }))}"` : ''} ${s.done ? 'style="border-color:var(--green)"' : ''}>
         <input class="${s.warmup ? 'warm-i' : ''}" type="number" inputmode="numeric" value="${s.reps != null ? s.reps : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="reps" ${s.done ? 'style="border-color:var(--green)"' : ''}>
         <button class="rpe-btn ${s.rpe != null ? '' : 'muted'}" data-action="rpe-pick" data-ei="${ei}" data-si="${si}" ${s.done ? 'style="border-color:var(--green)"' : ''}>${s.rpe != null ? s.rpe : '—'}</button>
         <button class="set-done-btn ${s.done ? 'success' : ''}" data-action="set-done" data-ei="${ei}" data-si="${si}">${s.done ? '✓' : '○'}</button>`).join('')}
@@ -2228,7 +2476,7 @@ function showPlanImportPreview(newPlan, onConfirm) {
       } else if (e.metric === 'height') {
         targetDesc = `${e.sets} attempts`;
       } else {
-        targetDesc = `${e.warmupSets ? `${e.warmupSets}W + ` : ''}${e.sets} × ${e.reps}${e.weight ? ` @ ${e.weight}${unit()}` : ''}${e.targetRpe ? ` @ RPE ${e.targetRpe}` : ''}`;
+        targetDesc = `${e.warmupSets ? `${e.warmupSets}W + ` : ''}${e.sets} × ${e.reps}${e.weight || isAddedLoad(e) ? ` @ ${loadText(e, e.weight)}${unit()}` : ''}${e.targetRpe ? ` @ RPE ${e.targetRpe}` : ''}`;
       }
 
       const techDetails = [
@@ -2298,20 +2546,20 @@ function viewPlan() {
           // every member of the first group has ↑ disabled, not just the first
           // exercise in the day.
           const groups = supersetGroups(d.exercises);
-          const groupOfIdx = new Map();
-          groups.forEach((g, gi) => g.idx.forEach(x => groupOfIdx.set(x, gi)));
           return `
           <div class="divider"></div>
-          ${d.exercises.map((e, i) => `
+          <div data-reorder-list="plan" data-day="${d.id}">
+          ${groups.map((g, gi) => `<div class="reorder-unit${isRealGroup(g) ? ' plan-group' : ''}" data-reorder-unit="${gi}">${g.idx.map(i => { const e = d.exercises[i]; return `
             <div class="row between" style="padding:9px 0">
+              ${reorderHandle('plan', d.id, i, I18n.exercise(e.name))}
               <div class="grow tappable" data-action="ex-menu" data-day="${d.id}" data-i="${i}">
                 <div class="bold">${esc(I18n.exercise(e.name))}${e.superset ? ` <span class="day-pill">${esc(tr("view_plan.text.ss", { e_superset: e.superset }))}</span>` : ''}</div>
-                <div class="muted small">${WorkoutModel.timed(e) ? esc(`${e.sets} × ${measurementText(e, e)}`) : esc(tr("view_plan.text.rest", { e_warmupSets_tr_view_plan_me: e.warmupSets ? `${tr("view_plan.message.w", { e_warmupSets: e.warmupSets })} ` : '', e_sets: e.sets, e_reps: e.reps, e_weight: e.weight, unit: unit(), e_targetRpe_tr_view_plan_mes: e.targetRpe ? tr("format.rpe_suffix", { rpe: e.targetRpe }) : '', fmtClock_e_restSeconds: fmtClock(e.restSeconds), e_alternates_length_e_altern: e.alternates.length ? ' · ' + e.alternates.length + ' alt' : '' }))} ${equipChip(e)}</div>
+                <div class="muted small">${WorkoutModel.timed(e) ? esc(`${e.sets} × ${measurementText(e, e)}`) : esc(tr("view_plan.text.rest", { e_warmupSets_tr_view_plan_me: e.warmupSets ? `${tr("view_plan.message.w", { e_warmupSets: e.warmupSets })} ` : '', e_sets: e.sets, e_reps: e.reps, e_weight: loadText(e, e.weight), unit: unit(), e_targetRpe_tr_view_plan_mes: e.targetRpe ? tr("format.rpe_suffix", { rpe: e.targetRpe }) : '', fmtClock_e_restSeconds: fmtClock(e.restSeconds), e_alternates_length_e_altern: e.alternates.length ? ' · ' + e.alternates.length + ' alt' : '' }))} ${equipChip(e)}</div>
               </div>
-              <button class="icon-btn" data-action="ex-move" data-day="${d.id}" data-i="${i}" data-dir="-1" ${groupOfIdx.get(i) === 0 ? 'disabled' : ''}>↑</button>
-              <button class="icon-btn" data-action="ex-move" data-day="${d.id}" data-i="${i}" data-dir="1" ${groupOfIdx.get(i) === groups.length - 1 ? 'disabled' : ''}>↓</button>
-            </div>`).join('')}
-          <div class="row mt8">
+              ${moveButtons('plan', d.id, i, { first: gi === 0, last: gi === groups.length - 1 }, I18n.exercise(e.name))}
+            </div>`; }).join('')}</div>`).join('')}
+          </div>
+          <div class="row mt8 wrap-row">
             <button class="ghost icon-btn" data-action="ex-add" data-day="${d.id}">${esc(tr("view_plan.text.exercise"))}</button>
             <button class="ghost icon-btn" data-action="day-warmup" data-id="${d.id}">${esc(tr("view_plan.text.warm_up", { d_warmup_length_d_warmup_len: (d.warmup || []).length ? ` (${d.warmup.length})` : '' }))}</button>
             <button class="ghost icon-btn" data-action="day-rename" data-id="${d.id}">${esc(tr("view_plan.text.rename"))}</button>
@@ -2341,6 +2589,9 @@ function exerciseHistory(name) {
       rows.push({ date: s.date, timed: true, metric: e.metric, sets: ws });
     } else if (e.metric === 'height') {
       rows.push({ date: s.date, jump: true, heightCm: bestHeight(e.sets), sets: ws });
+    } else if (isAddedLoad(e)) {
+      const best = addedLoadBest(ws);
+      rows.push({ date: s.date, jump: false, addedLoad: true, equipment: e.equipment, metric: e.metric, best, e1rm: best.weight || 0, sets: ws });
     } else {
       const best = ws.reduce((a, b) => est1RM(b.weight, b.reps) > est1RM(a.weight, a.reps) ? b : a);
       rows.push({ date: s.date, jump: false, best, e1rm: est1RM(best.weight, best.reps), sets: ws });
@@ -2391,6 +2642,7 @@ function weeklyStats(weeks = 8) {
           wk.sets += ws.length;
           // Height sets have no kg × reps to contribute; they still count as sets.
           if (e.metric && e.metric !== 'load') continue;
+          if (isAddedLoad(e)) continue; // added load × reps is not tonnage; the sets still count
           for (const st of ws) wk.volume += (st.weight || 0) * (st.reps || 0);
         }
       }
@@ -2429,6 +2681,7 @@ function viewHistory() {
   // "undefined" values, so only rows matching the newest row's metric are shown.
   const histRows = hist.filter(r => r.jump === histJump && r.timed === (histTimed || undefined));
   const prBest = !histTimed && histRows.length ? Math.max(...histRows.map(r => histJump ? r.heightCm : r.e1rm)) : 0;
+  const histAdded = !!(histRows.length && histRows[histRows.length - 1].addedLoad);
   const bwLast = bodyWeight[bodyWeight.length - 1];
   const weeks = sessions.length ? weeklyStats(8) : [];
   const thisWeek = weeks[weeks.length - 1];
@@ -2464,14 +2717,14 @@ function viewHistory() {
         <select data-bind="history-ex">${exNames.map(n => `<option value="${esc(n)}" ${n === sel ? 'selected' : ''}>${esc(historyLabel(historyEntries.get(n)))}</option>`).join('')}</select>
         ${histTimed ? histRows.slice(-8).reverse().map(r => `<div class="mt8"><span class="muted small">${fmtDate(r.date)}</span><div>${esc(r.sets.map(s => measurementText(r, s)).join(' · '))}</div></div>`).join('') : histRows.length ? `
           ${chartSvg(histRows.slice(-12).map(r => ({ v: histJump ? r.heightCm : r.e1rm, d: r.date })))}
-          <div class="muted small mt8">${histJump ? `${esc(tr("view_history.text.best_jump"))} <b class="amber">${esc(tr("view_history.text.cm", { prBest: prBest }))}</b>` : `${esc(tr("view_history.text.best_est_1rm"))} <b class="amber">${prBest} ${unit()}</b>`}</div>
+          <div class="muted small mt8">${histJump ? `${esc(tr("view_history.text.best_jump"))} <b class="amber">${esc(tr("view_history.text.cm", { prBest: prBest }))}</b>` : histAdded ? `${esc(tr("history.added_load.best"))} <b class="amber">+${prBest} ${unit()}</b> <span class="muted">${esc(tr("history.added_load.no_e1rm"))}</span>` : `${esc(tr("view_history.text.best_est_1rm"))} <b class="amber">${prBest} ${unit()}</b>`}</div>
           ${hist.length > histRows.length ? `<div class="muted small mt8">${esc(tr("view_history.text.earlier_session_logged_this_exercise_with_a_diff", { hist_length_histRows_length: hist.length - histRows.length, hist_length_histRows_length_: hist.length - histRows.length === 1 ? '' : 's', hist_length_histRows_length_2: hist.length - histRows.length === 1 ? 'is' : 'are' }))}</div>` : ''}
           <div class="divider"></div>
           ${histRows.slice(-8).reverse().map(r => `
             <div class="row between" style="padding:5px 0">
               <span class="muted small">${fmtDate(r.date)}</span>
-              <span class="small">${histJump ? r.sets.map(s => tr("view_history.message.cm", { s_heightCm: s.heightCm })).join(' · ') : r.sets.map(s => `${s.weight}×${s.reps}`).join(' · ')}</span>
-              <span class="small bold ${(histJump ? r.heightCm : r.e1rm) >= prBest ? 'amber' : ''}">${(histJump ? r.heightCm : r.e1rm) >= prBest ? '🏆 ' : ''}${histJump ? tr("view_history.message.cm_2", { r_heightCm: r.heightCm }) : tr("view_history.message.e1rm", { r_e1rm: r.e1rm })}</span>
+              <span class="small">${histJump ? r.sets.map(s => tr("view_history.message.cm", { s_heightCm: s.heightCm })).join(' · ') : r.sets.map(s => `${loadText(r, s.weight)}×${s.reps}`).join(' · ')}</span>
+              <span class="small bold ${(histJump ? r.heightCm : r.e1rm) >= prBest ? 'amber' : ''}">${(histJump ? r.heightCm : r.e1rm) >= prBest ? '🏆 ' : ''}${histJump ? tr("view_history.message.cm_2", { r_heightCm: r.heightCm }) : r.addedLoad ? tr("history.added_load.top", { weight: r.e1rm, unit: unit() }) : tr("view_history.message.e1rm", { r_e1rm: r.e1rm })}</span>
             </div>`).join('')}` : `<p class="muted mt8">${esc(tr("view_history.text.no_logged_sets_for_this_exercise_yet"))}</p>`}
         ${!historyEntries.get(sel)?.movementId && (exNames.length > 1 || Object.keys(aliases).length) ? `<button class="ghost wide mt8 small" data-action="merge-names" data-name="${esc(historyEntries.get(sel)?.name)}">${esc(tr("view_history.text.merge_names"))}</button>` : ''}`
       : `<p class="empty"><span class="big">📈</span>${esc(tr("view_history.text.finish_your_first_workout_and_your_progress_will"))}</p>`}
@@ -2663,7 +2916,7 @@ function exMenuModal(dayId, i) {
   const e = day.exercises[i];
   const desc = ExerciseLibrary.instructions(e, I18n.explanation, lookupExplanation);
   showModal(I18n.exercise(e.name), `
-    <p class="muted small">${WorkoutModel.timed(e) ? esc(`${e.sets} × ${measurementText(e, e)}`) : esc(tr("ex_menu_modal.text.rest", { e_sets: e.sets, e_reps: e.reps, e_weight: e.weight, unit: unit(), e_targetRpe_tr_ex_menu_modal: e.targetRpe ? tr("format.rpe_suffix", { rpe: e.targetRpe }) : '', fmtClock_e_restSeconds: fmtClock(e.restSeconds) }))}</p>
+    <p class="muted small">${WorkoutModel.timed(e) ? esc(`${e.sets} × ${measurementText(e, e)}`) : esc(tr("ex_menu_modal.text.rest", { e_sets: e.sets, e_reps: e.reps, e_weight: loadText(e, e.weight), unit: unit(), e_targetRpe_tr_ex_menu_modal: e.targetRpe ? tr("format.rpe_suffix", { rpe: e.targetRpe }) : '', fmtClock_e_restSeconds: fmtClock(e.restSeconds) }))}</p>
     ${desc ? `<p class="small mt8">${esc(desc)}</p>` : ''}
     ${e.alternates.length ? `<div class="divider"></div><p class="small muted">${esc(tr("ex_menu_modal.text.alternates", { e_alternates_map_a_esc_a_nam: e.alternates.map(a => esc(I18n.exercise(a.name))).join(', ') }))}</p>` : ''}`,
     [
@@ -2678,7 +2931,8 @@ function exMenuModal(dayId, i) {
     ]);
 }
 // Human-readable increment rule for the plan editor's weight field.
-function ladderHint(equipment) {
+function ladderHint(equipment, addedLoad) {
+  if (addedLoad && equipment === 'bodyweight') return tr('exercise.added_load.hint', { step: ADDED_LOAD_STEP[unit()] || 1.25, unit: unit() });
   if (unit() !== 'kg') return '';
   if (equipment === 'bodyweight') return tr("ladder_hint.message.bodyweight_leave_at_0");
   if (equipment === 'other') return tr("exercise.weight.unchecked");
@@ -2693,13 +2947,17 @@ function ladderHint(equipment) {
  * block is exactly how a "22.5 kg dumbbell" gets into a plan through whichever
  * screen was forgotten. Returns a ready-to-toast message, or null when fine.
  */
-function weightValidationError({ equipment, barWeight, weight, metric, loadProfile }) {
+function weightValidationError({ equipment, barWeight, weight, metric, loadProfile, addedLoad }) {
   if (metric === 'height') return weight ? tr('weight_validation_error.message.a_jump_height_exercise_carries_no_weight_set_it_') : null;
+  if (addedLoad && equipment === 'bodyweight' && metric === 'load' && !(weight >= 0)) return tr('exercise.added_load.negative');
   if (loadProfile && weight) {
     if (loadProfile.unit !== unit() || !WorkoutModel.loadable(loadProfile, weight)) return tr('exercise.model.invalid', { fields: 'loadProfile / weight' });
     return null;
   }
   if (WorkoutModel.timed({ metric }) && equipment === 'bodyweight') return null;
+  // Added load is checked against a custom profile when one exists (above); otherwise any
+  // non-negative value is accepted — belts and vests have no verified gym ladder yet.
+  if (addedLoad && equipment === 'bodyweight' && metric === 'load') return null;
   if (unit() !== 'kg') return null; // the ladder is kg-only
   const bar = barWeight != null ? barWeight : resolvedBarWeight({ equipment, barWeight: null });
   const kind = weightIssueKind(equipment, bar, weight);
@@ -2788,6 +3046,31 @@ function customLibraryModal(dayId, name) {
     ]);
 }
 
+// "Added weight" option for bodyweight load exercises in the plan editor and the
+// mid-workout add sheet. Hidden (and ignored on save) for any other equipment/metric.
+function addedLoadToggle(prefix, e, equipment) {
+  const show = equipment === 'bodyweight' && (e.metric || 'load') === 'load';
+  return `<label class="merge-row${show ? '' : ' hidden'}" id="${prefix}-addedload-row">
+    <input type="checkbox" id="${prefix}-addedload" data-bind="added-load" data-prefix="${prefix}" ${e.addedLoad === true ? 'checked' : ''}>
+    <span class="grow"><span class="small bold">${esc(tr('exercise.added_load.toggle'))}</span><span class="field-hint">${esc(tr('exercise.added_load.toggle_hint'))}</span></span>
+  </label>`;
+}
+function readAddedLoad(prefix, equipment, metric) {
+  const box = document.getElementById(`${prefix}-addedload`);
+  return !!(box && box.checked && equipment === 'bodyweight' && metric === 'load');
+}
+function refreshAddedLoadFields(prefix) {
+  const eq = document.getElementById(`${prefix}-equipment`), metric = document.getElementById(`${prefix}-metric`);
+  const row = document.getElementById(`${prefix}-addedload-row`);
+  if (!eq || !row) return;
+  const applicable = eq.value === 'bodyweight' && (metric ? metric.value : 'load') === 'load';
+  row.classList.toggle('hidden', !applicable);
+  const added = applicable && document.getElementById(`${prefix}-addedload`).checked;
+  const label = document.getElementById(`${prefix}-weight-label`);
+  if (label) label.textContent = added ? tr('exercise.added_load.label', { unit: unit() }) : tr('exercise.form.weight', { unit: unit() });
+  const hint = document.getElementById(`${prefix}-weight-hint`);
+  if (hint) hint.textContent = ladderHint(eq.value, added);
+}
 function exEditModal(dayId, i, selection = null) {
   const day = plan.days.find(d => d.id === dayId);
   const e = i != null ? day.exercises[i] : { name: '', sets: 3, warmupSets: 0, reps: '8-12', weight: 0, targetRpe: 8, restSeconds: 120, restSecondsNext: null, equipment: 'barbell', barWeight: null, metric: 'load', superset: null, description: '', alternates: [] };
@@ -2802,8 +3085,8 @@ function exEditModal(dayId, i, selection = null) {
         <span class="field-hint">${esc(tr("ex_edit_modal.text.extra_ramp_rows_seeded_from_the_working_weight"))}</span></label>
     </div>
     <div class="row">
-      <label class="field grow"><span>${esc(tr("exercise.form.weight", { unit: unit() }))}</span><input id="f-weight" type="number" inputmode="decimal" step="0.5" value="${e.weight}">
-        <span class="field-hint" id="f-weight-hint">${esc(ladderHint(equipment))}</span></label>
+      <label class="field grow"><span id="f-weight-label">${esc(isAddedLoad(e) ? tr('exercise.added_load.label', { unit: unit() }) : tr("exercise.form.weight", { unit: unit() }))}</span><input id="f-weight" type="number" inputmode="decimal" step="any" value="${e.weight}">
+        <span class="field-hint" id="f-weight-hint">${esc(ladderHint(equipment, isAddedLoad(e)))}</span></label>
       <label class="field grow"><span>${esc(tr("ex_edit_modal.text.target_rpe"))}</span><button type="button" id="f-rpe" class="rpe-btn" data-action="edit-rpe-pick" data-v="${e.targetRpe != null ? e.targetRpe : ''}">${e.targetRpe != null ? e.targetRpe : '—'}</button></label>
     </div>
     <div class="row">
@@ -2813,6 +3096,7 @@ function exEditModal(dayId, i, selection = null) {
     <label class="field"><span>${esc(tr("exercise.form.equipment"))}</span>
       <select id="f-equipment" data-bind="edit-equipment">${EQUIPMENT_TYPES.map(t => `<option value="${t}" ${t === equipment ? 'selected' : ''}>${esc(equipmentLabel(t, 'edit'))}</option>`).join('')}</select>
     </label>
+    ${addedLoadToggle('f', e, equipment)}
     <label class="field${BAR_WEIGHT_EQUIPMENT.has(equipment) ? '' : ' hidden'}" id="f-barweight-row"><span>${esc(tr("ex_edit_modal.text.bar_weight", { unit: unit() }))}</span><input id="f-barweight" type="number" inputmode="decimal" step="0.5" placeholder="${esc(tr("ex_edit_modal.placeholder.default", { resolvedBarWeight_equipment_: resolvedBarWeight({ equipment, barWeight: null }) }))}" value="${e.barWeight != null ? e.barWeight : ''}"></label>
     <label class="field"><span>${esc(tr("exercise.form.measurement"))}</span>
       <select id="f-metric" data-bind="model-metric" data-prefix="f">${modelOptions(e.metric)}</select>
@@ -2840,7 +3124,8 @@ function exEditModal(dayId, i, selection = null) {
           const wVal = mnum('f-weight');
           let metadata;
           try { metadata = readModelFields('f', metricVal); } catch (err) { toast(err.message, 'err'); return; }
-          const wErr = weightValidationError({ equipment: eqVal, barWeight: barVal, weight: wVal, metric: metricVal, loadProfile: metadata.loadProfile });
+          const addedVal = readAddedLoad('f', eqVal, metricVal);
+          const wErr = weightValidationError({ equipment: eqVal, barWeight: barVal, weight: wVal, metric: metricVal, loadProfile: metadata.loadProfile, addedLoad: addedVal });
           if (wErr) { toast(wErr, 'err'); return; }
           // A tag must form ONE adjacent run. Split across the day it renders as
           // two cards with independent rest cycles, both headed "Superset A" and
@@ -2868,6 +3153,7 @@ function exEditModal(dayId, i, selection = null) {
             metric: metricVal,
             superset: ssVal,
             description: mval('f-desc') };
+          if (addedVal) upd.addedLoad = true;
           const prevLibrary = plan.library ? [...plan.library] : [];
           if (e.libraryEntry) {
             if (metadata.movementId !== e.libraryEntry.id) { toast(tr('library.identity_locked'), 'err'); return; }
@@ -2878,7 +3164,7 @@ function exEditModal(dayId, i, selection = null) {
             plan.library = [...items.filter(x => x.id !== entry.id), entry];
           }
           const prevEx = i != null ? { ...day.exercises[i] } : null;
-          if (i != null) Object.assign(day.exercises[i], upd);
+          if (i != null) { delete day.exercises[i].addedLoad; Object.assign(day.exercises[i], upd); }
           else day.exercises.push(Object.assign({ id: uid(), notes: '', alternates: [] }, upd));
 
           if (!savePlan()) {
@@ -3037,13 +3323,14 @@ function sessionAddExerciseModal() {
       <label class="field grow"><span>${esc(tr("exercise.form.reps"))}</span><input id="a-reps" value="8-12"></label>
     </div>
     <div class="row">
-      <label class="field grow"><span>${esc(tr("exercise.form.weight", { unit: unit() }))}</span><input id="a-weight" type="number" inputmode="decimal" step="0.5" value="0">
+      <label class="field grow"><span id="a-weight-label">${esc(tr("exercise.form.weight", { unit: unit() }))}</span><input id="a-weight" type="number" inputmode="decimal" step="any" value="0">
         <span class="field-hint" id="a-weight-hint">${esc(ladderHint('barbell'))}</span></label>
       <label class="field grow"><span>${esc(tr("session_add_exercise_modal.text.rest_sec"))}</span><input id="a-rest" type="number" inputmode="numeric" value="120"></label>
     </div>
     <label class="field"><span>${esc(tr("exercise.form.equipment"))}</span>
       <select id="a-equipment" data-bind="add-equipment">${EQUIPMENT_TYPES.map(t => `<option value="${t}">${esc(equipmentLabel(t, 'add'))}</option>`).join('')}</select>
     </label>
+    ${addedLoadToggle('a', {}, 'barbell')}
     <label class="field"><span>${esc(tr("exercise.form.measurement"))}</span>
       <select id="a-metric" data-bind="model-metric" data-prefix="a">${modelOptions('load')}</select>
     </label>
@@ -3070,7 +3357,9 @@ function sessionAddExerciseModal() {
           if (!metadata.movementId && toPlan && plan.days.some(d => d.exercises.some(x => sameExercise(x.name, name)))) {
             toast(tr("session_add_exercise_modal.message.already_exists_in_your_plan_history_is_keyed_on_", { name: name }), 'err'); return;
           }
-          const wErr = weightValidationError({ equipment: eqVal, barWeight: null, weight: wVal, metric: metricVal, loadProfile: metadata.loadProfile });
+          const addedVal = readAddedLoad('a', eqVal, metricVal);
+          if (addedVal) metadata.addedLoad = true;
+          const wErr = weightValidationError({ equipment: eqVal, barWeight: null, weight: wVal, metric: metricVal, loadProfile: metadata.loadProfile, addedLoad: addedVal });
           if (wErr) { toast(wErr, 'err'); return; }
 
           const sets = Math.max(1, mnum('a-sets', 3));
@@ -3127,7 +3416,7 @@ function exInfoModal(ei) {
   // on the metric, so building this line unconditionally read "Target: 3×1 @ 0kg".
   const target = WorkoutModel.timed(e) ? `${e.plannedSets} × ${measurementText(e, { ...e, weight: e.plannedWeight })}` : isJump(e)
     ? tr("ex_info_modal.message.attempt", { e_plannedSets: e.plannedSets, e_plannedSets_1_s: e.plannedSets === 1 ? '' : 's' })
-    : `${e.plannedSets}×${esc(e.plannedReps)} @ ${e.plannedWeight}${unit()}${e.targetRpe ? tr("format.rpe_suffix", { rpe: e.targetRpe }) : ''}`;
+    : `${e.plannedSets}×${esc(e.plannedReps)} @ ${loadText(e, e.plannedWeight)}${unit()}${e.targetRpe ? tr("format.rpe_suffix", { rpe: e.targetRpe }) : ''}`;
   showModal(I18n.exercise(e.name), `<p>${esc(desc)}</p>
     <p class="muted small mt12">${esc(tr("ex_info_modal.text.target", { target: target }))}</p>`);
 }
@@ -3283,12 +3572,16 @@ function stepperInfo(el) {
   if (f === 'heightCm') return { kind: 'height', label: tr("stepper_info.button.cm"), down: 0.5, up: 0.5 };
   if (f !== 'weight') return null;
   const ex = active && active.exercises[+el.dataset.ei];
-  if (!ex || (ex.equipment === 'bodyweight' && !ex.loadProfile && !WorkoutModel.timed(ex))) return null;
+  if (!ex || (ex.equipment === 'bodyweight' && !ex.loadProfile && !WorkoutModel.timed(ex) && !isAddedLoad(ex))) return null;
   if (ex.loadProfile?.unit === unit()) {
     const current = parseFloat(el.value) || 0;
     return { kind: 'weight', label: unit(), down: Math.max(0, current - WorkoutModel.nextLoad(ex.loadProfile, current, -1)), up: Math.max(0, WorkoutModel.nextLoad(ex.loadProfile, current, 1) - current) };
   }
   if (ex.loadProfile) return null; // A profile expressed in another unit is not a usable ladder.
+  if (isAddedLoad(ex)) {
+    const step = ADDED_LOAD_STEP[unit()] || 1.25, current = parseFloat(el.value) || 0;
+    return { kind: 'added', label: '+' + unit(), down: Math.min(step, Math.max(0, current)), up: step };
+  }
   if (WorkoutModel.timed(ex) && ex.equipment === 'bodyweight') return { kind: 'weight', label: unit(), down: 2.5, up: 2.5 };
   if (unit() !== 'kg') return { kind: 'weight', label: unit(), down: 2.5, up: 2.5 };
   const cur = parseFloat(el.value) || 0;
@@ -3344,7 +3637,7 @@ document.getElementById('stepper-bar').addEventListener('pointerdown', e => {
   let next;
   if (info.kind === 'weight' && unit() === 'kg') {
     const ex = active.exercises[+stepperTarget.dataset.ei];
-    next = ex.loadProfile?.unit === unit() ? WorkoutModel.nextLoad(ex.loadProfile, curN, dir) : WorkoutModel.timed(ex) && ex.equipment === 'bodyweight' ? curN + dir * 2.5 : nextWeight(ex.equipment, resolvedBarWeight(ex), curN, dir);
+    next = ex.loadProfile?.unit === unit() ? WorkoutModel.nextLoad(ex.loadProfile, curN, dir) : info.kind === 'added' ? curN + dir * (dir > 0 ? info.up : info.down) : WorkoutModel.timed(ex) && ex.equipment === 'bodyweight' ? curN + dir * 2.5 : nextWeight(ex.equipment, resolvedBarWeight(ex), curN, dir);
   } else {
     next = curN + dir * (dir > 0 ? info.up : info.down);
   }
@@ -3898,6 +4191,195 @@ function cmjCleanup() {
   cmjState = null;
 }
 
+/* ================= exercise reordering ================= */
+/*
+ * One move path for the plan editor (future workouts) and the active workout (this
+ * workout only). The exercise objects themselves are moved, never rebuilt, so
+ * identities, logged sets, notes, setups, library snapshots and an exercise timer
+ * (which lives on its set row) travel with them. A failed save restores the previous
+ * array, so the screen never shows an order that was not persisted.
+ */
+function reorderHandle(scope, dayId, i, name) {
+  return `<button type="button" class="icon-btn ghost drag-handle" data-reorder-handle data-scope="${scope}" data-day="${esc(dayId)}" data-i="${i}" aria-label="${esc(tr('reorder.handle.label', { exercise: name }))}" title="${esc(tr('reorder.handle.title'))}">${icon('grip', 18)}</button>`;
+}
+function moveButton(scope, dayId, i, dir, disabled, name) {
+  const label = dir < 0 ? 'reorder.move_up.label' : 'reorder.move_down.label';
+  return `<button type="button" class="icon-btn ghost move-btn" data-action="ex-move" data-scope="${scope}" data-day="${esc(dayId)}" data-i="${i}" data-dir="${dir}" aria-label="${esc(tr(label, { exercise: name }))}" title="${esc(tr(label, { exercise: name }))}" ${disabled ? 'disabled' : ''}>${dir < 0 ? '↑' : '↓'}</button>`;
+}
+function moveButtons(scope, dayId, i, pos, name) {
+  return moveButton(scope, dayId, i, -1, pos.first, name) + moveButton(scope, dayId, i, 1, pos.last, name);
+}
+// Vertical ↑ / grip / ↓ for expanded workout cards, where a horizontal row would crowd the name.
+function reorderCluster(scope, dayId, i, pos, name) {
+  return `<div class="reorder-cluster">${moveButton(scope, dayId, i, -1, pos.first, name)}${reorderHandle(scope, dayId, i, name)}${moveButton(scope, dayId, i, 1, pos.last, name)}</div>`;
+}
+function reorderList(scope, dayId) {
+  if (scope === 'session') return active ? active.exercises : null;
+  const day = plan.days.find(d => d.id === dayId);
+  return day ? day.exercises : null;
+}
+function announce(msg) {
+  let live = document.getElementById('sr-live');
+  if (!live) {
+    live = document.createElement('div');
+    live.id = 'sr-live'; live.className = 'sr-only';
+    live.setAttribute('aria-live', 'polite');
+    document.body.appendChild(live);
+  }
+  live.textContent = msg;
+}
+function applyExerciseOrder(scope, dayId, next, moved, opts = {}) {
+  const list = reorderList(scope, dayId);
+  if (!list || !next || next.length !== list.length || !next.includes(moved)) return false;
+  if (scope === 'session') {
+    const prev = active.exercises;
+    active.exercises = next;
+    if (!saveActive()) { active.exercises = prev; render(); toast(tr('reorder.error.not_saved'), 'err'); return false; }
+  } else {
+    const day = plan.days.find(d => d.id === dayId);
+    const prev = day.exercises;
+    day.exercises = next;
+    if (!savePlan()) { day.exercises = prev; render(); toast(tr('reorder.error.not_saved'), 'err'); return false; }
+  }
+  render();
+  const at = next.indexOf(moved);
+  const groups = WorkoutModel.groupRuns(next);
+  const gi = groups.findIndex(g => g.idx.includes(at));
+  announce(tr('reorder.announce.moved', { exercise: I18n.exercise(moved.name), position: gi + 1, total: groups.length }));
+  // Keep keyboard and screen-reader focus on the control that was used, at its new index.
+  const byHandle = document.querySelector(`[data-reorder-handle][data-scope="${scope}"][data-i="${at}"]`);
+  const byMove = opts.focus === 'move'
+    ? [...document.querySelectorAll(`[data-action="ex-move"][data-scope="${scope}"][data-i="${at}"]`)].find(b => !b.disabled && +b.dataset.dir === opts.dir)
+    : null;
+  const target = opts.focus ? (byMove || byHandle) : null;
+  if (target) target.focus({ preventScroll: true });
+  return true;
+}
+function moveExercise(scope, dayId, i, dir, opts) {
+  const list = reorderList(scope, dayId);
+  if (!list || !list[i]) return false;
+  return applyExerciseOrder(scope, dayId, WorkoutModel.moveGroupBy(list, i, dir), list[i], opts);
+}
+
+/*
+ * Drag controller. Only the grip handle starts a drag, so inputs, set buttons and
+ * ordinary page scrolling behave exactly as before. Mouse: press and move. Touch and
+ * pen: press and hold, then move; moving before the hold completes cancels it.
+ * Escape, pointercancel or any re-render cancels without changing the order.
+ */
+const DRAG_HOLD_MS = 350;
+let drag = null;
+function dragUnits(d) { return [...d.listEl.querySelectorAll(':scope > [data-reorder-unit]')]; }
+// Insertion gap in the ORIGINAL order (0..units.length), from unit midpoints.
+function dragGap(d) {
+  const units = dragUnits(d);
+  let gap = 0;
+  for (const u of units) {
+    const r = u.getBoundingClientRect();
+    if (d.y > r.top + r.height / 2) gap++;
+  }
+  return gap;
+}
+function paintDrag(d) {
+  d.preview.style.top = (d.y - d.offsetY) + 'px';
+  d.gap = dragGap(d);
+  const units = dragUnits(d);
+  const listRect = d.listEl.getBoundingClientRect();
+  const y = d.gap < units.length ? units[d.gap].getBoundingClientRect().top - 5 : units[units.length - 1].getBoundingClientRect().bottom + 3;
+  Object.assign(d.indicator.style, { top: y + 'px', left: listRect.left + 'px', width: listRect.width + 'px' });
+  const from = units.indexOf(d.unit);
+  d.indicator.classList.toggle('noop', d.gap === from || d.gap === from + 1);
+}
+function beginDrag() {
+  const d = drag;
+  if (!d || d.started) return;
+  if (!d.unit.isConnected) { endDrag(); return; }
+  d.started = true;
+  // Editing and dragging are exclusive: commit/close any focused field first.
+  if (document.activeElement && document.activeElement !== d.handle && document.activeElement.blur) document.activeElement.blur();
+  hideStepper();
+  const r = d.unit.getBoundingClientRect();
+  d.offsetY = Math.min(d.y - r.top, 60);
+  d.preview = d.unit.cloneNode(true);
+  d.preview.classList.add('drag-preview');
+  d.preview.removeAttribute('data-reorder-unit');
+  d.preview.setAttribute('aria-hidden', 'true');
+  d.preview.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+  Object.assign(d.preview.style, { left: r.left + 'px', width: r.width + 'px' });
+  d.indicator = document.createElement('div');
+  d.indicator.className = 'drop-indicator';
+  document.body.append(d.preview, d.indicator);
+  d.unit.classList.add('drag-source');
+  document.body.classList.add('dragging');
+  try { d.handle.setPointerCapture(d.pointerId); } catch (e) {}
+  if (d.touch) buzz([15]);
+  paintDrag(d);
+  const scroll = () => {
+    if (drag !== d) return;
+    const top = 70, bottom = window.innerHeight - 150;
+    const v = d.y < top ? -Math.ceil((top - d.y) / 5) : d.y > bottom ? Math.ceil((d.y - bottom) / 5) : 0;
+    if (v) { window.scrollBy(0, v); paintDrag(d); }
+    d.raf = requestAnimationFrame(scroll);
+  };
+  d.raf = requestAnimationFrame(scroll);
+}
+function endDrag() {
+  const d = drag;
+  drag = null;
+  if (!d) return null;
+  clearTimeout(d.timer);
+  if (d.raf) cancelAnimationFrame(d.raf);
+  if (d.preview) d.preview.remove();
+  if (d.indicator) d.indicator.remove();
+  d.unit.classList.remove('drag-source');
+  document.body.classList.remove('dragging');
+  return d;
+}
+document.addEventListener('pointerdown', e => {
+  const handle = e.target.closest && e.target.closest('[data-reorder-handle]');
+  if (!handle || drag || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  const unit = handle.closest('[data-reorder-unit]'), listEl = handle.closest('[data-reorder-list]');
+  if (!unit || !listEl) return;
+  drag = { handle, unit, listEl, pointerId: e.pointerId, x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY,
+    touch: e.pointerType !== 'mouse', started: false, gap: null,
+    scope: handle.dataset.scope, dayId: handle.dataset.day, index: +handle.dataset.i };
+  if (drag.touch) drag.timer = setTimeout(beginDrag, DRAG_HOLD_MS);
+  else e.preventDefault(); // no text selection while dragging with a mouse
+});
+document.addEventListener('pointermove', e => {
+  const d = drag;
+  if (!d || e.pointerId !== d.pointerId) return;
+  d.x = e.clientX; d.y = e.clientY;
+  if (!d.started) {
+    const dist = Math.hypot(d.x - d.startX, d.y - d.startY);
+    if (d.touch && dist > 10) endDrag();           // moved before the hold: not a drag
+    else if (!d.touch && dist > 4) beginDrag();
+    return;
+  }
+  e.preventDefault();
+  paintDrag(d);
+}, { passive: false });
+document.addEventListener('pointerup', e => {
+  if (!drag || e.pointerId !== drag.pointerId) return;
+  if (drag.started) paintDrag(drag);
+  const d = endDrag();
+  if (!d.started || d.gap == null) return;
+  const list = reorderList(d.scope, d.dayId);
+  if (!list || !list[d.index]) return;
+  const next = WorkoutModel.moveGroupToGap(list, d.index, d.gap);
+  if (next) applyExerciseOrder(d.scope, d.dayId, next, list[d.index], { focus: 'handle' });
+});
+document.addEventListener('pointercancel', e => { if (drag && e.pointerId === drag.pointerId) endDrag(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && drag) { endDrag(); return; }
+  const handle = e.target.closest && e.target.closest('[data-reorder-handle]');
+  if (!handle || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+  e.preventDefault();
+  moveExercise(handle.dataset.scope, handle.dataset.day, +handle.dataset.i, e.key === 'ArrowUp' ? -1 : 1, { focus: 'handle' });
+});
+// A long press on the handle must not open the browser's context menu or callout.
+document.addEventListener('contextmenu', e => { if (e.target.closest && e.target.closest('[data-reorder-handle]')) e.preventDefault(); });
+
 /* ================= event wiring ================= */
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-action]');
@@ -3918,6 +4400,14 @@ document.addEventListener('click', e => {
     case 'rest-add': adjustRest(15); break;
     case 'rest-sub': adjustRest(-15); break;
     case 'rest-skip': stopRest(); break;
+
+    /* exercise timer */
+    case 'extimer-start': startExerciseTimer(+el.dataset.ei, +el.dataset.si); break;
+    case 'extimer-pause': pauseExerciseTimer(+el.dataset.ei, +el.dataset.si); break;
+    case 'extimer-resume': resumeExerciseTimer(+el.dataset.ei, +el.dataset.si); break;
+    case 'extimer-reset': resetExerciseTimer(+el.dataset.ei, +el.dataset.si); break;
+    case 'extimer-cancel': cancelExerciseTimer(+el.dataset.ei, +el.dataset.si); break;
+    case 'extimer-log': logExerciseTimer(+el.dataset.ei, +el.dataset.si); break;
 
     /* session lifecycle */
     case 'start-session': startSession(el.dataset.id); break;
@@ -3955,9 +4445,10 @@ document.addEventListener('click', e => {
       break;
     }
     case 'ex-toggle': {
-      // Keys are dual-typed on purpose: a plain exercise is keyed by index, a
-      // superset by 'ss:'+tag, because the whole group collapses as a unit.
-      const k = el.dataset.key != null ? el.dataset.key : +el.dataset.ei;
+      // Keys are dual-typed on purpose: a plain exercise is keyed by its object, so a
+      // reorder keeps the right card open; a superset by 'ss:'+tag, because the whole
+      // group collapses as a unit.
+      const k = el.dataset.key != null ? el.dataset.key : active.exercises[+el.dataset.ei];
       if (exExpanded.has(k)) exExpanded.delete(k); else exExpanded.add(k);
       render();
       break;
@@ -4059,30 +4550,12 @@ document.addEventListener('click', e => {
     case 'ex-menu': exMenuModal(el.dataset.day, +el.dataset.i); break;
     case 'ex-add': exerciseLibraryModal(el.dataset.day); break;
     case 'day-warmup': dayWarmupModal(el.dataset.id); break;
-    case 'ex-move': {
-      const day = plan.days.find(d => d.id === el.dataset.day);
-      if (!day) break;
+    case 'ex-move':
       // Moves operate on GROUPS, not individual exercises. Sliding one member out
       // of the middle of a superset silently splits it into two cards with
       // independent rest cycles — the exact state push-plan.mjs refuses to push.
-      // Since supersetGroups partitions the list into contiguous runs, swapping
-      // two neighbouring groups is a single splice.
-      const groups = supersetGroups(day.exercises);
-      const gi = groups.findIndex(g => g.idx.includes(+el.dataset.i));
-      const ti = gi + (+el.dataset.dir);
-      if (gi === -1 || ti < 0 || ti >= groups.length) break;
-      const a = groups[Math.min(gi, ti)], b = groups[Math.max(gi, ti)];
-      const aEx = a.idx.map(x => day.exercises[x]);
-      const bEx = b.idx.map(x => day.exercises[x]);
-      const prevExercises = [...day.exercises];
-      day.exercises.splice(a.idx[0], a.idx.length + b.idx.length, ...bEx, ...aEx);
-      if (!savePlan()) {
-        day.exercises = prevExercises;
-        return;
-      }
-      render();
+      moveExercise(el.dataset.scope || 'plan', el.dataset.day, +el.dataset.i, +el.dataset.dir, { focus: 'move', dir: +el.dataset.dir });
       break;
-    }
     case 'plan-swap-pick': doPlanSwap(el.dataset.day, +el.dataset.i, +el.dataset.ai); break;
     case 'plan-rename':
       showModal(tr("action_plan-rename.message.rename_plan"), `<label class="field"><span>${esc(tr("action_plan-rename.text.plan_name"))}</span><input id="f-plan-name" value="${esc(plan.name)}"></label>`,
@@ -4277,7 +4750,9 @@ document.addEventListener('click', e => {
     case 'backup-restore':
       showModal(tr("action_backup-restore.message.restore_backup"), `<p class="muted small">${esc(tr("action_backup-restore.text.paste_a_backup_json_this_replaces_everything_on_"))}</p><textarea id="restore-area" class="mt8"></textarea>`,
         [{ label: tr("common.action.restore"), cls: 'danger', fn: () => {
-            try { restoreBackup(mval('restore-area')); render(); toast(tr("action_backup-restore.message.backup_restored")); }
+            // A button with a handler owns closing its sheet; without this the Restore sheet
+            // stayed open over the restored data and invited a second tap.
+            try { restoreBackup(mval('restore-area')); closeModal(); render(); toast(tr("action_backup-restore.message.backup_restored")); }
             catch (err) { toast(tr("backup.error.restore", { error: err.message }), 'err'); }
           } }, { label: tr("common.action.cancel") }]);
       break;
@@ -4395,6 +4870,7 @@ document.addEventListener('change', e => {
     if (reps) reps.closest('label').hidden = metric !== 'load';
     const warmups = document.getElementById(`${prefix}-warmupsets`);
     if (warmups) { warmups.closest('label').hidden = metric !== 'load'; if (metric !== 'load') warmups.value = 0; }
+    refreshAddedLoadFields(prefix);
   }
   if (bind === 'target-pace') {
     const match = e.target.value.trim().match(/^(\d+):([0-5]\d)$/);
@@ -4440,11 +4916,14 @@ document.addEventListener('change', e => {
     }
     const hint = document.getElementById('f-weight-hint');
     if (hint) hint.textContent = ladderHint(e.target.value);
+    refreshAddedLoadFields('f');
   }
   if (bind === 'add-equipment') {
     const hint = document.getElementById('a-weight-hint');
     if (hint) hint.textContent = ladderHint(e.target.value);
+    refreshAddedLoadFields('a');
   }
+  if (bind === 'added-load') refreshAddedLoadFields(prefix);
 });
 
 /* boot */

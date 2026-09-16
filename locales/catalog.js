@@ -645,6 +645,30 @@ globalThis.GYM_I18N_CATALOG = {
       "en": "Add exercise",
       "fi": "Lisää liike"
     },
+    "exercise.added_load.chip": {
+      "en": "added weight",
+      "fi": "lisäpaino"
+    },
+    "exercise.added_load.hint": {
+      "en": "Only the extra load. 0 = bodyweight only. Steps of {step} {unit}.",
+      "fi": "Vain lisäkuorma. 0 = pelkkä kehonpaino. Askel {step} {unit}."
+    },
+    "exercise.added_load.label": {
+      "en": "Added weight ({unit})",
+      "fi": "Lisäpaino ({unit})"
+    },
+    "exercise.added_load.negative": {
+      "en": "Added weight cannot be negative. Assisted variations are not supported yet.",
+      "fi": "Lisäpaino ei voi olla negatiivinen. Avustettuja versioita ei vielä tueta."
+    },
+    "exercise.added_load.toggle": {
+      "en": "Log added weight",
+      "fi": "Kirjaa lisäpaino"
+    },
+    "exercise.added_load.toggle_hint": {
+      "en": "Belt, vest or dumbbell. Tracked separately from bodyweight-only history.",
+      "fi": "Vyö, liivi tai käsipaino. Seurataan erillään pelkän kehonpainon historiasta."
+    },
     "exercise.edit.translated_name": {
       "en": "Display name: {name} (the original name identifies your history)",
       "fi": "Näyttönimi: {name} (alkuperäinen nimi yhdistää historiatiedot)"
@@ -1669,6 +1693,18 @@ globalThis.GYM_I18N_CATALOG = {
       "en": " · RPE ",
       "fi": "· RPE"
     },
+    "history.added_load.best": {
+      "en": "Heaviest added weight",
+      "fi": "Suurin lisäpaino"
+    },
+    "history.added_load.no_e1rm": {
+      "en": "(no estimated 1RM: body weight is not included)",
+      "fi": "(ei arvioitua 1RM:ää: kehonpainoa ei lasketa mukaan)"
+    },
+    "history.added_load.top": {
+      "en": "top +{weight} {unit}",
+      "fi": "paras +{weight} {unit}"
+    },
     "history.body_weight.latest": {
       "en": "Latest: {weight} {unit} on {date} · {entries} entries",
       "fi": "Viimeisin: {weight} {unit}, {date} · kirjauksia {entries}"
@@ -2065,6 +2101,30 @@ globalThis.GYM_I18N_CATALOG = {
       "en": "+15s",
       "fi": "+15 s"
     },
+    "reorder.announce.moved": {
+      "en": "{exercise} moved to position {position} of {total}",
+      "fi": "{exercise} siirretty kohtaan {position}/{total}"
+    },
+    "reorder.error.not_saved": {
+      "en": "Order not saved. The previous order is back.",
+      "fi": "Järjestystä ei tallennettu. Aiempi järjestys palautettiin."
+    },
+    "reorder.handle.label": {
+      "en": "Reorder {exercise}: hold and drag, or use the arrow keys",
+      "fi": "Järjestä {exercise}: pidä pohjassa ja vedä tai käytä nuolinäppäimiä"
+    },
+    "reorder.handle.title": {
+      "en": "Hold and drag to reorder",
+      "fi": "Pidä pohjassa ja vedä järjestääksesi"
+    },
+    "reorder.move_down.label": {
+      "en": "Move {exercise} down",
+      "fi": "Siirrä {exercise} alas"
+    },
+    "reorder.move_up.label": {
+      "en": "Move {exercise} up",
+      "fi": "Siirrä {exercise} ylös"
+    },
     "restore.text.measured_fps_in_this_clip_but_the_settings_above": {
       "en": "Measured ~{snapped} fps in this clip, but the settings above imply a {Math_round_derived} fps timeline — check them.",
       "fi": "Videosta mitattiin noin {snapped} fps, mutta yllä olevat asetukset vastaavat {Math_round_derived} fps:n aikajanaa. Tarkista asetukset."
@@ -2412,6 +2472,58 @@ globalThis.GYM_I18N_CATALOG = {
     "sync_status_html.text.syncing": {
       "en": "⟳ Syncing…",
       "fi": "⟳ Synkronoidaan…"
+    },
+    "timer.action.cancel": {
+      "en": "Cancel timer",
+      "fi": "Peru ajastin"
+    },
+    "timer.action.log": {
+      "en": "Log {time}",
+      "fi": "Kirjaa {time}"
+    },
+    "timer.action.pause": {
+      "en": "Pause",
+      "fi": "Tauko"
+    },
+    "timer.action.reset": {
+      "en": "Reset",
+      "fi": "Nollaa"
+    },
+    "timer.action.resume": {
+      "en": "Resume",
+      "fi": "Jatka"
+    },
+    "timer.action.start": {
+      "en": "Start timer",
+      "fi": "Käynnistä ajastin"
+    },
+    "timer.error.nothing_elapsed": {
+      "en": "No time has elapsed yet. Start the timer or enter the duration.",
+      "fi": "Aikaa ei ole vielä kulunut. Käynnistä ajastin tai syötä kesto."
+    },
+    "timer.label": {
+      "en": "Exercise timer for {exercise}",
+      "fi": "Liikkeen ajastin: {exercise}"
+    },
+    "timer.status.finished": {
+      "en": "Time's up: {time} done. Log the set when ready.",
+      "fi": "Aika täynnä: {time} tehty. Kirjaa sarja, kun olet valmis."
+    },
+    "timer.status.paused": {
+      "en": "Paused · target {time}",
+      "fi": "Tauolla · tavoite {time}"
+    },
+    "timer.status.running": {
+      "en": "Counting down from {time}",
+      "fi": "Lasketaan alas ajasta {time}"
+    },
+    "timer.text.foreground_only": {
+      "en": "Keep the app open. A locked or backgrounded phone may not play the alarm.",
+      "fi": "Pidä sovellus auki. Lukittu tai taustalla oleva puhelin ei välttämättä soita hälytystä."
+    },
+    "timer.text.target": {
+      "en": "Target {time}",
+      "fi": "Tavoite {time}"
     },
     "updates.action.check": {
       "en": "Check for updates",
@@ -2894,5 +3006,5 @@ globalThis.GYM_I18N_CATALOG = {
       "fi": "hyppykorkeus"
     }
   },
-  "version": "42e0f433a01abd67c472"
+  "version": "407e24fb591d0a9dcee9"
 };
