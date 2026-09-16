@@ -87,6 +87,22 @@ expectError('a weight below the empty bar names the equipment as the suspect',
   planOf(day('Day A', [ex({ equipment: 'barbell', weight: 12 })])), /below the empty barbell/);
 expectError('a bodyweight move carrying load is an error',
   planOf(day('Day A', [ex({ equipment: 'bodyweight', weight: 20 })])), /weight 0/);
+expectClean('a bodyweight move with addedLoad may carry external load off the kg ladder',
+  planOf(day('Day A', [ex({ name: 'Weighted Pull-Up', equipment: 'bodyweight', addedLoad: true, weight: 11.25 })])));
+expectClean('addedLoad with weight 0 means bodyweight only',
+  planOf(day('Day A', [ex({ name: 'Weighted Dip', equipment: 'bodyweight', addedLoad: true, weight: 0 })])));
+expectError('addedLoad on a barbell exercise is an error',
+  planOf(day('Day A', [ex({ equipment: 'barbell', addedLoad: true, weight: 60 })])), /addedLoad/);
+expectError('addedLoad with omitted equipment resolves to barbell and is an error',
+  planOf(day('Day A', [ex({ equipment: undefined, addedLoad: true, weight: 10 })])), /addedLoad/);
+expectError('negative added load (assistance) is refused',
+  planOf(day('Day A', [ex({ equipment: 'bodyweight', addedLoad: true, weight: -20 })])), /negative/);
+expectError('addedLoad on a height exercise is an error',
+  planOf(day('Day A', [ex({ name: 'Box Jump', metric: 'height', equipment: 'bodyweight', addedLoad: true, weight: 0 })])), /addedLoad/);
+expectClean('an alternate inheriting bodyweight may declare addedLoad',
+  planOf(day('Day A', [ex({ name: 'Pull-Up', equipment: 'bodyweight', weight: 0, alternates: [{ name: 'Weighted Chin-Up', addedLoad: true, weight: 7.5 }] })])));
+expectError('addedLoad on an alternate that is a cable exercise is an error',
+  planOf(day('Day A', [ex({ name: 'Pull-Up', equipment: 'bodyweight', weight: 0, alternates: [{ name: 'Lat Pulldown', equipment: 'cable', addedLoad: true, weight: 50 }] })])), /addedLoad/);
 expectClean('"other" equipment is not ladder-checked',
   planOf(day('Day A', [ex({ equipment: 'other', weight: 33.7 })])));
 

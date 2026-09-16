@@ -188,12 +188,22 @@ export function validatePlan(plan, { unit = 'kg' } = {}) {
   const errors = plan.library == null ? [] : WorkoutModel.libraryListErrors(plan.library), warnings = [];
   for (const day of plan.days) for (const e of day.exercises || []) {
     for (const x of [e, ...(e.alternates || [])]) {
-      const invalid = WorkoutModel.errors(x).filter(field => field !== 'metric'); // Metric errors below retain alternate context.
+      // Metric and addedLoad combination errors are reported below with fuller context.
+      const invalid = WorkoutModel.errors(x).filter(field => field !== 'metric' && field !== 'addedLoad / equipment');
       if (invalid.length) errors.push(`${day.name} → ${x.name}: invalid ${invalid.join(', ')}.`);
       if (x.loadProfile && !invalid.includes('loadProfile') && x.weight &&
           (x.loadProfile.unit !== unit || !WorkoutModel.loadable(x.loadProfile, x.weight))) errors.push(`${day.name} → ${x.name}: weight does not match loadProfile.`);
     }
     if (WorkoutModel.timed(e) && e.warmupSets) errors.push(`${day.name} → ${e.name}: timed/distance exercises cannot prescribe ramp warmupSets.`);
+    // addedLoad describes a bodyweight load exercise. Main exercises default to barbell/load
+    // when omitted and alternates inherit, so check the resolved values. Mirrors normalizePlan.
+    for (const x of [e, ...(e.alternates || [])]) {
+      if (x.addedLoad !== true) continue;
+      const eq = x === e ? (e.equipment || 'barbell') : (x.equipment || e.equipment || 'barbell');
+      const metric = x === e ? (e.metric || 'load') : (x.metric || e.metric || 'load');
+      if (eq !== 'bodyweight' || metric !== 'load') errors.push(`${day.name} → ${x.name}: addedLoad is only valid on a bodyweight exercise with metric "load".`);
+      if (Number(x.weight) < 0) errors.push(`${day.name} → ${x.name}: added load cannot be negative — assisted variations are not supported yet.`);
+    }
   }
 
   const seen = new Map();
@@ -295,7 +305,7 @@ export function validatePlan(plan, { unit = 'kg' } = {}) {
         // checked. `continue`-ing the whole exercise here used to skip them too, so a
         // height exercise carrying an unloadable alternate (e.g. a 22.5 kg dumbbell)
         // passed silently.
-        if (e.metric !== 'height' && !e.loadProfile && !(WorkoutModel.timed(e) && e.equipment === 'bodyweight')) {
+        if (e.metric !== 'height' && !e.loadProfile && !(WorkoutModel.timed(e) && e.equipment === 'bodyweight') && !WorkoutModel.isAddedLoad(e)) {
           const p = weightProblem(e.equipment, e.weight, e.barWeight);
           if (p) errors.push(`${day.name} → ${e.name}: ${e.weight} kg ${p}`);
         }
@@ -320,6 +330,7 @@ export function validatePlan(plan, { unit = 'kg' } = {}) {
           }
           if (!a.weight) continue; // 0 = bodyweight/interval alternate
           if (a.loadProfile || (WorkoutModel.timed({ metric: a.metric || e.metric }) && (a.equipment || e.equipment) === 'bodyweight')) continue;
+          if (WorkoutModel.isAddedLoad({ addedLoad: a.addedLoad, equipment: a.equipment || e.equipment, metric: a.metric || e.metric })) continue;
           if (a.equipment) {
             const ap = weightProblem(a.equipment, a.weight, a.barWeight);
             if (ap) errors.push(`${day.name} → ${e.name} → alternate "${a.name}": ${a.weight} kg ${ap}`);
