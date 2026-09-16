@@ -48,11 +48,15 @@ using coach-provided plans (coach participation to be confirmed). The expected
 aim for four iPhones and one Android in the first cohort. Native iOS completion and
 the full coach dashboard are not prerequisites for this web trial.
 
-Implementation block completed in working tree:
+Implementation block committed in `8113f59` (2026-09-16):
 - **Local-only fail-closed alpha mode**: isolated prefix `gym_alpha.`, cloud requests disabled and choked via `syncFetch`, share URL/UUID restore/write token hidden in UI.
 - **Preview ports**: port `8765` for personal deployment preview; port `8766` for athlete-alpha preview.
 - **Storage dependability**: detect and preserve corrupted records without overwrite; structured save failure handling with rollback; crash-safe completion idempotency; staged-commit backup restore.
 - **Coach-to-athlete handoff**: clean plan export without personal history or credentials; athlete import preview preserving workout history.
+
+Shared PWA features prepared 2026-09-16 (uncommitted for review): drag/↑↓ exercise reordering,
+exercise timer for time-prescribed sets, and bodyweight exercises with explicit added load.
+Native parity and assisted (negative-load) bodyweight variations are later work.
 
 Expand to 10–15 and then 30 only after reliable saves/recovery and a supported
 release process are demonstrated on physical devices.

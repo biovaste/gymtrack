@@ -12,6 +12,13 @@ iPhone signed build, which cannot be established by the Windows emulator.
 
 ### Web Alpha Physical-Device Checklist (Immediate Priority)
 
+> Emulated pre-run 2026-09-16 (`node tools/device-checklist-emulated.mjs`, report in
+> `tmp/checklist-emulated/report.md`): Edge/Chromium, iPhone-size viewport, CDP touch, real
+> service worker, synthetic data. 28 rows passed in emulation, 1 failed (Finnish at 320 px with
+> larger text: superset member rows overflow ~13 px, present in `HEAD` before this work),
+> 3 device-only. **Emulation is not WebKit or a phone. The Pass/fail column below stays empty
+> until each row is done on a physical device.**
+
 | Step | Expected result | Pass/fail and evidence |
 |---|---|---|
 | Install/open exact alpha build | Version identifiable (e.g. `GymTrack Athlete Alpha 0.1.0-alpha`), badge visible, clear plan onboarding | |
@@ -34,6 +41,15 @@ iPhone signed build, which cannot be established by the Windows emulator.
 | Fail a storage write (quota/simulated) | Active workout kept safe; retry or emergency backup offered; no false completion | |
 | Update old installed/cached build | Active/finished workouts retained; update banner shown; no mid-workout forced reload | |
 | Larger text and Finnish | Controls reachable; no clipped essential labels | |
+| Drag exercise card (Home Screen, touch) | Hold grip ~0.35 s, drag: preview follows finger, blue insertion line; normal swipe on the card scrolls; swipe starting on grip before the hold does nothing; keyboard/typing in a set field never starts a drag | |
+| Drag superset + completed exercise | Superset moves as one block, member order kept; completed card keeps its ✓ sets, note and expanded/collapsed state after moving | |
+| ↑/↓ reorder with VoiceOver/TalkBack | Buttons announce "Move … up/down"; move is announced; focus stays on the control | |
+| Plan-editor reorder vs active workout | Plan reorder changes the next workout only; workout reorder leaves the plan unchanged; order survives app close/reopen | |
+| Timed set: start, lock, return | Countdown correct after unlocking (not reset or stretched); if expired while locked: "Time's up" shown, no late alarm, set NOT logged | |
+| Timed set: foreground expiry | One audible cue (with sound on, not silent switch) + vibration on Android; record iPhone silent/Focus behaviour separately | |
+| Timed set: pause, reset, cancel, Log | Pause holds time; Reset returns to target paused; ✕ removes timer; Log writes elapsed seconds (editable) and only then starts rest | |
+| Timed set vs rest timer | Starting the exercise timer ends a running rest; logging another set ends the exercise timer; never two alarms | |
+| Weighted pull-up/dip | Plan editor: Bodyweight → "Log added weight" → field reads "Added weight (kg)"; stepper ±1.25 kg; 0 allowed; history shows "+x kg", no e1RM, separate from old bodyweight-only history | |
 | Cloud isolation verification | Cloud sync toggle absent in alpha; syncFetch throws; no share link or write token leaks | |
 
 ### Native iOS Signed Build & Offline Workout Follow-up Checklist

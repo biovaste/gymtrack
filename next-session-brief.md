@@ -1,34 +1,26 @@
 # Next Session Brief — GymTrack (Tracking app)
-_State as of 2026-09-12. Live state only. History: `..\..\..\session-log.md` · Rules: `..\lessons-learned.md` · Bugs: `BACKLOG.md`_
+_State as of 2026-09-16. Live state only. History: `..\..\..\session-log.md` · Rules: `..\lessons-learned.md` · Bugs: `BACKLOG.md`_
 
 ## Where things stand
 
-Two things shipped since this brief was last written. **Exercise library v1** released and
-deployed 2026-09-08 (`5803407`) — 30 curated entries, bilingual search, custom-entry versus
-library-alias selection; the deferred import/mid-workout entry gap is in `BACKLOG.md`.
-**Demo mode** shipped 2026-09-12 on branch `demo`, live at
-<https://demo.gymtrack.hithitpull.fi>. `main` and production are untouched by it.
-
-**The working tree on `main` is dirty with in-flight work from other sessions** — a native
-mobile prototype (`mobile/`, Expo/React Native), `shared/`, modifications to `app.js`,
-`sw.js`, `worker/src/index.js`, the coaching skills and the locales, plus untracked
-`docs/2026-09-10-codebase-review.md`, `docs/native-prototype-results.md`,
-`docs/phase-1-device-checklist.md` and `docs/plans/2026-09-11-athlete-alpha.md`. None of it
-is committed and none of it came from the demo session. Establish what it is before building
-on it.
-
-## Live threads
-
-- **Portfolio link to the demo** — handed to a separate portfolio session with a written
-  prompt. The loop is currently half-open: the demo links to the portfolio, the portfolio
-  does not link to the demo. Nothing needed from this repo.
-- **Athlete Web Alpha implementation block completed** (uncommitted in working tree for Codex review):
-  - Local-only fail-closed alpha mode via `app-config.js` and `app.js` (`APP_CONFIG` detects origin/port/config; cloud sync disabled, share/UUID/write token hidden; `gym_alpha.` prefix).
-  - Storage dependability: corrupt data preserved without overwrite; structured write failure returns with UI rollbacks; crash-safe completion idempotency; staged-commit backup restore.
-  - Plan handoff: clean plan export (`buildPlanExport`) without personal history/credentials; athlete import preview with history preservation.
-  - Regression test suites added: `tools/athlete-alpha.test.mjs` and `tools/athlete-alpha-browser.test.mjs`. All 90 unit tests pass.
-  - Separate preview ports: `8765` for personal deployment preview; `8766` for athlete alpha preview.
-  - Follow-up physical device checklist in `docs/phase-1-device-checklist.md` updated with native iOS signed build follow-up and web-alpha checks.
+- **Alpha/WAL work is committed** (`8113f59`, 2026-09-16) — not uncommitted as earlier notes said.
+  Demo mode lives on branch `demo` (<https://demo.gymtrack.hithitpull.fi>).
+- **Uncommitted on `main`, for review (2026-09-16 session):** three shared PWA features, both modes.
+  1. *Drag to reorder* exercise cards in plan editor and active workout (grip handle; mouse drag,
+     touch press-and-hold; ↑/↓ + arrow keys; supersets move as a block; failed save restores order).
+  2. *Exercise timer* for duration/cardio sets: Start → pause/resume/reset/cancel → "Log m:ss".
+     Deadline persisted on the set row; expiry never logs; stale expiry is silent; one timer, never
+     overlapping rest.
+  3. *Added weight* for bodyweight lifts: `addedLoad: true` (weight = external load, 0 = BW only),
+     separate history key, no e1RM/tonnage, PR = heaviest added load, validator + import checks.
+  Tests: `tools/workout-features-browser.test.mjs` (alpha + personal, zero external requests),
+  new model tests, validator cases; i18n smoke harness fixed to run in personal mode.
+- **Review + emulated checklist run (same day):** fixed timer expiry stealing input focus (full
+  re-render → targeted update), Restore sheet staying open after a successful restore (existing
+  bug), superset header overflow, Finnish day-action row clipping. `tools/device-checklist-emulated.mjs`:
+  28 emulated pass, 3 device-only, 1 existing overflow (BACKLOG).
+- **Not done:** physical-device checks (checklist updated), native parity, assisted bodyweight
+  (negative load) design, deployment.
 
 ## Open actions
 
@@ -37,9 +29,6 @@ on it.
   pasted into AI chats. **Order matters:** put the token on the phone (Settings → Write
   token) and in `GYMTRACK_WRITE_TOKEN` on the desktop *first*, or the next sync 401s
   mid-workout.
-- **Commit or discard two uncommitted doc edits** — `BACKLOG.md` (the write-secret and stray
-  KV entries) and this brief. Left uncommitted deliberately because `main`'s tree holds
-  unrelated in-flight work; fold them into whatever commit that becomes.
 - **Stray KV key `ee88b033-af5d-427f-9200-dbc3faa33cdf`** — junk, deliberately left in place,
   documented in `BACKLOG.md`. Do not delete it as a tidy-up without reading that entry.
 - **Optional, cosmetic:** the demo intro card's link renders in default browser blue rather

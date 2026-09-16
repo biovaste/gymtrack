@@ -28,6 +28,23 @@ deleted — recorded here so a future session doesn't rediscover it and mistake 
 account, or delete something else by guessing. The sync API has no delete route; removing it
 means `wrangler kv key delete` against the `GYMTRACK_DATA` namespace.
 
+## Open — Narrow phone + larger text overflow in superset cards (2026-09-16)
+
+At 320 px width with ~120% text (Finnish), the active-workout page scrolls sideways by ~13 px:
+superset member rows (`.superset-member.ss-next` negative margin, and "+ Sarja / − Sarja /
+Muistiinpano" row) are wider than the card. Reproduced identically on committed `HEAD`, so not
+caused by the reorder/timer work. Found by `tools/device-checklist-emulated.mjs`; confirm on a
+small phone (iPhone SE / Android with large font) before fixing.
+
+## Open — Deferred from the 2026-09-16 feature block
+
+- **Assisted bodyweight exercises** (band/machine assistance) are not representable. Negative
+  `weight` is refused by the editor, import and `push-plan.mjs`. Needs its own design and history key.
+- **Language preference `gym.language` is shared** between personal and alpha profiles on the same
+  origin-less key (i18n.js). Harmless preference, but not isolated by the `gym_alpha.` prefix.
+- **Web exercise timer cannot alarm while an iPhone is locked/suspended.** Stated in the UI; native
+  notifications belong to the iOS workstream.
+
 ## Open — Exercise library entry paths (2026-09-08)
 
 **Unknown exercises bypass the library choice on import and mid-workout entry.**

@@ -106,6 +106,24 @@ a known data-loss or access-control defect in a small sample.
   data was retained, reproducibility, optional redacted screenshot. Do not request
   full personal backups as the default bug report.
 
+## Local preview and later deployment (2026-09-16)
+
+Local, synthetic data only. Personal and alpha use separate storage prefixes (`gym.` / `gym_alpha.`).
+
+- **Alpha:** `python -m http.server 8766 --bind 127.0.0.1` → <http://127.0.0.1:8766>. Port 8766 and any
+  unrecognised host resolve to alpha: cloud requests are refused at `syncFetch`, share/UUID/token UI hidden.
+- **Personal:** port 8765 is personal mode **with cloud sync on** — opening it in a fresh browser creates a
+  real KV entry (see `BACKLOG.md`, stray key). For local personal-mode checks use
+  `http://127.0.0.1:<any port>/?mode=personal` and turn Auto-sync off, or rely on the automated suite.
+- A previously installed service worker keeps serving the old build; unregister it or use
+  Settings → Check for updates.
+- **Automated:** `node --test --test-isolation=none tools/workout-features-browser.test.mjs` (both modes, zero
+  external requests) plus `tools/athlete-alpha-browser.test.mjs`.
+- **Later deployment (not done):** separate `athlete-alpha` branch → separate Cloudflare Pages project on
+  `alpha.gymtrack.hithitpull.fi`, `app-config.js` `mode: 'alpha'`, bumped build string shown in Settings.
+  Personal `main` → `gymtrack.hithitpull.fi` is unchanged. Backups are manual JSON exports; alpha has no
+  cloud recovery.
+
 ## Needed from Henri
 
 - First five invitees and approximate iPhone/Android split; target training types,
