@@ -34,6 +34,9 @@ const server = createServer(async (req, res) => {
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const origin = `http://127.0.0.1:${server.address().port}`;
+// Random local ports resolve to athlete-alpha (gym_alpha.*). These checks seed and read
+// personal gym.* keys and intercept the sync API, so run them explicitly in personal mode.
+const appUrl = `${origin}/?mode=personal`;
 let browser, reviewer;
 try {
   browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM_EXECUTABLE ? { executablePath: process.env.CHROMIUM_EXECUTABLE } : {}) });
@@ -46,7 +49,7 @@ try {
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', error => { errors.push(error.message); console.error(error.stack); });
-  await page.goto(origin);
+  await page.goto(appUrl);
   // First installation claims the page and triggers the app's one-time reload.
   // Begin interactions on a controlled load so that navigation cannot erase a click.
   await page.waitForFunction(() => !!navigator.serviceWorker.controller);
