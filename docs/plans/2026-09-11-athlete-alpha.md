@@ -106,6 +106,16 @@ a known data-loss or access-control defect in a small sample.
   data was retained, reproducibility, optional redacted screenshot. Do not request
   full personal backups as the default bug report.
 
+## Update 2026-09-19 — supersedes parts of the section below
+
+- Track is decided by origin: `gymtrack.hithitpull.fi` and localhost:8765 are personal;
+  every other origin is alpha. `app-config.js` only carries version strings.
+- **Alpha now has cloud sync** under its own UUID/token keys (`gymtrack_alpha_uuid`,
+  `gymtrack_alpha_write_token`); the invite code from a coach issues the token. The
+  "cloud requests are refused" and "no cloud recovery" statements below are obsolete.
+- Branch is `alpha` (not `athlete-alpha`); it tracks `main` until alpha diverges.
+- Coach programs: see `2026-09-19-coach-interface.md`.
+
 ## Local preview and later deployment (2026-09-16)
 
 Local, synthetic data only. Personal and alpha use separate storage prefixes (`gym.` / `gym_alpha.`).

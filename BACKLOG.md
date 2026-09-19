@@ -40,8 +40,6 @@ small phone (iPhone SE / Android with large font) before fixing.
 
 - **Assisted bodyweight exercises** (band/machine assistance) are not representable. Negative
   `weight` is refused by the editor, import and `push-plan.mjs`. Needs its own design and history key.
-- **Language preference `gym.language` is shared** between personal and alpha profiles on the same
-  origin-less key (i18n.js). Harmless preference, but not isolated by the `gym_alpha.` prefix.
 - **Web exercise timer cannot alarm while an iPhone is locked/suspended.** Stated in the UI; native
   notifications belong to the iOS workstream.
 
@@ -65,6 +63,10 @@ Deferred explicitly by Henri for the library v1 release; not fixed in this relea
 Scheduled in `ROADMAP.md` Phase 2, before native exercise-entry screens are finalized.
 
 ## Resolved
+
+- **Language preference shared between tracks** — fixed 2026-09-19 (`0aa3ae2`): alpha uses
+  `gym_alpha.language` (default Finnish), personal `gym.language` (default English).
+
 
 All six items in the previous list were fixed as of 2026-08-14:
 
