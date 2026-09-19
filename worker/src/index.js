@@ -9,10 +9,11 @@
 
 import ExerciseLibrary from '../../exercise-library.js';
 import WorkoutModel from '../../workout-model.js';
+import { handleCoachRoutes } from './coach.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-GymTrack-Write',
 };
 
@@ -76,6 +77,13 @@ export default {
     }
 
     const parts = url.pathname.split('/').filter(Boolean);
+
+    const coachResponse = await handleCoachRoutes(request, env, parts, {
+      json, deriveWriteToken,
+      // Athlete routes fail closed: a missing secret is refused upstream, never inert.
+      checkAthlete: async (req, uuid) => safeEqual(presentedToken(req), await deriveWriteToken(env.GYMTRACK_WRITE_SECRET, uuid)),
+    });
+    if (coachResponse) return coachResponse;
 
     if (parts[0] !== 'data' || !parts[1]) {
       return json({ error: 'Not found' }, 404);

@@ -40,7 +40,9 @@ athlete never accepts never touches their data.
 
 | Key | Value |
 |---|---|
-| `coach:<coachId>` | `{ name, createdAt }` |
+| `coach:<email>` | `{ name }`, created by Henri with `wrangler kv key put` |
+| `athlete:<uuid>` | `{ coachId, coachName, displayName, linkedAt }`, one coach per athlete |
+| `assignments:<coachId>` | the last 50 assignment IDs |
 | `roster:<coachId>` | `[{ athleteUuid, displayName, linkedAt }]` |
 | `invite:<code>` | `{ coachId, expiresAt }`, single use, 7-day TTL |
 | `inbox:<athleteUuid>` | `[{ id, coachId, coachName, plan, sentAt, status }]`, capped at 10 |
@@ -48,9 +50,14 @@ athlete never accepts never touches their data.
 
 ## Credentials
 
-- **Coach token:** `HMAC(secret, "coach:" + coachId)`. Henri creates coaches by hand
-  with a new `tools/coach-token.mjs` (there are one or two coaches in alpha, so no
-  sign-up flow).
+- **Coach sign-in: Cloudflare Access (decided 2026-09-19).** The coach page and
+  `/coach/*` sit on `coach.gymtrack.hithitpull.fi` behind an Access policy (Google
+  login or one-time email code, two-factor via the Google account). The Worker
+  verifies the `Cf-Access-Jwt-Assertion` JWT (RS256 signature against the team's
+  certs, audience, issuer, expiry) and uses its email as the coach ID. A verified
+  email is only a coach if `coach:<email>` exists in KV. Revoking a coach means
+  removing them from the Access policy (or deleting the KV key). No coach secret
+  is ever pasted anywhere.
 - **Linking athletes:** the coach makes an invite code. The athlete types it in
   Settings, which calls `POST /link` with their UUID. Linking happens only with the
   athlete's consent, and the coach never sees the athlete's token.
@@ -65,10 +72,13 @@ athlete never accepts never touches their data.
 
 | Method | Path | Auth | Does |
 |---|---|---|---|
+| GET | `/coach/me` | coach | the signed-in coach |
 | POST | `/coach/invite` | coach | create an invite code |
+| GET | `/coach/athlete/:uuid` | coach, roster | the athlete's plan, sessions and body weight (not settings) |
+| DELETE | `/inbox/:uuid/coach` | athlete | unlink from the coach |
 | POST | `/link` | invite code | issue the athlete's write token, add the athlete to the roster |
 | GET | `/coach/roster` | coach | list linked athletes |
-| DELETE | `/coach/roster/:uuid` | coach or athlete | unlink the athlete |
+| DELETE | `/coach/roster/:uuid` | coach | unlink the athlete |
 | POST | `/coach/assign` | coach | `{ plan, athletes: [uuid] }`: validate once, write each inbox |
 | GET | `/coach/assignments` | coach | delivery and accept status |
 | GET | `/inbox/:uuid` | athlete | pending plans |
@@ -85,8 +95,8 @@ in the response for each athlete rather than silently.
 `exercise-library.js`, `i18n.js` and the styles, and defaults to Finnish like the
 rest of alpha.
 
-1. **Sign in:** paste the coach token and store it locally, the same pattern as the
-   athlete write token.
+1. **Sign in:** handled by Cloudflare Access before the page loads. The page and
+   the API share the `coach.` origin so the Access cookie covers both.
 2. **Roster:** linked athletes, a "create invite code" button, and unlink.
 3. **Program:** load a plan from JSON (a file or a paste), or start from a copy of
    an earlier assignment. Show the same preview athletes see. **v1 has no in-page
@@ -122,8 +132,17 @@ rest of alpha.
 
 ## Phases
 
-1. **Worker:** records, endpoints, coach token tool and Worker tests. Deploy
-   behind the existing secret. Personal routes stay unchanged.
+1. **Worker (built 2026-09-19):** `worker/src/coach.js`, tests in
+   `tools/coach-worker.test.mjs`. Every coach route fails closed until
+   `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` are set. Personal routes are unchanged.
+   Setup before first use:
+   - Zero Trust → Access → add a self-hosted application for
+     `coach.gymtrack.hithitpull.fi`, with a policy allowing the coaches' emails.
+     Copy its **Application Audience (AUD) tag**.
+   - Route `coach.gymtrack.hithitpull.fi/*` to the `gymtrack` Worker.
+   - `wrangler secret put ACCESS_AUD` and set `ACCESS_TEAM_DOMAIN`
+     (`<team>.cloudflareaccess.com`) as a var.
+   - `wrangler kv key put --binding GYMTRACK_DATA "coach:<email>" '{"name":"<name>"}'`.
 2. **Athlete inbox:** banner, preview, accept and decline, plus the Settings
    linking section. Test this with two alpha profiles on localhost:8766.
 3. **Coach page:** roster, send and status.
@@ -161,3 +180,5 @@ converts by hand when needed.
 2. Redeeming the invite code issues the athlete's write token.
 3. The coach can see athletes' logged sessions in v1.
 4. A coach update replaces only that coach's days; the athlete's own days are kept.
+5. Coaches sign in through Cloudflare Access. Closing the open `/data` read for alpha
+   athletes is deferred.
