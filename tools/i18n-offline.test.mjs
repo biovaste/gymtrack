@@ -32,7 +32,7 @@ test('offline install includes translation runtime, exercise dictionary and cata
 });
 test('cached app and catalogue remain immutable until next worker activation', async () => {
   const h = harness();
-  for (const path of ['app.js', 'locales/catalog.js', 'index.html']) {
+  for (const path of ['app.js', 'locales/catalog.js', '']) {
     let response;
     h.events.fetch({ request: { method: 'GET', url: 'https://example.test/gym/' + path }, respondWith: value => { response = value; } });
     assert.equal((await response).body, 'installed version');

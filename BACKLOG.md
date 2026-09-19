@@ -28,6 +28,12 @@ deleted — recorded here so a future session doesn't rediscover it and mistake 
 account, or delete something else by guessing. The sync API has no delete route; removing it
 means `wrangler kv key delete` against the `GYMTRACK_DATA` namespace.
 
+### Second stray KV entry (2026-09-19)
+
+`cf66049d-e1b3-435a-997e-841339fda6dd` is also junk: created when Claude opened
+`gymtrack.hithitpull.fi` in a fresh in-app browser to debug the update check. Empty
+starter plan, 0 sessions. Same handling as the entry above.
+
 ## Open — Narrow phone + larger text overflow in superset cards (2026-09-16)
 
 At 320 px width with ~120% text (Finnish), the active-workout page scrolls sideways by ~13 px:

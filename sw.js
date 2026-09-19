@@ -2,10 +2,11 @@
 // Bump on EVERY release. The browser only installs a new worker when sw.js itself
 // changes byte-for-byte, so shipping app.js/styles.css without touching this file
 // means no 'updatefound', no update banner, and users sit on the old cache.
-const CACHE = 'gymtrack-i18n-8382c3e067d7c308cbdd';
+const CACHE = 'gymtrack-i18n-31713dcba223e92fa07b';
 const ASSETS = [
+  // Only './': Cloudflare Pages answers /index.html with a 308 to '/', and Safari
+  // refuses a redirected response from a service worker for a navigation.
   './',
-  './index.html',
   './styles.css',
   './app-config.js',
   './app.js',

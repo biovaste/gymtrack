@@ -4417,5 +4417,12 @@
     "context": "Coach program preview: reassures that accepting touches only the coach's days",
     "screen": "Coach programs",
     "role": "text"
+  },
+  "updates.error.failed": {
+    "en": "Update check failed: {error}",
+    "fi": "Päivitysten tarkistus epäonnistui: {error}",
+    "context": "Settings → Check for updates failed while online; shows the browser error text",
+    "screen": "Settings",
+    "role": "message"
   }
 }

@@ -2645,6 +2645,10 @@ globalThis.GYM_I18N_CATALOG = {
       "en": "Check for updates",
       "fi": "Tarkista päivitykset"
     },
+    "updates.error.failed": {
+      "en": "Update check failed: {error}",
+      "fi": "Päivitysten tarkistus epäonnistui: {error}"
+    },
     "updates.status.latest": {
       "en": "You’re on the latest version ✓",
       "fi": "Käytössäsi on uusin versio ✓"
@@ -3122,5 +3126,5 @@ globalThis.GYM_I18N_CATALOG = {
       "fi": "hyppykorkeus"
     }
   },
-  "version": "9df85ecf5354d84107ec"
+  "version": "a5df19ee612c5bf2805a"
 };

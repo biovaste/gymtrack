@@ -735,6 +735,25 @@ function touch() {
   store.set('updatedAt', dataUpdatedAt);
   if (syncReady && APP_CONFIG.cloudSync) scheduleSync();
 }
+
+// One-time rescue (2026-09-19). Before the track was decided by origin, a stale cached
+// page could open the personal host in alpha mode, so workouts logged there landed
+// under the gym_alpha. prefix. Copy them into personal history; ids and dates dedupe.
+// The alpha keys are left in place as a backup; the plan is not touched.
+if (!APP_CONFIG.isAlpha && !store.get('alphaRescued', 0) && !store.hasUnresolvedTx()) {
+  const readAlpha = k => { try { const v = JSON.parse(localStorage.getItem('gym_alpha.' + k)); return Array.isArray(v) ? v : []; } catch (e) { return []; } };
+  const alphaSessions = readAlpha('sessions'), alphaBW = readAlpha('bw');
+  const mergedSessions = mergeByKey(alphaSessions, sessions, s => s.id).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const mergedBW = mergeByKey(alphaBW, bodyWeight, b => b.date).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const added = (mergedSessions.length - sessions.length) + (mergedBW.length - bodyWeight.length);
+  if (added > 0 && store.set('sessions', mergedSessions).ok && store.set('bw', mergedBW).ok) {
+    sessions = mergedSessions; bodyWeight = mergedBW;
+    // No touch(): the cloud copy stays newer, so the launch sync pulls it, keeps these
+    // local-only records (mergeByKey) and pushes the union back up.
+    console.log('Rescued from alpha storage:', added);
+  }
+  store.set('alphaRescued', Date.now());
+}
 function savePlan() {
   const res = store.set('plan', plan);
   if (!res.ok) { toast(tr('storage.error.save_failed', { item: tr('navigation.plan') }), 'err'); return false; }
@@ -2270,7 +2289,11 @@ async function checkForUpdates() {
     const reg = await navigator.serviceWorker.getRegistration();
     if (!reg) { toast(tr("check_for_updates.message.app_not_installed_as_a_pwa_just_reload_the_page")); return reset(); }
 
-    await reg.update(); // re-fetches sw.js; installs a new worker if it differs
+    // A failed worker update must not end the check: the app.js comparison below
+    // still works and offers a cache-purging reload, which recovers a stuck worker.
+    let updateError = null;
+    try { await reg.update(); } // re-fetches sw.js; installs a new worker if it differs
+    catch (err) { updateError = err; }
     if (reg.waiting) { swWaiting = reg.waiting; showUpdateBanner(); toast(tr("check_for_updates.message.update_ready_tap_update")); return reset(); }
 
     // Worker is current. Is its cached app.js still current too?
@@ -2278,9 +2301,9 @@ async function checkForUpdates() {
       fetch(`./app.js?fresh=${Date.now()}`, { cache: 'no-store' }),
       caches.match('./app.js')
     ]);
-    if (!liveRes.ok || !cachedRes) { toast(tr("updates.status.latest")); return reset(); }
-    const [live, cached] = await Promise.all([liveRes.text(), cachedRes.text()]);
-    if (live === cached) { toast(tr("updates.status.latest")); return reset(); }
+    if (!liveRes.ok) throw new Error('app.js HTTP ' + liveRes.status);
+    const [live, cached] = await Promise.all([liveRes.text(), cachedRes ? cachedRes.text() : '']);
+    if (live === cached && !updateError) { toast(tr("updates.status.latest")); return reset(); }
 
     reset();
     showModal(tr("check_for_updates.message.update_available"), `
@@ -2289,7 +2312,9 @@ async function checkForUpdates() {
       [{ label: tr("check_for_updates.button.reload_now"), cls: 'primary', fn: forceRefresh }, { label: tr("check_for_updates.button.not_now") }]);
   } catch (err) {
     reset();
-    toast(tr("check_for_updates.message.could_not_check_are_you_offline"), 'err');
+    // navigator.onLine is only a hint, but it separates "no network" from a real failure.
+    if (navigator.onLine === false) toast(tr("check_for_updates.message.could_not_check_are_you_offline"), 'err');
+    else toast(tr("updates.error.failed", { error: (err && (err.message || err.name)) || '?' }), 'err');
   }
 }
 

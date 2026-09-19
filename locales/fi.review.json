@@ -32780,6 +32780,20 @@
       "status": "draft",
       "origin": "source",
       "history": []
+    },
+    "updates.error.failed": {
+      "revision": "7b53f83ca8c8283704e3",
+      "source": {
+        "en": "Update check failed: {error}",
+        "fi": "Päivitysten tarkistus epäonnistui: {error}",
+        "context": "Settings → Check for updates failed while online; shows the browser error text",
+        "screen": "Settings",
+        "role": "message"
+      },
+      "fi": "Päivitysten tarkistus epäonnistui: {error}",
+      "status": "draft",
+      "origin": "source",
+      "history": []
     }
   }
 }
