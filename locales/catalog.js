@@ -437,6 +437,122 @@ globalThis.GYM_I18N_CATALOG = {
       "en": "Record in the Camera app first using Slo-Mo (1080p/240 fps under Settings › Camera › Record Slo-mo). Then return here and choose the video from Photo Library.",
       "fi": "Kuvaa ensin kameran slow-mo-tilassa (1080p/240 fps: Asetukset › Kamera › Tallenna hidastettua). Palaa sitten tänne ja valitse video Kuvakirjastosta."
     },
+    "coach.action.accept": {
+      "en": "Accept",
+      "fi": "Hyväksy"
+    },
+    "coach.action.decline": {
+      "en": "Decline",
+      "fi": "Hylkää"
+    },
+    "coach.error.ack": {
+      "en": "Could not reach the server: {error}",
+      "fi": "Palvelimeen ei saatu yhteyttä: {error}"
+    },
+    "coach.error.code_format": {
+      "en": "The invite code is 8 letters and numbers",
+      "fi": "Kutsukoodissa on 8 kirjainta ja numeroa"
+    },
+    "coach.error.link": {
+      "en": "Coach link failed: {error}",
+      "fi": "Valmentajayhteys epäonnistui: {error}"
+    },
+    "coach.inbox.banner": {
+      "en": "{coach} sent a new program: {plan}",
+      "fi": "{coach} lähetti uuden ohjelman: {plan}"
+    },
+    "coach.inbox.open": {
+      "en": "Review program",
+      "fi": "Tarkastele ohjelmaa"
+    },
+    "coach.plan.from": {
+      "en": "From {coach}",
+      "fi": "Valmentajalta {coach}"
+    },
+    "coach.plan.from_edited": {
+      "en": "From {coach} · edited",
+      "fi": "Valmentajalta {coach} · muokattu"
+    },
+    "coach.preview.added": {
+      "en": "New days: {days}",
+      "fi": "Uudet päivät: {days}"
+    },
+    "coach.preview.edits_lost": {
+      "en": "Your changes to these days will be overwritten: {days}",
+      "fi": "Näihin päiviin tekemäsi muutokset korvataan: {days}"
+    },
+    "coach.preview.history": {
+      "en": "Only this coach's days change. Your own days and your workout history are kept.",
+      "fi": "Vain tämän valmentajan päivät muuttuvat. Omat päiväsi ja treenihistoriasi säilyvät."
+    },
+    "coach.preview.kept": {
+      "en": "Your own days, kept: {days}",
+      "fi": "Omat päiväsi säilyvät: {days}"
+    },
+    "coach.preview.note": {
+      "en": "Coach's note: {note}",
+      "fi": "Valmentajan viesti: {note}"
+    },
+    "coach.preview.removed": {
+      "en": "Removed days: {days}",
+      "fi": "Poistuvat päivät: {days}"
+    },
+    "coach.preview.replaced": {
+      "en": "Updated days: {days}",
+      "fi": "Päivitetyt päivät: {days}"
+    },
+    "coach.preview.title": {
+      "en": "{plan} from {coach}",
+      "fi": "{plan} – valmentajalta {coach}"
+    },
+    "coach.settings.code_label": {
+      "en": "Invite code",
+      "fi": "Kutsukoodi"
+    },
+    "coach.settings.consent": {
+      "en": "Linking lets the coach send you programs and see your logged workouts. You can unlink at any time.",
+      "fi": "Yhdistäminen antaa valmentajan lähettää sinulle ohjelmia ja nähdä kirjaamasi treenit. Voit poistaa yhteyden milloin tahansa."
+    },
+    "coach.settings.link": {
+      "en": "Link to coach",
+      "fi": "Yhdistä valmentajaan"
+    },
+    "coach.settings.linked": {
+      "en": "Linked to {coach}. Your coach can send you programs and see your logged workouts.",
+      "fi": "Yhdistetty valmentajaan {coach}. Valmentajasi voi lähettää sinulle ohjelmia ja nähdä kirjaamasi treenit."
+    },
+    "coach.settings.name_label": {
+      "en": "Your name (shown to the coach)",
+      "fi": "Nimesi (näkyy valmentajalle)"
+    },
+    "coach.settings.title": {
+      "en": "Coach",
+      "fi": "Valmentaja"
+    },
+    "coach.settings.unlink": {
+      "en": "Unlink coach",
+      "fi": "Poista valmentajayhteys"
+    },
+    "coach.settings.unlink_confirm": {
+      "en": "Unlink from {coach}? They will no longer see your workouts or send you programs. Days they already sent stay in your plan.",
+      "fi": "Poistetaanko yhteys valmentajaan {coach}? Hän ei enää näe treenejäsi eikä voi lähettää ohjelmia. Jo lähetetyt päivät jäävät ohjelmaasi."
+    },
+    "coach.toast.accepted": {
+      "en": "Program accepted",
+      "fi": "Ohjelma hyväksytty"
+    },
+    "coach.toast.declined": {
+      "en": "Program declined",
+      "fi": "Ohjelma hylätty"
+    },
+    "coach.toast.linked": {
+      "en": "Linked to {coach}",
+      "fi": "Yhdistetty valmentajaan {coach}"
+    },
+    "coach.toast.unlinked": {
+      "en": "Coach unlinked",
+      "fi": "Valmentajayhteys poistettu"
+    },
     "coach_prompt.copy_data": {
       "en": "You are my strength coach. Below is my recent GymTrack training data (JSON). Review my actual sets, reps, weights, RPE, notes and body weight, then write my next workout plan.\n\nOutput ONLY a JSON code block matching this exact schema (weights in {unit}):\n{schema}\n\nRules: progress weights from logged RPE (at or below target: increase; above target: hold or reduce). Always include 1–2 alternates per exercise for busy equipment and a short description for every exercise and alternate. Keep rest realistic. Set restSecondsNext only when rest before changing movements differs from between-set rest. Set equipment accurately because it controls the plate calculator and bodyweight weight field. Use metric \"height\" only for jump-height tests logged in cm, with bodyweight and weight 0. Use the same superset tag only for adjacent exercises that form one alternating superset. Preserve canonical exercise names where supplied so history matches; descriptions may be in the selected language. Do not translate or alter user notes. Preserve movementId, side, setupId, loadProfile, libraryEntry and saved library entries for existing movements. Never infer or merge identities from similar names. Alternates may carry their own identity, equipment, metric and measurement targets. Use numbers for durationSeconds, distanceMeters and speedKph, and an object for loadProfile; omit unknown optional fields. Preserve warmup and warmupSets where appropriate. Timed and distance measurements are not repetitions; the set-RPE load estimate is not a whole-session RPE rating.\n\nMy data:\n",
       "fi": "Olet fysiikkavalmentajani. Alla ovat GymTrack-sovelluksesta tuodut viimeisimmät harjoittelutietoni (JSON). Arvioi toteutuneet sarjat, toistot, painot, RPE:t, muistiinpanot ja kehonpaino, ja laadi seuraava harjoitteluohjelmani.\n\nVastaa VAIN JSON-koodilohkolla, joka noudattaa täsmälleen tätä rakennetta (painot yksikössä {unit}):\n{schema}\n\nSäännöt: säädä painoja kirjatun RPE:n perusteella (tavoite-RPE tai alle: lisää painoa; yli tavoitteen: pidä ennallaan tai vähennä). Lisää aina 1–2 vaihtoehtoista liikettä ruuhkaisia välineitä varten sekä lyhyt suoritusohje jokaiselle liikkeelle ja vaihtoehdolle. Pidä palautusajat liikkeeseen sopivina. Aseta restSecondsNext vain, kun palautus ennen seuraavaan liikkeeseen siirtymistä eroaa sarjojen välisestä palautuksesta. Aseta equipment oikein, koska se ohjaa levypainolaskuria ja kehonpainoliikkeiden painokenttää. Käytä metric-arvoa \"height\" vain senttimetreinä kirjattaville hyppykorkeustesteille sekä silloin equipment-arvoa \"bodyweight\" ja weight-arvoa 0. Käytä samaa superset-tunnistetta vain peräkkäisille liikkeille, jotka kirjataan yhtenä vuorottelevana supersarjana. Säilytä annetut liikenimet kanonisina, jotta historia yhdistyy oikein; suoritusohjeet voivat olla valitulla kielellä. Älä käännä tai muuta käyttäjän muistiinpanoja. Säilytä olemassa olevien liikkeiden movementId, side, setupId, loadProfile, libraryEntry ja tallennetut kirjastotietueet. Älä päättele tai yhdistä tunnisteita samankaltaisten nimien perusteella. Vaihtoehdoilla voi olla omat tunnisteet, välineet, mittarit ja mittaustavoitteet. Anna durationSeconds, distanceMeters ja speedKph numeroina ja loadProfile objektina; jätä tuntemattomat valinnaiset kentät pois. Säilytä warmup ja warmupSets tarvittaessa. Aika- ja matkamittaukset eivät ole toistoja; sarjojen RPE:stä laskettu kuormitusarvio ei ole koko harjoituksen RPE-arvio.\n\nTietoni:\n"
@@ -3006,5 +3122,5 @@ globalThis.GYM_I18N_CATALOG = {
       "fi": "hyppykorkeus"
     }
   },
-  "version": "407e24fb591d0a9dcee9"
+  "version": "9df85ecf5354d84107ec"
 };

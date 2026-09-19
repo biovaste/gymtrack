@@ -4214,5 +4214,208 @@
       "weight",
       "unit"
     ]
+  },
+  "coach.inbox.banner": {
+    "en": "{coach} sent a new program: {plan}",
+    "fi": "{coach} lähetti uuden ohjelman: {plan}",
+    "context": "Start screen banner when a coach program is waiting for the athlete",
+    "screen": "Coach programs",
+    "role": "text"
+  },
+  "coach.inbox.open": {
+    "en": "Review program",
+    "fi": "Tarkastele ohjelmaa",
+    "context": "Opens the preview of the coach program waiting in the inbox",
+    "screen": "Coach programs",
+    "role": "button"
+  },
+  "coach.preview.title": {
+    "en": "{plan} from {coach}",
+    "fi": "{plan} – valmentajalta {coach}",
+    "context": "Preview dialog title for a program sent by a coach",
+    "screen": "Coach programs",
+    "role": "title"
+  },
+  "coach.preview.note": {
+    "en": "Coach's note: {note}",
+    "fi": "Valmentajan viesti: {note}",
+    "context": "Free-text note the coach attached to the program",
+    "screen": "Coach programs",
+    "role": "text"
+  },
+  "coach.preview.added": {
+    "en": "New days: {days}",
+    "fi": "Uudet päivät: {days}",
+    "context": "List of plan days the coach program adds",
+    "screen": "Coach programs",
+    "role": "text"
+  },
+  "coach.preview.replaced": {
+    "en": "Updated days: {days}",
+    "fi": "Päivitetyt päivät: {days}",
+    "context": "List of this coach's earlier days that the program replaces",
+    "screen": "Coach programs",
+    "role": "text"
+  },
+  "coach.preview.removed": {
+    "en": "Removed days: {days}",
+    "fi": "Poistuvat päivät: {days}",
+    "context": "List of this coach's earlier days that are not in the new program",
+    "screen": "Coach programs",
+    "role": "text"
+  },
+  "coach.preview.kept": {
+    "en": "Your own days, kept: {days}",
+    "fi": "Omat päiväsi säilyvät: {days}",
+    "context": "Athlete's own plan days that the coach program does not touch",
+    "screen": "Coach programs",
+    "role": "text"
+  },
+  "coach.preview.edits_lost": {
+    "en": "Your changes to these days will be overwritten: {days}",
+    "fi": "Näihin päiviin tekemäsi muutokset korvataan: {days}",
+    "context": "Warning: the athlete edited coach days locally and accepting replaces them",
+    "screen": "Coach programs",
+    "role": "text"
+  },
+  "coach.action.accept": {
+    "en": "Accept",
+    "fi": "Hyväksy",
+    "context": "Accept the coach program and apply it to the plan",
+    "screen": "Coach programs",
+    "role": "button"
+  },
+  "coach.action.decline": {
+    "en": "Decline",
+    "fi": "Hylkää",
+    "context": "Decline the coach program; the plan is not changed",
+    "screen": "Coach programs",
+    "role": "button"
+  },
+  "coach.toast.accepted": {
+    "en": "Program accepted",
+    "fi": "Ohjelma hyväksytty",
+    "context": "Coach program was applied to the plan",
+    "screen": "Coach programs",
+    "role": "message"
+  },
+  "coach.toast.declined": {
+    "en": "Program declined",
+    "fi": "Ohjelma hylätty",
+    "context": "Coach program was declined",
+    "screen": "Coach programs",
+    "role": "message"
+  },
+  "coach.error.ack": {
+    "en": "Could not reach the server: {error}",
+    "fi": "Palvelimeen ei saatu yhteyttä: {error}",
+    "context": "Sending accept/decline to the server failed",
+    "screen": "Coach programs",
+    "role": "message"
+  },
+  "coach.settings.title": {
+    "en": "Coach",
+    "fi": "Valmentaja",
+    "context": "Settings section for linking to a coach",
+    "screen": "Settings",
+    "role": "heading"
+  },
+  "coach.settings.linked": {
+    "en": "Linked to {coach}. Your coach can send you programs and see your logged workouts.",
+    "fi": "Yhdistetty valmentajaan {coach}. Valmentajasi voi lähettää sinulle ohjelmia ja nähdä kirjaamasi treenit.",
+    "context": "Settings: the athlete is linked to a coach",
+    "screen": "Settings",
+    "role": "text"
+  },
+  "coach.settings.unlink": {
+    "en": "Unlink coach",
+    "fi": "Poista valmentajayhteys",
+    "context": "Remove the link to the coach",
+    "screen": "Settings",
+    "role": "button"
+  },
+  "coach.settings.unlink_confirm": {
+    "en": "Unlink from {coach}? They will no longer see your workouts or send you programs. Days they already sent stay in your plan.",
+    "fi": "Poistetaanko yhteys valmentajaan {coach}? Hän ei enää näe treenejäsi eikä voi lähettää ohjelmia. Jo lähetetyt päivät jäävät ohjelmaasi.",
+    "context": "Confirmation before unlinking from the coach",
+    "screen": "Settings",
+    "role": "text"
+  },
+  "coach.settings.code_label": {
+    "en": "Invite code",
+    "fi": "Kutsukoodi",
+    "context": "Input for the 8-character code the coach gives the athlete",
+    "screen": "Settings",
+    "role": "label"
+  },
+  "coach.settings.name_label": {
+    "en": "Your name (shown to the coach)",
+    "fi": "Nimesi (näkyy valmentajalle)",
+    "context": "Input for the athlete's display name on the coach roster",
+    "screen": "Settings",
+    "role": "label"
+  },
+  "coach.settings.consent": {
+    "en": "Linking lets the coach send you programs and see your logged workouts. You can unlink at any time.",
+    "fi": "Yhdistäminen antaa valmentajan lähettää sinulle ohjelmia ja nähdä kirjaamasi treenit. Voit poistaa yhteyden milloin tahansa.",
+    "context": "Explains what linking to a coach shares, shown before linking",
+    "screen": "Settings",
+    "role": "text"
+  },
+  "coach.settings.link": {
+    "en": "Link to coach",
+    "fi": "Yhdistä valmentajaan",
+    "context": "Redeem the invite code and link to the coach",
+    "screen": "Settings",
+    "role": "button"
+  },
+  "coach.toast.linked": {
+    "en": "Linked to {coach}",
+    "fi": "Yhdistetty valmentajaan {coach}",
+    "context": "Linking to the coach succeeded",
+    "screen": "Settings",
+    "role": "message"
+  },
+  "coach.toast.unlinked": {
+    "en": "Coach unlinked",
+    "fi": "Valmentajayhteys poistettu",
+    "context": "Unlinking from the coach succeeded",
+    "screen": "Settings",
+    "role": "message"
+  },
+  "coach.error.link": {
+    "en": "Coach link failed: {error}",
+    "fi": "Valmentajayhteys epäonnistui: {error}",
+    "context": "Linking or unlinking the coach failed",
+    "screen": "Settings",
+    "role": "message"
+  },
+  "coach.error.code_format": {
+    "en": "The invite code is 8 letters and numbers",
+    "fi": "Kutsukoodissa on 8 kirjainta ja numeroa",
+    "context": "Invite code typed in the wrong format",
+    "screen": "Settings",
+    "role": "message"
+  },
+  "coach.plan.from": {
+    "en": "From {coach}",
+    "fi": "Valmentajalta {coach}",
+    "context": "Plan day label: this day came from a coach",
+    "screen": "Plan",
+    "role": "chip"
+  },
+  "coach.plan.from_edited": {
+    "en": "From {coach} · edited",
+    "fi": "Valmentajalta {coach} · muokattu",
+    "context": "Plan day label: coach day the athlete changed locally; the next coach update overwrites it",
+    "screen": "Plan",
+    "role": "chip"
+  },
+  "coach.preview.history": {
+    "en": "Only this coach's days change. Your own days and your workout history are kept.",
+    "fi": "Vain tämän valmentajan päivät muuttuvat. Omat päiväsi ja treenihistoriasi säilyvät.",
+    "context": "Coach program preview: reassures that accepting touches only the coach's days",
+    "screen": "Coach programs",
+    "role": "text"
   }
 }

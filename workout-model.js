@@ -121,7 +121,54 @@
     if (from === -1) return null;
     return moveGroupToGap(list, exerciseIndex, dir < 0 ? from - 1 : from + 2);
   }
-  const api = { isAddedLoad, groupRuns, moveGroupToGap, moveGroupBy, libraryErrors, libraryListErrors, metrics, sides, timed, targetFields, metadata, key, errors, loadable, nextLoad, row, recordSet, speed };
+  // ---- coach programs (docs/plans/2026-09-19-coach-interface.md) ----
+  // A day's content fingerprint. Stored on coach and starter days when they arrive, so
+  // a later mismatch means the athlete edited the day locally.
+  function dayHash(day) {
+    const text = JSON.stringify({ name: day.name, warmup: day.warmup || [], exercises: day.exercises || [] });
+    let h = 5381;
+    for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) | 0;
+    return (h >>> 0).toString(36);
+  }
+  const edited = day => !!(day.source && day.source.hash && day.source.hash !== dayHash(day));
+  // Replace only this coach's days with the incoming program. The athlete's own days
+  // stay in place; untouched starter days go (they were only ever a placeholder).
+  // Incoming coach days take the position of the first old coach day, or go first.
+  // Days are matched by name to keep their ids stable across updates.
+  function mergeCoachPlan(plan, incoming, source) {
+    const days = (plan && plan.days) || [];
+    const isThisCoach = d => d.source && d.source.coachId === source.coachId;
+    const isSpareStarter = d => d.source && d.source.starter && !edited(d);
+    const old = days.filter(isThisCoach);
+    const oldByName = new Map(old.map(d => [d.name, d]));
+    const tagged = incoming.days.map(d => {
+      const prev = oldByName.get(d.name);
+      const day = { ...d, id: prev ? prev.id : d.id };
+      day.source = { coachId: source.coachId, coachName: source.coachName, assignmentId: source.assignmentId };
+      day.source.hash = dayHash(day);
+      return day;
+    });
+    const result = [];
+    let placed = false;
+    for (const d of days) {
+      if (isThisCoach(d)) { if (!placed) { result.push(...tagged); placed = true; } continue; }
+      if (isSpareStarter(d)) continue;
+      result.push(d);
+    }
+    if (!placed) result.unshift(...tagged);
+    const incomingNames = new Set(incoming.days.map(d => d.name));
+    const kept = result.filter(d => !isThisCoach(d) && !tagged.includes(d));
+    return {
+      days: result,
+      name: kept.length ? plan.name : incoming.name,
+      replaced: old.filter(d => incomingNames.has(d.name)).map(d => d.name),
+      removed: old.filter(d => !incomingNames.has(d.name)).map(d => d.name),
+      added: incoming.days.filter(d => !oldByName.has(d.name)).map(d => d.name),
+      kept: kept.map(d => d.name),
+      overwrittenEdits: old.filter(edited).map(d => d.name)
+    };
+  }
+  const api = { dayHash, mergeCoachPlan, isAddedLoad, groupRuns, moveGroupToGap, moveGroupBy, libraryErrors, libraryListErrors, metrics, sides, timed, targetFields, metadata, key, errors, loadable, nextLoad, row, recordSet, speed };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.WorkoutModel = api;
 })(typeof globalThis === 'object' ? globalThis : this);

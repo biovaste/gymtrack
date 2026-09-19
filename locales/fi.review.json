@@ -32374,6 +32374,412 @@
       "status": "draft",
       "origin": "source",
       "history": []
+    },
+    "coach.inbox.banner": {
+      "revision": "ae2fb838f0713f8e90b5",
+      "source": {
+        "en": "{coach} sent a new program: {plan}",
+        "fi": "{coach} lähetti uuden ohjelman: {plan}",
+        "context": "Start screen banner when a coach program is waiting for the athlete",
+        "screen": "Coach programs",
+        "role": "text"
+      },
+      "fi": "{coach} lähetti uuden ohjelman: {plan}",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.inbox.open": {
+      "revision": "217972dc39a3b59b90ec",
+      "source": {
+        "en": "Review program",
+        "fi": "Tarkastele ohjelmaa",
+        "context": "Opens the preview of the coach program waiting in the inbox",
+        "screen": "Coach programs",
+        "role": "button"
+      },
+      "fi": "Tarkastele ohjelmaa",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.preview.title": {
+      "revision": "dbe0234024108261667f",
+      "source": {
+        "en": "{plan} from {coach}",
+        "fi": "{plan} – valmentajalta {coach}",
+        "context": "Preview dialog title for a program sent by a coach",
+        "screen": "Coach programs",
+        "role": "title"
+      },
+      "fi": "{plan} – valmentajalta {coach}",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.preview.note": {
+      "revision": "7211a34102de2c06a60a",
+      "source": {
+        "en": "Coach's note: {note}",
+        "fi": "Valmentajan viesti: {note}",
+        "context": "Free-text note the coach attached to the program",
+        "screen": "Coach programs",
+        "role": "text"
+      },
+      "fi": "Valmentajan viesti: {note}",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.preview.added": {
+      "revision": "2e0726ffeaba1d65881a",
+      "source": {
+        "en": "New days: {days}",
+        "fi": "Uudet päivät: {days}",
+        "context": "List of plan days the coach program adds",
+        "screen": "Coach programs",
+        "role": "text"
+      },
+      "fi": "Uudet päivät: {days}",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.preview.replaced": {
+      "revision": "5daab85fd46f6b203f22",
+      "source": {
+        "en": "Updated days: {days}",
+        "fi": "Päivitetyt päivät: {days}",
+        "context": "List of this coach's earlier days that the program replaces",
+        "screen": "Coach programs",
+        "role": "text"
+      },
+      "fi": "Päivitetyt päivät: {days}",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.preview.removed": {
+      "revision": "2fda19ec13e384050099",
+      "source": {
+        "en": "Removed days: {days}",
+        "fi": "Poistuvat päivät: {days}",
+        "context": "List of this coach's earlier days that are not in the new program",
+        "screen": "Coach programs",
+        "role": "text"
+      },
+      "fi": "Poistuvat päivät: {days}",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.preview.kept": {
+      "revision": "5b4b36172fc79d24e400",
+      "source": {
+        "en": "Your own days, kept: {days}",
+        "fi": "Omat päiväsi säilyvät: {days}",
+        "context": "Athlete's own plan days that the coach program does not touch",
+        "screen": "Coach programs",
+        "role": "text"
+      },
+      "fi": "Omat päiväsi säilyvät: {days}",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.preview.edits_lost": {
+      "revision": "1d3c2d00574b2aa22986",
+      "source": {
+        "en": "Your changes to these days will be overwritten: {days}",
+        "fi": "Näihin päiviin tekemäsi muutokset korvataan: {days}",
+        "context": "Warning: the athlete edited coach days locally and accepting replaces them",
+        "screen": "Coach programs",
+        "role": "text"
+      },
+      "fi": "Näihin päiviin tekemäsi muutokset korvataan: {days}",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.action.accept": {
+      "revision": "1bf26f469baa39a779e4",
+      "source": {
+        "en": "Accept",
+        "fi": "Hyväksy",
+        "context": "Accept the coach program and apply it to the plan",
+        "screen": "Coach programs",
+        "role": "button"
+      },
+      "fi": "Hyväksy",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.action.decline": {
+      "revision": "cb5a60547f8a15383103",
+      "source": {
+        "en": "Decline",
+        "fi": "Hylkää",
+        "context": "Decline the coach program; the plan is not changed",
+        "screen": "Coach programs",
+        "role": "button"
+      },
+      "fi": "Hylkää",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.toast.accepted": {
+      "revision": "f77c7dad6975ca52dde7",
+      "source": {
+        "en": "Program accepted",
+        "fi": "Ohjelma hyväksytty",
+        "context": "Coach program was applied to the plan",
+        "screen": "Coach programs",
+        "role": "message"
+      },
+      "fi": "Ohjelma hyväksytty",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.toast.declined": {
+      "revision": "efb56e29222b67260d0b",
+      "source": {
+        "en": "Program declined",
+        "fi": "Ohjelma hylätty",
+        "context": "Coach program was declined",
+        "screen": "Coach programs",
+        "role": "message"
+      },
+      "fi": "Ohjelma hylätty",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.error.ack": {
+      "revision": "72246b7c63ce9a660dfc",
+      "source": {
+        "en": "Could not reach the server: {error}",
+        "fi": "Palvelimeen ei saatu yhteyttä: {error}",
+        "context": "Sending accept/decline to the server failed",
+        "screen": "Coach programs",
+        "role": "message"
+      },
+      "fi": "Palvelimeen ei saatu yhteyttä: {error}",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.settings.title": {
+      "revision": "d5dde0536521d9394046",
+      "source": {
+        "en": "Coach",
+        "fi": "Valmentaja",
+        "context": "Settings section for linking to a coach",
+        "screen": "Settings",
+        "role": "heading"
+      },
+      "fi": "Valmentaja",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.settings.linked": {
+      "revision": "758080a7fc5c9bba7b60",
+      "source": {
+        "en": "Linked to {coach}. Your coach can send you programs and see your logged workouts.",
+        "fi": "Yhdistetty valmentajaan {coach}. Valmentajasi voi lähettää sinulle ohjelmia ja nähdä kirjaamasi treenit.",
+        "context": "Settings: the athlete is linked to a coach",
+        "screen": "Settings",
+        "role": "text"
+      },
+      "fi": "Yhdistetty valmentajaan {coach}. Valmentajasi voi lähettää sinulle ohjelmia ja nähdä kirjaamasi treenit.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.settings.unlink": {
+      "revision": "4a6499d23e75ef99a729",
+      "source": {
+        "en": "Unlink coach",
+        "fi": "Poista valmentajayhteys",
+        "context": "Remove the link to the coach",
+        "screen": "Settings",
+        "role": "button"
+      },
+      "fi": "Poista valmentajayhteys",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.settings.unlink_confirm": {
+      "revision": "266353b2121f560fc339",
+      "source": {
+        "en": "Unlink from {coach}? They will no longer see your workouts or send you programs. Days they already sent stay in your plan.",
+        "fi": "Poistetaanko yhteys valmentajaan {coach}? Hän ei enää näe treenejäsi eikä voi lähettää ohjelmia. Jo lähetetyt päivät jäävät ohjelmaasi.",
+        "context": "Confirmation before unlinking from the coach",
+        "screen": "Settings",
+        "role": "text"
+      },
+      "fi": "Poistetaanko yhteys valmentajaan {coach}? Hän ei enää näe treenejäsi eikä voi lähettää ohjelmia. Jo lähetetyt päivät jäävät ohjelmaasi.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.settings.code_label": {
+      "revision": "ec3d590d76b89fb9d073",
+      "source": {
+        "en": "Invite code",
+        "fi": "Kutsukoodi",
+        "context": "Input for the 8-character code the coach gives the athlete",
+        "screen": "Settings",
+        "role": "label"
+      },
+      "fi": "Kutsukoodi",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.settings.name_label": {
+      "revision": "c69073e544a5e763008f",
+      "source": {
+        "en": "Your name (shown to the coach)",
+        "fi": "Nimesi (näkyy valmentajalle)",
+        "context": "Input for the athlete's display name on the coach roster",
+        "screen": "Settings",
+        "role": "label"
+      },
+      "fi": "Nimesi (näkyy valmentajalle)",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.settings.consent": {
+      "revision": "78dc8bfa79662a8c8d8e",
+      "source": {
+        "en": "Linking lets the coach send you programs and see your logged workouts. You can unlink at any time.",
+        "fi": "Yhdistäminen antaa valmentajan lähettää sinulle ohjelmia ja nähdä kirjaamasi treenit. Voit poistaa yhteyden milloin tahansa.",
+        "context": "Explains what linking to a coach shares, shown before linking",
+        "screen": "Settings",
+        "role": "text"
+      },
+      "fi": "Yhdistäminen antaa valmentajan lähettää sinulle ohjelmia ja nähdä kirjaamasi treenit. Voit poistaa yhteyden milloin tahansa.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.settings.link": {
+      "revision": "ddb85238e3dc74b5fda8",
+      "source": {
+        "en": "Link to coach",
+        "fi": "Yhdistä valmentajaan",
+        "context": "Redeem the invite code and link to the coach",
+        "screen": "Settings",
+        "role": "button"
+      },
+      "fi": "Yhdistä valmentajaan",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.toast.linked": {
+      "revision": "bb3eb6b274ccb8e955a5",
+      "source": {
+        "en": "Linked to {coach}",
+        "fi": "Yhdistetty valmentajaan {coach}",
+        "context": "Linking to the coach succeeded",
+        "screen": "Settings",
+        "role": "message"
+      },
+      "fi": "Yhdistetty valmentajaan {coach}",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.toast.unlinked": {
+      "revision": "7040fe672f8f5a1667b5",
+      "source": {
+        "en": "Coach unlinked",
+        "fi": "Valmentajayhteys poistettu",
+        "context": "Unlinking from the coach succeeded",
+        "screen": "Settings",
+        "role": "message"
+      },
+      "fi": "Valmentajayhteys poistettu",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.error.link": {
+      "revision": "5c6fc34f546bd9e5a8e5",
+      "source": {
+        "en": "Coach link failed: {error}",
+        "fi": "Valmentajayhteys epäonnistui: {error}",
+        "context": "Linking or unlinking the coach failed",
+        "screen": "Settings",
+        "role": "message"
+      },
+      "fi": "Valmentajayhteys epäonnistui: {error}",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.error.code_format": {
+      "revision": "7f868c707cf5d5d716bc",
+      "source": {
+        "en": "The invite code is 8 letters and numbers",
+        "fi": "Kutsukoodissa on 8 kirjainta ja numeroa",
+        "context": "Invite code typed in the wrong format",
+        "screen": "Settings",
+        "role": "message"
+      },
+      "fi": "Kutsukoodissa on 8 kirjainta ja numeroa",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.plan.from": {
+      "revision": "0b295d2f431e41871695",
+      "source": {
+        "en": "From {coach}",
+        "fi": "Valmentajalta {coach}",
+        "context": "Plan day label: this day came from a coach",
+        "screen": "Plan",
+        "role": "chip"
+      },
+      "fi": "Valmentajalta {coach}",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.plan.from_edited": {
+      "revision": "d3964972672e3cca8eff",
+      "source": {
+        "en": "From {coach} · edited",
+        "fi": "Valmentajalta {coach} · muokattu",
+        "context": "Plan day label: coach day the athlete changed locally; the next coach update overwrites it",
+        "screen": "Plan",
+        "role": "chip"
+      },
+      "fi": "Valmentajalta {coach} · muokattu",
+      "status": "draft",
+      "origin": "source",
+      "history": []
+    },
+    "coach.preview.history": {
+      "revision": "a5435c321ac1b935637a",
+      "source": {
+        "en": "Only this coach's days change. Your own days and your workout history are kept.",
+        "fi": "Vain tämän valmentajan päivät muuttuvat. Omat päiväsi ja treenihistoriasi säilyvät.",
+        "context": "Coach program preview: reassures that accepting touches only the coach's days",
+        "screen": "Coach programs",
+        "role": "text"
+      },
+      "fi": "Vain tämän valmentajan päivät muuttuvat. Omat päiväsi ja treenihistoriasi säilyvät.",
+      "status": "draft",
+      "origin": "source",
+      "history": []
     }
   }
 }

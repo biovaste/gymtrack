@@ -575,6 +575,12 @@ function weightIssueKind(equipment, barWeight, weight) {
 
 /* ================= default starter plan ================= */
 function defaultPlan() {
+  const p = starterPlan();
+  // Starter days are placeholders: an accepted coach program drops them unless edited.
+  for (const d of p.days) d.source = { starter: true, hash: WorkoutModel.dayHash(d) };
+  return p;
+}
+function starterPlan() {
   const ex = (name, sets, reps, weight, rpe, rest, alternates = [], equipment) =>
     ({ id: uid(), name, sets, reps, weight, targetRpe: rpe, restSeconds: rest, restSecondsNext: null, equipment: equipment || 'barbell', barWeight: null, metric: 'load', superset: null, description: '', notes: '', alternates });
   return {
@@ -878,7 +884,7 @@ async function syncWakeLock() {
   } catch (e) { wakeLock = null; }
 }
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') { unlockAudio(); syncWakeLock(); }
+  if (document.visibilityState === 'visible') { unlockAudio(); syncWakeLock(); refreshCoachInbox(); }
   else if (syncReady && settings.autoSync && dataUpdatedAt > lastSyncedAt) {
     clearTimeout(syncTimer); workerPush({ silent: true }); // flush unsynced changes before backgrounding
   }
@@ -1224,6 +1230,15 @@ function validatePlanImport(raw) {
   }
   return true;
 }
+// Only the known fields of a day's origin survive import; anything else is dropped.
+function daySource(src) {
+  if (!src || typeof src !== 'object') return {};
+  if (src.starter === true) return { source: { starter: true, ...(typeof src.hash === 'string' ? { hash: src.hash } : {}) } };
+  if (typeof src.coachId !== 'string' || !src.coachId) return {};
+  const out = { coachId: src.coachId, coachName: String(src.coachName || ''), assignmentId: String(src.assignmentId || '') };
+  if (typeof src.hash === 'string') out.hash = src.hash;
+  return { source: out };
+}
 function normalizePlan(raw) {
   if (!raw || typeof raw !== 'object') throw new Error(tr("normalize_plan.message.not_a_json_object"));
   if (raw.type && raw.type !== 'workout-plan') throw new Error(tr("normalize_plan.message.json_type_should_be_workout_plan"));
@@ -1239,6 +1254,7 @@ function normalizePlan(raw) {
       if (!Array.isArray(d.exercises)) throw new Error(tr("normalize_plan.message.day_needs_an_exercises_array", { d_name: d.name || '?' }));
       return {
         id: d.id || uid(), name: String(d.name || tr("normalize_plan.message.day")),
+        ...daySource(d.source),
         // Day-level warm-up: a checklist of general prep (bike, band work,
         // mobility), not logged sets. Bare strings are accepted so a plan can
         // write ["Bike 5 min", "Band pull-apart x20"] without ceremony.
@@ -2062,6 +2078,139 @@ function saveWriteToken(raw) {
   if (settings.autoSync) workerPush({ silent: true });
 }
 
+/* ================= coach programs (athlete alpha) ================= */
+// See docs/plans/2026-09-19-coach-interface.md. The coach never writes this athlete's
+// backup: programs wait in a server-side inbox and are applied here, by the athlete.
+let coachLink = store.get('coach', null);  // { name } once linked
+let coachInbox = [];                       // pending items from GET /inbox
+let coachInboxFetchedAt = 0;
+
+async function coachApi(method, path, body) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (writeToken) headers['X-GymTrack-Write'] = writeToken;
+  const res = await syncFetch(WORKER_URL + path, { method, headers, ...(body ? { body: JSON.stringify(body) } : {}) });
+  let data = null; try { data = await res.json(); } catch (e) { /* non-JSON error page */ }
+  if (!res.ok) throw new Error((data && data.error) || tr("cloud_sync.error.status", { status: res.status }));
+  return data;
+}
+function saveCoachLink(link) {
+  coachLink = link;
+  if (link) store.set('coach', link); else store.del('coach');
+}
+async function refreshCoachInbox(force) {
+  if (!APP_CONFIG.isAlpha || !APP_CONFIG.cloudSync || !writeToken || store.hasUnresolvedTx()) return;
+  if (!force && Date.now() - coachInboxFetchedAt < 60000) return;
+  coachInboxFetchedAt = Date.now();
+  try {
+    const r = await coachApi('GET', `/inbox/${gymUUID}`);
+    coachInbox = Array.isArray(r.items) ? r.items : [];
+    const name = r.coach ? r.coach.name : null;
+    if ((coachLink && coachLink.name) !== name) saveCoachLink(name ? { name } : null);
+    // Never re-render under an active workout; the banner waits for the day list.
+    if (!active && (tab === 'workout' || tab === 'settings')) render();
+  } catch (e) { /* offline or server down: retried on the next launch or resume */ }
+}
+function coachInboxBanner() {
+  const item = coachInbox[0];
+  if (!item) return '';
+  return `<div class="card coach-banner">
+      <div class="bold">${esc(tr("coach.inbox.banner", { coach: item.coachName, plan: (item.plan && item.plan.name) || '' }))}</div>
+      <button class="primary wide mt8" data-action="coach-inbox-open">${esc(tr("coach.inbox.open"))}</button>
+    </div>`;
+}
+function coachDayLabel(d) {
+  if (!d.source || !d.source.coachId) return '';
+  const key = d.source.hash && d.source.hash !== WorkoutModel.dayHash(d) ? "coach.plan.from_edited" : "coach.plan.from";
+  return ` <span class="day-pill">${esc(tr(key, { coach: d.source.coachName || '' }))}</span>`;
+}
+function openCoachInbox() {
+  const item = coachInbox[0];
+  if (!item || active) return;
+  let incoming;
+  try { validatePlanImport(item.plan); incoming = normalizePlan(item.plan); }
+  catch (err) { toast(tr("plan_import.error.invalid", { error: err.message }), 'err'); return; }
+  const merge = WorkoutModel.mergeCoachPlan(plan, incoming, { coachId: item.coachId, coachName: item.coachName, assignmentId: item.id });
+  const list = (key, days) => days.length ? `<p class="small mt4">${esc(tr(key, { days: days.join(', ') }))}</p>` : '';
+  const body = `
+    ${item.note ? `<p class="mt4">${esc(tr("coach.preview.note", { note: item.note }))}</p>` : ''}
+    <div class="mt8">
+      ${list("coach.preview.added", merge.added)}
+      ${list("coach.preview.replaced", merge.replaced)}
+      ${list("coach.preview.removed", merge.removed)}
+      ${list("coach.preview.kept", merge.kept)}
+    </div>
+    ${merge.overwrittenEdits.length ? `<p class="small amber mt8">⚠ ${esc(tr("coach.preview.edits_lost", { days: merge.overwrittenEdits.join(', ') }))}</p>` : ''}
+    <p class="small green mt12">✓ ${esc(tr("coach.preview.history"))}</p>`;
+  showModal(tr("coach.preview.title", { coach: item.coachName, plan: incoming.name }), body, [
+    { label: tr("coach.action.accept"), cls: 'primary', fn: () => acceptCoachProgram(item, incoming, merge) },
+    { label: tr("coach.action.decline"), fn: () => declineCoachProgram(item) },
+    { label: tr("common.action.cancel"), fn: closeModal }
+  ]);
+}
+async function acceptCoachProgram(item, incoming, merge) {
+  const next = { ...plan, name: merge.name, days: merge.days };
+  next.library = ExerciseLibrary.importLibrary(plan, incoming);
+  const prevPlan = plan;
+  plan = next;
+  if (!savePlan()) { plan = prevPlan; render(); return; }
+  coachInbox = coachInbox.filter(i => i.id !== item.id);
+  expandedDay = null; closeModal(); render();
+  toast(tr("coach.toast.accepted"));
+  // Already applied locally. A failed ack leaves the item "sent" on the server, so it
+  // is offered again next launch; accepting it twice yields the same plan.
+  try { await coachApi('POST', `/inbox/${gymUUID}/${item.id}/ack`, { status: 'accepted' }); }
+  catch (e) { toast(tr("coach.error.ack", { error: e.message }), 'err'); }
+}
+async function declineCoachProgram(item) {
+  try {
+    await coachApi('POST', `/inbox/${gymUUID}/${item.id}/ack`, { status: 'declined' });
+    coachInbox = coachInbox.filter(i => i.id !== item.id);
+    closeModal(); render(); toast(tr("coach.toast.declined"));
+  } catch (e) { toast(tr("coach.error.ack", { error: e.message }), 'err'); }
+}
+function viewCoachSettings() {
+  if (coachLink) return `
+    <h2 class="section">${esc(tr("coach.settings.title"))}</h2>
+    <div class="card">
+      <p>${esc(tr("coach.settings.linked", { coach: coachLink.name }))}</p>
+      <button class="ghost wide mt8" data-action="coach-unlink">${esc(tr("coach.settings.unlink"))}</button>
+    </div>`;
+  return `
+    <h2 class="section">${esc(tr("coach.settings.title"))}</h2>
+    <div class="card">
+      <label class="field"><span>${esc(tr("coach.settings.code_label"))}</span><input id="coach-code" autocapitalize="characters" autocomplete="off" maxlength="8"></label>
+      <label class="field mt8"><span>${esc(tr("coach.settings.name_label"))}</span><input id="coach-name" maxlength="60"></label>
+      <p class="small muted mt8">${esc(tr("coach.settings.consent"))}</p>
+      <button class="primary wide mt8" data-action="coach-link">${esc(tr("coach.settings.link"))}</button>
+    </div>`;
+}
+async function linkCoach(code, displayName) {
+  code = (code || '').trim().toUpperCase();
+  if (!/^[A-HJ-NP-Z2-9]{8}$/.test(code)) { toast(tr("coach.error.code_format"), 'err'); return; }
+  try {
+    const r = await coachApi('POST', '/link', { code, uuid: gymUUID, displayName: (displayName || '').trim() });
+    if (r.writeToken) { localStorage.setItem(APP_CONFIG.tokenKey, r.writeToken); writeToken = r.writeToken; }
+    saveCoachLink({ name: r.coachName });
+    render();
+    toast(tr("coach.toast.linked", { coach: r.coachName }));
+    if (settings.autoSync) workerPush({ silent: true });
+    refreshCoachInbox(true);
+  } catch (e) { toast(tr("coach.error.link", { error: e.message }), 'err'); }
+}
+function confirmUnlinkCoach() {
+  if (!coachLink) return;
+  showModal(tr("coach.settings.unlink"), `<p>${esc(tr("coach.settings.unlink_confirm", { coach: coachLink.name }))}</p>`, [
+    { label: tr("coach.settings.unlink"), cls: 'primary', fn: async () => {
+      try {
+        await coachApi('DELETE', `/inbox/${gymUUID}/coach`);
+        saveCoachLink(null); coachInbox = [];
+        closeModal(); render(); toast(tr("coach.toast.unlinked"));
+      } catch (e) { toast(tr("coach.error.link", { error: e.message }), 'err'); }
+    } },
+    { label: tr("common.action.cancel"), fn: closeModal }
+  ]);
+}
+
 /* ================= first-run onboarding ================= */
 function showOnboarding() {
   if (!APP_CONFIG.cloudSync) {
@@ -2210,6 +2359,7 @@ function viewStart() {
     if (idx >= 0) suggest = plan.days[(idx + 1) % plan.days.length].id;
   }
   return `
+    ${coachInboxBanner()}
     <h2 class="section">${esc(tr("view_start.text.start_a_workout"))}</h2>
     ${plan.days.map(d => `
       <div class="card">
@@ -2533,7 +2683,7 @@ function viewPlan() {
       return `
       <div class="card">
         <div class="row between tappable" data-action="day-toggle" data-id="${d.id}">
-          <div class="bold grow">${esc(d.name)}</div>
+          <div class="bold grow">${esc(d.name)}${coachDayLabel(d)}</div>
           <span class="day-pill">${esc(tr("view_plan.text.exercise_2", { d_exercises_length: d.exercises.length, d_exercises_length_1_s: d.exercises.length === 1 ? '' : 's' }))}</span>
           <span class="chev">${icon(open ? 'chevDown' : 'chevRight', 16)}</span>
         </div>
@@ -2857,6 +3007,7 @@ function viewSettings() {
       <button class="ghost wide mt8" data-action="test-sound">${esc(tr("view_settings.text.test_the_rest_timer_sound"))}</button>
     </div>
 
+    ${APP_CONFIG.isAlpha ? viewCoachSettings() : ''}
     ${!APP_CONFIG.cloudSync ? `
     <h2 class="section">${esc(tr("alpha.badge"))}</h2>
     <div class="card">
@@ -4705,6 +4856,9 @@ document.addEventListener('click', e => {
       break;
     }
     case 'sync-retry': workerPush({ silent: true }); break;
+    case 'coach-inbox-open': openCoachInbox(); break;
+    case 'coach-link': linkCoach(mval('coach-code'), mval('coach-name')); break;
+    case 'coach-unlink': confirmUnlinkCoach(); break;
     case 'toggle-autosync':
       settings.autoSync = !settings.autoSync;
       if (!saveSettings()) { settings.autoSync = !settings.autoSync; return; }
@@ -4934,4 +5088,4 @@ renderRest();
 if (rest && !rest.fired) scheduleCue(Math.max(0, (rest.endsAt - Date.now()) / 1000));
 if (!store.get('onboarded', false) && sessions.length === 0) showOnboarding();
 window.addEventListener('load', initServiceWorkerUpdates);
-autoSyncOnLoad(); // reconcile with the cloud, then enable auto-push
+autoSyncOnLoad().then(() => refreshCoachInbox()); // reconcile with the cloud, then enable auto-push

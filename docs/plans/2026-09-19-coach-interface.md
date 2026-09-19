@@ -1,6 +1,6 @@
 # Coach interface for athlete alpha
 
-Status: plan, decisions confirmed by Henri 2026-09-19 (see end). Nothing here is built. Alpha has no users yet and
+Status: phases 1–2 built 2026-09-19; decisions confirmed by Henri (see end). Alpha has no users yet and
 `alpha.gymtrack.hithitpull.fi` is not wired up; that happens once a start date is confirmed.
 
 ## Goal
@@ -143,8 +143,14 @@ rest of alpha.
    - `wrangler secret put ACCESS_AUD` and set `ACCESS_TEAM_DOMAIN`
      (`<team>.cloudflareaccess.com`) as a var.
    - `wrangler kv key put --binding GYMTRACK_DATA "coach:<email>" '{"name":"<name>"}'`.
-2. **Athlete inbox:** banner, preview, accept and decline, plus the Settings
-   linking section. Test this with two alpha profiles on localhost:8766.
+2. **Athlete inbox (built 2026-09-19):** start-screen banner, preview listing new,
+   updated, removed and kept days plus a warning for overwritten local edits,
+   accept/decline, and the Settings coach section (invite code + name, unlink).
+   Merge: `WorkoutModel.mergeCoachPlan` / `dayHash`; untouched starter days are
+   dropped on the first program. Plan days show "From <coach>" ("· edited" once
+   changed locally). Tests: `tools/workout-model.test.mjs` (merge) and
+   `tools/coach-alpha-browser.test.mjs` (link → send → accept → sync → unlink in a
+   real browser, API answered by the Worker code in-process).
 3. **Coach page:** roster, send and status.
 4. **Dry run:** Henri as the coach and two test profiles, on real phones, before
    inviting anyone.

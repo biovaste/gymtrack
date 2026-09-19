@@ -84,3 +84,51 @@ test('added load is an explicit bodyweight convention with its own history key',
   assert.deepEqual(Model.errors({ addedLoad: true }), [], 'alternates may inherit equipment and metric');
   assert.deepEqual(Model.recordSet({ ...pullUp, addedLoad: true }, { weight: 10, reps: 5, rpe: 8, done: true, timer: { state: 'expired' } }), { weight: 10, reps: 5, rpe: 8 });
 });
+
+/* ---- coach programs: mergeCoachPlan ---- */
+const coachDay = (name, coachId = 'coach@example.com', ex = 'Back Squat') => {
+  const d = { id: name, name, warmup: [], exercises: [{ name: ex, sets: 3, reps: '5', weight: 100 }] };
+  d.source = { coachId, coachName: 'Aino', assignmentId: 'a0' };
+  d.source.hash = Model.dayHash(d);
+  return d;
+};
+const ownDay = name => ({ id: name, name, warmup: [], exercises: [{ name: 'Row', sets: 3, reps: '8', weight: 50 }] });
+const SRC = { coachId: 'coach@example.com', coachName: 'Aino', assignmentId: 'a1' };
+
+test('coach update replaces only that coach\'s days and keeps the athlete\'s own in place', () => {
+  const plan = { name: 'Mine', days: [coachDay('Team A'), coachDay('Team B'), ownDay('My extra')] };
+  const incoming = { name: 'Block 2', days: [{ id: 'n1', name: 'Team A', exercises: [] }, { id: 'n2', name: 'Team C', exercises: [] }] };
+  const r = Model.mergeCoachPlan(plan, incoming, SRC);
+  assert.deepEqual(r.days.map(d => d.name), ['Team A', 'Team C', 'My extra']);
+  assert.equal(r.days[0].id, 'Team A', 'same-name day keeps its id');
+  assert.equal(r.days[0].source.assignmentId, 'a1');
+  assert.equal(r.days[2].source, undefined, 'own day untouched');
+  assert.deepEqual(r.replaced, ['Team A']);
+  assert.deepEqual(r.removed, ['Team B']);
+  assert.deepEqual(r.added, ['Team C']);
+  assert.deepEqual(r.kept, ['My extra']);
+  assert.equal(r.name, 'Mine', 'athlete keeps their plan name while they have own days');
+});
+
+test('own days before the coach block stay before it; another coach\'s days are kept', () => {
+  const plan = { name: 'Mine', days: [ownDay('Mobility'), coachDay('Team A'), coachDay('Other', 'other@example.com')] };
+  const r = Model.mergeCoachPlan(plan, { name: 'B', days: [{ name: 'Team A', exercises: [] }] }, SRC);
+  assert.deepEqual(r.days.map(d => d.name), ['Mobility', 'Team A', 'Other']);
+});
+
+test('first program goes first, drops untouched starter days, keeps edited ones', () => {
+  const starter = n => { const d = ownDay(n); d.source = { starter: true }; d.source.hash = Model.dayHash(d); return d; };
+  const editedStarter = starter('Day C'); editedStarter.exercises[0].weight = 60;
+  const plan = { name: 'Starter', days: [starter('Day A'), starter('Day B'), editedStarter, ownDay('Mine')] };
+  const r = Model.mergeCoachPlan(plan, { name: 'Team block', days: [{ name: 'Team A', exercises: [] }] }, SRC);
+  assert.deepEqual(r.days.map(d => d.name), ['Team A', 'Day C', 'Mine']);
+  const onlyStarter = Model.mergeCoachPlan({ name: 'Starter', days: [starter('Day A')] }, { name: 'Team block', days: [{ name: 'Team A', exercises: [] }] }, SRC);
+  assert.equal(onlyStarter.name, 'Team block', 'a plan made only of coach days takes the program name');
+});
+
+test('local edits to a coach day are reported before being overwritten', () => {
+  const edited = coachDay('Team A'); edited.exercises[0].weight = 105;
+  const r = Model.mergeCoachPlan({ name: 'x', days: [edited, coachDay('Team B')] }, { name: 'B', days: [{ name: 'Team A', exercises: [] }] }, SRC);
+  assert.deepEqual(r.overwrittenEdits, ['Team A']);
+  assert.equal(r.days[0].source.hash, Model.dayHash(r.days[0]), 'new coach days start unedited');
+});
