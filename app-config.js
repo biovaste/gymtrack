@@ -1,6 +1,6 @@
-/* GymTrack configuration.
-   In production/personal deployment on main: mode is 'personal'.
-   In the athlete-alpha branch/deployment: mode is 'alpha'.
+/* GymTrack version strings. The track (personal vs athlete alpha) is decided by
+   origin in app.js/i18n.js, not here: gymtrack.hithitpull.fi (main branch) is
+   personal, every other origin, including alpha.gymtrack.hithitpull.fi (alpha branch), is alpha.
 */
 window.GYM_CONFIG = {
   mode: 'personal',

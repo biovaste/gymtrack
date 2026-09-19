@@ -4,10 +4,10 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const source = readFileSync(new URL('../i18n.js', import.meta.url), 'utf8');
-function boot({ saved, browser = 'fi-FI', storageFails = false } = {}) {
+function boot({ saved, browser = 'fi-FI', storageFails = false, hostname = 'gymtrack.hithitpull.fi', lang } = {}) {
   const storage = new Map(saved ? [['gym.language', saved]] : []);
   const ctx = vm.createContext({
-    Intl, navigator: { languages: [browser] },
+    Intl, URLSearchParams, navigator: { languages: [browser] }, location: { hostname, port: '', search: '' },
     localStorage: { getItem: key => { if (storageFails) throw Error(); return storage.get(key); }, setItem: (key, value) => { if (storageFails) throw Error(); storage.set(key, value); } },
     GYM_I18N_CATALOG: { entries: {
       'settings.sound.on': { en: 'On', fi: 'Ääni käytössä' },
@@ -21,7 +21,7 @@ function boot({ saved, browser = 'fi-FI', storageFails = false } = {}) {
 }
 
 test('same source in different contexts resolves independently; drafts are live', () => {
-  const { api } = boot();
+  const { api } = boot({ saved: 'fi' });
   assert.equal(api.t('settings.sound.on'), 'Ääni käytössä');
   assert.equal(api.t('settings.sync.on'), 'Synkronointi käytössä');
   assert.equal(api.t('draft.message'), 'Luonnos');
@@ -37,11 +37,11 @@ test('explicit language survives boot and switching does not touch workout data'
   assert.equal(api.locale(), 'fi');
 });
 test('interpolation is plain text and does not recursively interpolate values', () => {
-  const { api } = boot();
+  const { api } = boot({ saved: 'fi' });
   assert.equal(api.t('workout.saved', { name: '<img>{name}&' }), 'Tallennettu: <img>{name}&');
 });
 test('Finnish formatting and decimal parsing do not reinterpret stored units', () => {
-  const { api } = boot();
+  const { api } = boot({ saved: 'fi' });
   assert.equal(api.number(12.5), '12,5');
   assert.equal(api.parseNumber('12,5'), 12.5);
   assert.equal(api.parseNumber('12.5'), 12.5);
@@ -75,4 +75,13 @@ test('both coaching prompts expose the current schema in English and Finnish', (
       assert.doesNotMatch(result,/Claude/);
     }
   }
+});
+
+test('track defaults: personal is English, alpha is Finnish, each keeps its own choice', () => {
+  assert.equal(boot({ browser: 'fi-FI' }).api.locale(), 'en');
+  const alpha = boot({ hostname: 'alpha.gymtrack.hithitpull.fi', browser: 'en-GB' });
+  assert.equal(alpha.api.locale(), 'fi');
+  alpha.api.setLocale('en');
+  assert.equal(alpha.storage.get('gym_alpha.language'), 'en');
+  assert.equal(alpha.storage.has('gym.language'), false);
 });

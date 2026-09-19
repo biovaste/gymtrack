@@ -1,7 +1,7 @@
 /*
  * athlete-alpha.test.mjs — Comprehensive unit tests for athlete-alpha mode:
  * 1. Fail-closed configuration and origin/mode boundary
- * 2. Zero-cloud guarantee (no network requests, cloud sync disabled)
+ * 2. (removed 2026-09-19: alpha now syncs to its own cloud UUID)
  * 3. Dependable storage: failure handling across logging, plan editing, settings, completion
  * 4. Corrupt data detection and preservation without overwriting defaults
  * 5. Completion idempotency across restart / crash recovery
@@ -33,120 +33,30 @@ function resolveAppConfig(winConfig, locationObj) {
   return vm.runInContext('APP_CONFIG', ctx);
 }
 
-test('APP_CONFIG fail-closed: missing config or unknown host runs in athlete-alpha mode', () => {
-  // Empty / undefined config
-  assert.equal(resolveAppConfig(undefined, { hostname: 'random.domain.com', port: '', search: '' }).mode, 'alpha');
-  assert.equal(resolveAppConfig(undefined, { hostname: 'random.domain.com', port: '', search: '' }).isAlpha, true);
-  assert.equal(resolveAppConfig(undefined, { hostname: 'random.domain.com', port: '', search: '' }).cloudSync, false);
-  assert.equal(resolveAppConfig(undefined, { hostname: 'random.domain.com', port: '', search: '' }).keyPrefix, 'gym_alpha.');
-
-  // Explicit alpha hostname
+test('APP_CONFIG: unknown host runs in athlete-alpha mode with its own storage and cloud identity', () => {
+  const unknown = resolveAppConfig(undefined, { hostname: 'random.domain.com', port: '', search: '' });
+  assert.equal(unknown.mode, 'alpha');
+  assert.equal(unknown.cloudSync, true);
+  assert.equal(unknown.keyPrefix, 'gym_alpha.');
+  assert.equal(unknown.uuidKey, 'gymtrack_alpha_uuid');
+  assert.equal(unknown.tokenKey, 'gymtrack_alpha_write_token');
   assert.equal(resolveAppConfig({ mode: 'personal' }, { hostname: 'alpha.gymtrack.hithitpull.fi', port: '', search: '' }).isAlpha, true);
-
-  // Localhost preview port 8766 (athlete alpha preview)
   assert.equal(resolveAppConfig({ mode: 'personal' }, { hostname: 'localhost', port: '8766', search: '' }).isAlpha, true);
-  assert.equal(resolveAppConfig({ mode: 'personal' }, { hostname: '127.0.0.1', port: '8766', search: '' }).isAlpha, true);
-
-  // Query parameter overrides to alpha
-  assert.equal(resolveAppConfig({ mode: 'personal' }, { hostname: 'gymtrack.hithitpull.fi', port: '', search: '?alpha=1' }).isAlpha, true);
-  assert.equal(resolveAppConfig({ mode: 'personal' }, { hostname: 'gymtrack.hithitpull.fi', port: '', search: '?mode=alpha' }).isAlpha, true);
+  assert.equal(resolveAppConfig({ mode: 'personal' }, { hostname: '127.0.0.1', port: '8766', search: '?mode=personal' }).isAlpha, true);
+  assert.equal(resolveAppConfig(undefined, { hostname: 'localhost', port: '8765', search: '?mode=alpha' }).isAlpha, true);
 });
 
-test('APP_CONFIG personal mode: requires recognized origin AND explicit personal config', () => {
-  // Production personal origin + personal config
-  const prodPersonal = resolveAppConfig({ mode: 'personal', version: '1.0.0' }, { hostname: 'gymtrack.hithitpull.fi', port: '', search: '' });
-  assert.equal(prodPersonal.mode, 'personal');
-  assert.equal(prodPersonal.isAlpha, false);
-  assert.equal(prodPersonal.cloudSync, true);
-  assert.equal(prodPersonal.keyPrefix, 'gym.');
-
-  // Dev port 8765 + personal config
-  const devPersonal = resolveAppConfig({ mode: 'personal', version: '1.0.0' }, { hostname: 'localhost', port: '8765', search: '' });
-  assert.equal(devPersonal.mode, 'personal');
-  assert.equal(devPersonal.isAlpha, false);
-  assert.equal(devPersonal.cloudSync, true);
-  assert.equal(devPersonal.keyPrefix, 'gym.');
-
-  // Personal origin with alpha config stays alpha (fail-closed)
-  const misconfiguredProd = resolveAppConfig({ mode: 'alpha' }, { hostname: 'gymtrack.hithitpull.fi', port: '', search: '' });
-  assert.equal(misconfiguredProd.isAlpha, true);
-  assert.equal(misconfiguredProd.cloudSync, false);
-});
-
-test('Zero-cloud guarantee in alpha mode: syncFetch throws and worker calls abort without network requests', async () => {
-  let fetchCalled = false;
-  const mockFetch = async () => { fetchCalled = true; return { ok: true, status: 200, text: async () => '{}' }; };
-
-  const ctx = {
-    console,
-    URLSearchParams,
-    fetch: mockFetch,
-    AbortController,
-    setTimeout,
-    clearTimeout,
-    window: { GYM_CONFIG: { mode: 'alpha' } },
-    location: { hostname: 'localhost', port: '8766', search: '' },
-    localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
-    I18n: { t: k => k },
-    tr: k => k,
-    toast: () => {},
-    document: { getElementById: () => null, querySelectorAll: () => [], addEventListener: () => {} }
-  };
-  vm.createContext(ctx);
-
-  // Evaluate config, storage, and sync functions in alpha context
-  const configSlice = appSrc.slice(appSrc.indexOf('const APP_CONFIG = (() => {'), appSrc.indexOf('const uid = () =>'));
-  const syncSlice = appSrc.slice(appSrc.indexOf('async function workerPush(opts = {}) {'), appSrc.indexOf('function restoreFromCode('));
-  const setupCode = `
-    ${configSlice}
-    const WORKER_URL = 'https://api.gymtrack.hithitpull.fi';
-    let gymUUID = APP_CONFIG.isAlpha ? '00000000-0000-4000-8000-000000000000' : 'some-uuid';
-    let writeToken = '';
-    let settings = { autoSync: false };
-    let syncTimer = null;
-    let syncState = 'idle';
-    let dataUpdatedAt = 0;
-    let sessions = [];
-    let bodyWeight = [];
-    let plan = { days: [] };
-    function setSyncState(st) { syncState = st; }
-    function buildBackup() { return '{}'; }
-    ${syncSlice}
-  `;
-  vm.runInContext(setupCode, ctx);
-
-  const APP_CONFIG = vm.runInContext('APP_CONFIG', ctx);
-  const gymUUID = vm.runInContext('gymUUID', ctx);
-  const writeToken = vm.runInContext('writeToken', ctx);
-  const syncFetch = vm.runInContext('syncFetch', ctx);
-  const workerPush = vm.runInContext('workerPush', ctx);
-  const workerFetch = vm.runInContext('workerFetch', ctx);
-  const workerReconcile = vm.runInContext('workerReconcile', ctx);
-
-  assert.equal(APP_CONFIG.isAlpha, true);
-  assert.equal(gymUUID, '00000000-0000-4000-8000-000000000000');
-  assert.equal(writeToken, '');
-
-  // Direct syncFetch invocation must throw
-  await assert.rejects(async () => {
-    await syncFetch('https://api.gymtrack.hithitpull.fi/data/test');
-  }, /(Cloud sync is disabled|alpha\.cloud_disabled)/i);
-  assert.equal(fetchCalled, false);
-
-  // workerPush must immediately return false without fetching
-  const pushRes = await workerPush();
-  assert.equal(pushRes, false);
-  assert.equal(fetchCalled, false);
-
-  // workerFetch must return null without fetching
-  const fetchRes = await workerFetch();
-  assert.equal(fetchRes, null);
-  assert.equal(fetchCalled, false);
-
-  // workerReconcile must return 'local' without fetching
-  const recRes = await workerReconcile();
-  assert.equal(recRes, 'local');
-  assert.equal(fetchCalled, false);
+test('APP_CONFIG personal mode is decided by origin, never by app-config.js or query', () => {
+  for (const cfg of [undefined, { mode: 'personal' }, { mode: 'alpha' }]) {
+    for (const search of ['', '?alpha=1', '?mode=alpha']) {
+      const prod = resolveAppConfig(cfg, { hostname: 'gymtrack.hithitpull.fi', port: '', search });
+      assert.equal(prod.mode, 'personal');
+      assert.equal(prod.keyPrefix, 'gym.');
+      assert.equal(prod.uuidKey, 'gymtrack_uuid');
+      assert.equal(prod.tokenKey, 'gymtrack_write_token');
+    }
+  }
+  assert.equal(resolveAppConfig(undefined, { hostname: 'localhost', port: '8765', search: '' }).mode, 'personal');
 });
 
 test('Corrupt storage detection preserves unreadable data without overwriting', () => {
@@ -165,6 +75,8 @@ test('Corrupt storage detection preserves unreadable data without overwriting', 
     URLSearchParams,
     window: { GYM_CONFIG: { mode: 'alpha' } },
     location: { hostname: 'localhost', port: '8766', search: '' },
+    crypto: { randomUUID: () => '11111111-1111-4111-8111-111111111111' },
+    fetch: async () => ({ ok: false, status: 404, text: async () => '' }),
     localStorage: mockLocalStorage,
     I18n: { t: (k, p) => `${k}:${JSON.stringify(p || {})}` }
   };
@@ -214,6 +126,8 @@ test('Storage write failures: store.set returns { ok: false } on QuotaExceededEr
     URLSearchParams,
     window: { GYM_CONFIG: { mode: 'alpha' } },
     location: { hostname: 'localhost', port: '8766', search: '' },
+    crypto: { randomUUID: () => '11111111-1111-4111-8111-111111111111' },
+    fetch: async () => ({ ok: false, status: 404, text: async () => '' }),
     localStorage: mockLocalStorage,
     I18n: { t: (k, p) => `${k}` },
     toast: (msg, kind) => toasted.push({ msg, kind })
@@ -339,6 +253,8 @@ test('commitTx durable WAL protocol and startup recovery from interrupted pendin
     URLSearchParams,
     window: { GYM_CONFIG: { mode: 'alpha' } },
     location: { hostname: 'localhost', port: '8766', search: '' },
+    crypto: { randomUUID: () => '11111111-1111-4111-8111-111111111111' },
+    fetch: async () => ({ ok: false, status: 404, text: async () => '' }),
     localStorage: mockLocalStorage,
     I18n: { t: k => k },
     tr: k => k
@@ -834,6 +750,8 @@ test('restoreBackup rejects malformed records without mutating storage or memory
     URLSearchParams,
     window: { GYM_CONFIG: { mode: 'alpha' } },
     location: { hostname: 'localhost', port: '8766', search: '' },
+    crypto: { randomUUID: () => '11111111-1111-4111-8111-111111111111' },
+    fetch: async () => ({ ok: false, status: 404, text: async () => '' }),
     localStorage: mockLocalStorage,
     I18n: { t: k => k },
     tr: (k, p) => k
@@ -931,6 +849,8 @@ test('restoreBackup recovers corrupted keys and clears corruptData and alerts', 
     URLSearchParams,
     window: { GYM_CONFIG: { mode: 'alpha' } },
     location: { hostname: 'localhost', port: '8766', search: '' },
+    crypto: { randomUUID: () => '11111111-1111-4111-8111-111111111111' },
+    fetch: async () => ({ ok: false, status: 404, text: async () => '' }),
     localStorage: mockLocalStorage,
     I18n: { t: k => k },
     tr: (k, p) => `${k}:${JSON.stringify(p || {})}`
@@ -1015,6 +935,8 @@ test('sessionAddExerciseModal: atomic commitTx rollback on failure prevents spli
     URLSearchParams,
     window: { GYM_CONFIG: { mode: 'alpha' } },
     location: { hostname: 'localhost', port: '8766', search: '' },
+    crypto: { randomUUID: () => '11111111-1111-4111-8111-111111111111' },
+    fetch: async () => ({ ok: false, status: 404, text: async () => '' }),
     localStorage: mockLocalStorage,
     I18n: { t: k => k },
     tr: k => k,
@@ -1121,6 +1043,8 @@ test('Audited application handlers revert in-memory state and DOM inputs on stor
     window: { GYM_CONFIG: { mode: 'alpha' }, scrollTo: () => {}, addEventListener: () => {} },
     document: mockDoc,
     location: { hostname: 'localhost', port: '8766', search: '' },
+    crypto: { randomUUID: () => '11111111-1111-4111-8111-111111111111' },
+    fetch: async () => ({ ok: false, status: 404, text: async () => '' }),
     localStorage: mockLocalStorage,
     I18n: { t: k => k, exercise: k => k, date: k => k, explanation: k => '', english: k => '' },
     tr: (k, p) => k

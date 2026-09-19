@@ -44,11 +44,6 @@ test('athlete-alpha browser assets and service worker contract', async () => {
   const syncFetchDefs = (appSrc.match(/async function syncFetch\(/g) || []).length;
   assert.equal(syncFetchDefs, 1, 'Single choke point syncFetch in app.js');
 
-  // Check that all network sync entry points verify APP_CONFIG.isAlpha
-  assert.ok(appSrc.includes('if (APP_CONFIG.isAlpha) return false;'), 'workerPush guards alpha');
-  assert.ok(appSrc.includes('if (APP_CONFIG.isAlpha) return null;'), 'workerFetch guards alpha');
-  assert.ok(appSrc.includes('if (APP_CONFIG.isAlpha) return \'local\';'), 'workerReconcile guards alpha');
-  assert.ok(appSrc.includes('if (APP_CONFIG.isAlpha) { syncReady = true; return; }'), 'autoSyncOnLoad guards alpha');
 });
 
 // Playwright integration check if available in environment
@@ -117,13 +112,12 @@ test('athlete-alpha browser lifecycle, persistence, and service worker upgrade',
     });
     const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
 
-    // Track any cloud network attempts — MUST BE ZERO
+    // Alpha syncs to the cloud now. Stub the API so the test never touches production,
+    // and record the UUIDs it uses: none may be the personal track's.
     const networkRequests = [];
-    context.on('request', req => {
-      const url = req.url();
-      if (!url.startsWith(origin)) {
-        networkRequests.push(url);
-      }
+    await context.route('https://api.gymtrack.hithitpull.fi/**', route => {
+      networkRequests.push(route.request().url());
+      route.fulfill({ status: 404, body: '' });
     });
 
     const page = await context.newPage();
@@ -144,7 +138,10 @@ test('athlete-alpha browser lifecycle, persistence, and service worker upgrade',
     const keyPrefix = await page.evaluate(() => store.prefix);
     assert.equal(keyPrefix, 'gym_alpha.', 'Uses gym_alpha. storage prefix');
 
-    assert.equal(networkRequests.length, 0, 'No external cloud network requests were made');
+    const alphaUuid = await page.evaluate(() => localStorage.getItem('gymtrack_alpha_uuid'));
+    assert.ok(alphaUuid, 'Alpha has its own cloud UUID');
+    assert.equal(await page.evaluate(() => localStorage.getItem('gymtrack_uuid')), null, 'Personal UUID untouched');
+    assert.ok(networkRequests.every(u => u.endsWith('/data/' + alphaUuid)), 'Alpha syncs only to its own UUID');
 
     // 3. Complete a workout and verify storage in gym_alpha.sessions
     await page.locator('[data-action="start-session"]').first().click();

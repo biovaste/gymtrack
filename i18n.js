@@ -3,12 +3,19 @@
   'use strict';
   const catalogue = root.GYM_I18N_CATALOG || { entries: {} };
   const entries = catalogue.entries || {};
-  const storageKey = 'gym.language';
+  // Track detection mirrors APP_CONFIG in app.js (which loads later). Personal
+  // defaults to English, athlete alpha to Finnish; each keeps its own choice.
+  const loc = root.location || {};
+  const isDevHost = loc.hostname === 'localhost' || loc.hostname === '127.0.0.1';
+  let modeParam = null;
+  try { modeParam = new URLSearchParams(loc.search || '').get('mode'); } catch (_) { /* no URL API */ }
+  const isPersonal = loc.hostname === 'gymtrack.hithitpull.fi' ||
+    (isDevHost && loc.port === '8765' && modeParam !== 'alpha') ||
+    (isDevHost && loc.port !== '8766' && modeParam === 'personal');
+  const storageKey = isPersonal ? 'gym.language' : 'gym_alpha.language';
   let saved;
   try { saved = root.localStorage.getItem(storageKey); } catch (_) { /* storage may be disabled */ }
-  const preferred = root.navigator?.languages || [root.navigator?.language || 'en'];
-  let language = ['en', 'fi'].includes(saved) ? saved :
-    (String(preferred[0] || '').toLowerCase().startsWith('fi') ? 'fi' : 'en');
+  let language = ['en', 'fi'].includes(saved) ? saved : (isPersonal ? 'en' : 'fi');
   const missing = new Set();
   const localeTag = () => language === 'fi' ? 'fi-FI' : 'en-GB';
 

@@ -6,33 +6,29 @@ const tr = (key, params) => I18n.t(key, params);
 /* ================= configuration ================= */
 const APP_CONFIG = (() => {
   const cfg = (typeof window !== 'undefined' && window.GYM_CONFIG) || {};
-  let mode = 'alpha'; // Fail-closed default
+  // Mode comes from the origin alone. app-config.js only supplies version strings:
+  // if the personal host ever loads without it (a stale cached index.html), it must
+  // still open the personal storage and cloud copy, not an empty alpha profile.
+  // Keep in sync with the same check in i18n.js.
+  let mode = 'alpha';
   if (typeof location !== 'undefined') {
-    const isPersonalOrigin = location.hostname === 'gymtrack.hithitpull.fi' ||
-      ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') && location.port === '8765');
-    const isPersonalConfig = cfg.mode === 'personal';
-    const params = new URLSearchParams(location.search);
-    const modeParam = params.get('mode');
     const isDevHost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-
-    if (params.has('alpha') || modeParam === 'alpha' || location.hostname === 'alpha.gymtrack.hithitpull.fi' || (isDevHost && location.port === '8766')) {
-      mode = 'alpha';
-    } else if (isPersonalOrigin && isPersonalConfig && modeParam !== 'alpha') {
-      mode = 'personal';
-    } else if (isDevHost && modeParam === 'personal') {
-      mode = 'personal';
-    } else {
-      mode = 'alpha';
-    }
+    const modeParam = new URLSearchParams(location.search).get('mode');
+    if (location.hostname === 'gymtrack.hithitpull.fi') mode = 'personal';
+    else if (isDevHost && location.port === '8765' && modeParam !== 'alpha') mode = 'personal';
+    else if (isDevHost && location.port !== '8766' && modeParam === 'personal') mode = 'personal';
   }
   const isAlpha = mode !== 'personal';
   return {
-    mode: isAlpha ? 'alpha' : 'personal',
+    mode,
     isAlpha,
     version: isAlpha ? (cfg.alphaVersion || '0.1.0-alpha') : (cfg.version || '1.0.0'),
     build: cfg.build || '2026-09-15',
-    cloudSync: !isAlpha,
-    keyPrefix: isAlpha ? 'gym_alpha.' : 'gym.'
+    cloudSync: true,
+    keyPrefix: isAlpha ? 'gym_alpha.' : 'gym.',
+    // Each track has its own cloud identity, so alpha data never lands on the personal UUID.
+    uuidKey: isAlpha ? 'gymtrack_alpha_uuid' : 'gymtrack_uuid',
+    tokenKey: isAlpha ? 'gymtrack_alpha_write_token' : 'gymtrack_write_token'
   };
 })();
 
@@ -692,7 +688,8 @@ let active = store.get('active', null);
 let bodyWeight = store.get('bw', []);
 let settings = Object.assign({ unit: 'kg', sound: true, vibrate: true, autoSync: APP_CONFIG.cloudSync }, store.get('settings', {}));
 delete settings.gistToken; delete settings.gistId; delete settings.gistOwner;
-if (APP_CONFIG.isAlpha) settings.autoSync = false;
+// Alpha shipped with cloud sync forced off; turn it on once now that alpha syncs too.
+if (APP_CONFIG.isAlpha && !settings.alphaCloud) { settings.autoSync = true; settings.alphaCloud = 1; store.set('settings', settings); }
 
 // Startup recovery check for interrupted workout completion
 if (active && sessions.some(s => s.id === active.id)) {
@@ -703,12 +700,11 @@ if (active && sessions.some(s => s.id === active.id)) {
 
 const WORKER_URL = 'https://api.gymtrack.hithitpull.fi';
 let gymUUID = (() => {
-  if (APP_CONFIG.isAlpha) return '00000000-0000-4000-8000-000000000000';
-  let id = localStorage.getItem('gymtrack_uuid');
-  if (!id) { id = crypto.randomUUID(); localStorage.setItem('gymtrack_uuid', id); }
+  let id = localStorage.getItem(APP_CONFIG.uuidKey);
+  if (!id) { id = crypto.randomUUID(); localStorage.setItem(APP_CONFIG.uuidKey, id); }
   return id;
 })();
-let writeToken = APP_CONFIG.isAlpha ? '' : (localStorage.getItem('gymtrack_write_token') || '');
+let writeToken = localStorage.getItem(APP_CONFIG.tokenKey) || '';
 let aliases = store.get('aliases', {}); // { aliasLowercase: 'Canonical Name' } — display-time merge of exercise names
 let tab = 'workout';
 let prevTab = 'workout';      // where the settings view returns to
@@ -1605,8 +1601,8 @@ function finishSession() {
   const sl = sessionLoad(record);
   if (sl) html += `<p class="mt8">${esc(tr("finish_session.text.session_rpe"))} <b>${sl.rpe}</b> · <b>${sl.load}</b> AU${sl.partial ? ` <span class="muted small">${esc(tr("finish_session.text.only_of_sets_had_an_rpe", { Math_round_sl_coverage_100: Math.round(sl.coverage * 100) }))}</span>` : ''}</p>`;
   if (prs.length) html += `<p class="mt8">${esc(tr("finish_session.text.new_prs"))} ${prs.map(p => `<span class="pr-badge">${esc(I18n.exercise(p))}</span>`).join(' ')}</p>`;
-  const syncing = settings.autoSync && !APP_CONFIG.isAlpha;
-  html += `<p class="muted small mt8">${esc(tr('sync.saved_locally'))}</p><div id="completion-sync-status">${syncing ? syncStatusHtml() : (APP_CONFIG.isAlpha ? esc(tr("alpha.storage_note")) : esc(tr("finish_session.message.head_to_the_ai_coach_tab_to_export_this_for_your")))}</div>`;
+  const syncing = settings.autoSync && APP_CONFIG.cloudSync;
+  html += `<p class="muted small mt8">${esc(tr('sync.saved_locally'))}</p><div id="completion-sync-status">${syncing ? syncStatusHtml() : (!APP_CONFIG.cloudSync ? esc(tr("alpha.storage_note")) : esc(tr("finish_session.message.head_to_the_ai_coach_tab_to_export_this_for_your")))}</div>`;
   // Explicit action rather than the implicit "Close" default: the way out of this
   // sheet should be obvious, and it lands you back on the day list.
   showModal(tr("finish_session.message.workout_complete"), html, [{ label: tr("finish_session.button.done"), cls: 'primary',
@@ -1900,7 +1896,7 @@ async function copyText(text) {
 }
 
 /* ================= worker sync ================= */
-const workerShareUrl = () => APP_CONFIG.isAlpha ? '' : `${WORKER_URL}/data/${gymUUID}`;
+const workerShareUrl = () => !APP_CONFIG.cloudSync ? '' : `${WORKER_URL}/data/${gymUUID}`;
 
 function relTime(ts) {
   if (!ts) return '';
@@ -1912,7 +1908,7 @@ function relTime(ts) {
   return tr("sync.time.days", { count: Math.round(h / 24) });
 }
 function syncStatusHtml() {
-  if (APP_CONFIG.isAlpha) return `<span class="muted small">${esc(tr("alpha.storage_note"))}</span>`;
+  if (!APP_CONFIG.cloudSync) return `<span class="muted small">${esc(tr("alpha.storage_note"))}</span>`;
   if (!settings.autoSync) return `<span class="muted small">${esc(tr("sync_status_html.text.auto_sync_off"))}</span>`;
   if (syncState === 'syncing') return `<span class="small amber">${esc(tr("sync_status_html.text.syncing"))}</span>`;
   if (syncState === 'error') return `<span class="small red">⚠ ` + esc(lastSyncMsg || tr("sync_status_html.message.sync_error")) + `</span> <button class="ghost" data-action="sync-retry">${esc(tr('sync.retry'))}</button>`;
@@ -1929,14 +1925,14 @@ function setSyncState(state, msg) {
   }
 }
 function scheduleSync() {
-  if (APP_CONFIG.isAlpha || !settings.autoSync) return;
+  if (!APP_CONFIG.cloudSync || !settings.autoSync) return;
   if (store.hasUnresolvedTx()) return;
   clearTimeout(syncTimer);
   syncTimer = setTimeout(() => workerPush({ silent: true }), 1500);
 }
 
 async function workerPush(opts = {}) {
-  if (APP_CONFIG.isAlpha) return false;
+  if (!APP_CONFIG.cloudSync) return false;
   if (store.hasUnresolvedTx()) return false;
   clearTimeout(syncTimer);
   setSyncState('syncing');
@@ -1963,7 +1959,7 @@ async function workerPush(opts = {}) {
   } catch (e) { setSyncState('error', e.message); if (!opts.silent) toast(tr("cloud_sync.error.push", { error: e.message }), 'err'); return false; }
 }
 async function syncFetch(url, options = {}) {
-  if (APP_CONFIG.isAlpha) {
+  if (!APP_CONFIG.cloudSync) {
     throw new Error(tr("alpha.cloud_disabled") || 'Cloud sync is disabled in athlete alpha mode');
   }
   if (store.hasUnresolvedTx()) {
@@ -1975,7 +1971,7 @@ async function syncFetch(url, options = {}) {
   finally { clearTimeout(timer); }
 }
 async function workerFetch() {
-  if (APP_CONFIG.isAlpha) return null;
+  if (!APP_CONFIG.cloudSync) return null;
   if (store.hasUnresolvedTx()) return null;
   const res = await syncFetch(`${WORKER_URL}/data/${gymUUID}`);
   if (res.status === 404) return null;
@@ -1997,7 +1993,7 @@ function mergeByKey(remoteArr, localArr, keyFn) {
 // merging sessions/bodyWeight by id/date so a pull can't silently drop
 // local-only records that hadn't synced yet.
 async function workerReconcile(opts = {}) {
-  if (APP_CONFIG.isAlpha) return 'local';
+  if (!APP_CONFIG.cloudSync) return 'local';
   if (store.hasUnresolvedTx()) return 'local';
   const r = await workerFetch();
   if (!r) { await workerPush({ silent: true, retried: opts.retried }); return 'pushed'; }
@@ -2024,7 +2020,7 @@ async function workerReconcile(opts = {}) {
   return 'pushed';
 }
 async function autoSyncOnLoad() {
-  if (APP_CONFIG.isAlpha) { syncReady = true; return; }
+  if (!APP_CONFIG.cloudSync) { syncReady = true; return; }
   if (!settings.autoSync || active || store.hasUnresolvedTx()) { syncReady = true; return; }
   setSyncState('syncing');
   try { await workerReconcile(); } catch (e) { setSyncState('error', e.message); }
@@ -2034,12 +2030,12 @@ async function autoSyncOnLoad() {
 /* ================= restore from backup code ================= */
 // Shared by the settings view and the onboarding "I have a backup code" flow.
 function restoreFromCode(raw) {
-  if (APP_CONFIG.isAlpha) { toast(tr("alpha.cloud_disabled"), 'err'); return; }
+  if (!APP_CONFIG.cloudSync) { toast(tr("alpha.cloud_disabled"), 'err'); return; }
   if (!raw) { toast(tr("restore_from_code.message.paste_your_backup_code_first"), 'err'); return; }
   const match = raw.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
   if (!match) { toast(tr("restore_from_code.message.invalid_backup_code"), 'err'); return; }
   const newUUID = match[1].toLowerCase();
-  localStorage.setItem('gymtrack_uuid', newUUID);
+  localStorage.setItem(APP_CONFIG.uuidKey, newUUID);
   gymUUID = newUUID;
   setSyncState('syncing');
   (async () => {
@@ -2055,11 +2051,11 @@ function restoreFromCode(raw) {
 // accident (a backup code, a truncated copy) and is worth catching here rather
 // than as a 401 mid-workout.
 function saveWriteToken(raw) {
-  if (APP_CONFIG.isAlpha) { toast(tr("alpha.cloud_disabled"), 'err'); return; }
+  if (!APP_CONFIG.cloudSync) { toast(tr("alpha.cloud_disabled"), 'err'); return; }
   const t = (raw || '').trim().toLowerCase();
   if (!t) { toast(tr("save_write_token.message.paste_your_write_token_first"), 'err'); return; }
   if (!/^[0-9a-f]{64}$/.test(t)) { toast(tr("save_write_token.message.that_does_not_look_like_a_write_token_64_hex_cha"), 'err'); return; }
-  localStorage.setItem('gymtrack_write_token', t);
+  localStorage.setItem(APP_CONFIG.tokenKey, t);
   writeToken = t;
   render();
   toast(tr("save_write_token.message.write_token_saved"));
@@ -2068,7 +2064,7 @@ function saveWriteToken(raw) {
 
 /* ================= first-run onboarding ================= */
 function showOnboarding() {
-  if (APP_CONFIG.isAlpha) {
+  if (!APP_CONFIG.cloudSync) {
     showModal(tr("show_onboarding.message.welcome_to_gymtrack"), `
       <div class="onboard-row">${icon('dumbbell', 22)}<div><b>${esc(tr("show_onboarding.text.log_your_workouts"))}</b><div class="muted small">${esc(tr("show_onboarding.text.sets_reps_rpe_with_a_rest_timer_that_runs_itself"))}</div></div></div>
       <div class="onboard-row">${icon('list', 22)}<div><b>${esc(tr("alpha.badge"))}</b><div class="muted small">${esc(tr("alpha.storage_note"))}</div></div></div>
@@ -2803,7 +2799,7 @@ function mergeNamesModal(selName) {
 function viewCoach() {
   return `
     <h2 class="section">${esc(tr("view_coach.text.share_with_ai"))}</h2>
-    ${APP_CONFIG.isAlpha ? `
+    ${!APP_CONFIG.cloudSync ? `
     <div class="card">
       <p class="small muted">${esc(tr("alpha.cloud_disabled"))}</p>
       <p class="small muted mt4">${esc(tr("alpha.storage_note"))}</p>
@@ -2861,7 +2857,7 @@ function viewSettings() {
       <button class="ghost wide mt8" data-action="test-sound">${esc(tr("view_settings.text.test_the_rest_timer_sound"))}</button>
     </div>
 
-    ${APP_CONFIG.isAlpha ? `
+    ${!APP_CONFIG.cloudSync ? `
     <h2 class="section">${esc(tr("alpha.badge"))}</h2>
     <div class="card">
       <p class="small muted">${esc(tr("alpha.storage_note"))}</p>
