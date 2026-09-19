@@ -52,9 +52,8 @@ athlete never accepts never touches their data.
   with a new `tools/coach-token.mjs` (there are one or two coaches in alpha, so no
   sign-up flow).
 - **Linking athletes:** the coach makes an invite code. The athlete types it in
-  Settings, which calls `POST /link` with their UUID and their own write token.
-  Linking happens only with the athlete's consent, and the coach never sees the
-  athlete's token.
+  Settings, which calls `POST /link` with their UUID. Linking happens only with the
+  athlete's consent, and the coach never sees the athlete's token.
 - **Athlete write tokens (decided):** redeeming an invite code at `/link` issues the
   athlete's write token and links them in one step. It is issued only for a UUID with
   no existing record, so a code can't be used to take over someone else's data.
