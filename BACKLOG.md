@@ -3,21 +3,7 @@
 Known bugs and deferred cleanups, each verified present in `main` as of the commit that added it
 here.
 
-## Open — The sync API still accepts unauthenticated writes (2026-09-12)
-
-**`GYMTRACK_WRITE_SECRET` is not set on the Worker, so `checkWrite()` is inert.** Any
-`POST /data/<uuid>` succeeds with no token, for any UUID. The README describes this as the
-rollout window that lets the API deploy ahead of the phone; that window is still open, and
-the phone has been live for weeks. Until the secret is set, anyone who learns a share URL —
-which is deliberately pasted into AI chats — can also overwrite that training history.
-
-Found on 2026-09-12 while verifying demo mode: two accidental non-demo page loads against a
-local server created a real KV entry with no write token presented.
-
-Fix: `cd worker && wrangler secret put GYMTRACK_WRITE_SECRET`, then derive the token with
-`node tools/write-token.mjs <uuid>` and paste it into Settings → **Write token** on the
-phone, and set `GYMTRACK_WRITE_TOKEN` on the desktop. Do the phone and desktop first, or the
-next sync fails with a 401 mid-workout. See README, "The write token".
+## Stray KV entries (junk, keep)
 
 ### Stray KV entry — leave it alone for now
 
@@ -69,6 +55,12 @@ Deferred explicitly by Henri for the library v1 release; not fixed in this relea
 Scheduled in `ROADMAP.md` Phase 2, before native exercise-entry screens are finalized.
 
 ## Resolved
+
+- **Sync API accepted unauthenticated writes** (open since 2026-09-12) — fixed 2026-09-19:
+  `GYMTRACK_WRITE_SECRET` set on the Worker. Verified: POST without a token, or with a
+  wrong one, returns 401 on `/data`, `/data/…/plan` and `/inbox`; GET stays open; the
+  desktop token in `.gymtrack-write-token` is accepted. Coach routes are now live too
+  (they refused to run without the secret).
 
 - **Language preference shared between tracks** — fixed 2026-09-19 (`0aa3ae2`): alpha uses
   `gym_alpha.language` (default Finnish), personal `gym.language` (default English).
