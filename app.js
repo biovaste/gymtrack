@@ -31,6 +31,8 @@ const APP_CONFIG = (() => {
     tokenKey: isAlpha ? 'gymtrack_alpha_write_token' : 'gymtrack_write_token'
   };
 })();
+// Hidden in alpha: not reliable enough for testers other than Henri. Manual cm entry stays.
+const CMJ_VIDEO = !APP_CONFIG.isAlpha;
 
 /* ================= storage ================= */
 const corruptData = {}; // In-memory preservation of raw corrupt data
@@ -2397,7 +2399,7 @@ function viewStart() {
         <button class="primary wide mt12" data-action="start-session" data-id="${d.id}">${esc(tr("view_start.text.start", { d_name_split_0_trim: d.name.split('—')[0].trim() }))}</button>
       </div>`).join('')}
     ${last ? `<p class="muted small" style="text-align:center">${esc(tr("view_start.text.last_workout", { last_dayName: last.dayName, fmtDate_last_date: fmtDate(last.date) }))}</p>` : ''}
-    <button class="ghost wide mt12" data-action="cmj-open">${icon('video', 16)} ${esc(tr("view_start.text.test_cmj_measurement"))}</button>`;
+    ${CMJ_VIDEO ? `<button class="ghost wide mt12" data-action="cmj-open">${icon('video', 16)} ${esc(tr("view_start.text.test_cmj_measurement"))}</button>` : ''}`;
 }
 
 /* ---- workout: active session ---- */
@@ -2440,7 +2442,7 @@ function viewActiveSession() {
             value="${active.readiness?.subjectiveEnergy ?? ''}" placeholder="—">
         </label>
       </div>
-      <button class="ghost wide mt8" data-action="cmj-open">${icon('video', 16)} ${esc(tr("view_active_session.text.measure_cmj_via_video"))}</button>
+      ${CMJ_VIDEO ? `<button class="ghost wide mt8" data-action="cmj-open">${icon('video', 16)} ${esc(tr("view_active_session.text.measure_cmj_via_video"))}</button>` : ''}
     </div>` : `
     <div class="card collapsed-ex tappable" data-action="readiness-toggle">
       <div class="row between">
@@ -2613,7 +2615,7 @@ function exerciseCard(e, ei, opts) {
     <div class="row mt12">
       <button class="ghost icon-btn" data-action="set-add" data-ei="${ei}">${esc(tr("exercise_card.text.set"))}</button>
       <button class="ghost icon-btn" data-action="set-remove" data-ei="${ei}">${esc(tr("exercise_card.text.set_2"))}</button>
-      ${isJump(e) ? `<button class="ghost icon-btn" data-action="cmj-open" data-ei="${ei}">${icon('video', 15)} ${esc(tr("exercise_card.text.measure"))}</button>` : ''}
+      ${CMJ_VIDEO && isJump(e) ? `<button class="ghost icon-btn" data-action="cmj-open" data-ei="${ei}">${icon('video', 15)} ${esc(tr("exercise_card.text.measure"))}</button>` : ''}
       <button class="ghost icon-btn grow note-btn" data-action="ex-note" data-ei="${ei}">${icon('note', 15)} ${e.notes ? esc(e.notes.slice(0, 24)) + (e.notes.length > 24 ? '…' : '') : tr("exercise_card.message.note")}</button>
     </div>
   </div>`;
@@ -4710,7 +4712,7 @@ document.addEventListener('click', e => {
     case 'ex-note': exNoteModal(+el.dataset.ei); break;
     case 'session-ex-add': sessionAddExerciseModal(); break;
     case 'plate-calc': showPlateCalculator(active.exercises[+el.dataset.ei]); break;
-    case 'cmj-open': cmjVideoModal(el.dataset.ei != null ? +el.dataset.ei : null); break;
+    case 'cmj-open': if (CMJ_VIDEO) cmjVideoModal(el.dataset.ei != null ? +el.dataset.ei : null); break;
     case 'session-swap-pick': {
       const ei = +el.dataset.ei;
       doSessionSwap(ei, active.exercises[ei].alternates[+el.dataset.ai]);
