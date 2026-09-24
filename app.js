@@ -1213,7 +1213,11 @@ function showModal(title, bodyHtml, actions) {
 }
 function closeModal() { document.getElementById('modal-root').innerHTML = ''; modalActions = {}; }
 const mval = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
-const mnum = (id, d = 0) => { const v = parseFloat(mval(id)); return isNaN(v) ? d : v; };
+// Finnish (and other comma-locale) keypads only offer ',' as the decimal separator, so
+// decimal fields are plain text inputs and every read accepts either ',' or '.'.
+const decimalText = v => String(v ?? '').trim().replace(',', '.');
+const parseDecimal = v => parseFloat(decimalText(v));
+const mnum = (id, d = 0) => { const v = parseDecimal(mval(id)); return isNaN(v) ? d : v; };
 
 /* ================= plan validation & normalization ================= */
 function validatePlanImport(raw) {
@@ -1342,7 +1346,7 @@ function modelFields(e, prefix) {
   const all = [...plan.days.flatMap(d => d.exercises), ...sessions.flatMap(s => s.exercises)];
   const movements = new Map(all.filter(x => x.movementId).map(x => [x.movementId, x.name]));
   const setups = new Map(all.filter(x => x.setupId).map(x => [x.setupId, x]));
-  const input = (key, value, type = 'text') => `<label class="field" data-model-field="${key}" ${['durationSeconds', 'distanceMeters', 'speedKph'].includes(key) && !WorkoutModel.targetFields(e).includes(key) ? 'hidden' : ''}><span>${esc(modelLabel(key))}</span><input id="${prefix}-${key}" type="${type}" ${type === 'number' ? 'min="0" step="any"' : ''} value="${esc(value ?? '')}"></label>`;
+  const input = (key, value, type = 'text') => `<label class="field" data-model-field="${key}" ${['durationSeconds', 'distanceMeters', 'speedKph'].includes(key) && !WorkoutModel.targetFields(e).includes(key) ? 'hidden' : ''}><span>${esc(modelLabel(key))}</span><input id="${prefix}-${key}" ${type === 'number' ? 'type="text" inputmode="decimal"' : `type="${type}"`} value="${esc(value ?? '')}"></label>`;
   return `<details class="mt8"><summary>${esc(modelLabel('identity_setup'))}</summary>
     <p class="small muted">${esc(modelLabel('identity_hint'))}</p>
     <label class="field"><span>${esc(modelLabel('movementId'))}</span><input id="${prefix}-movementId" list="${prefix}-movements" value="${esc(e.movementId || '')}"><datalist id="${prefix}-movements">${[...movements].map(([id, name]) => `<option value="${esc(id)}">${esc(name)}</option>`).join('')}</datalist></label>
@@ -1362,11 +1366,11 @@ function readModelFields(prefix, metric) {
   const out = { movementId: value('movementId') || undefined, side: value('side') || 'unspecified', setupId: value('setupId') || undefined, loadProfile: undefined,
     durationSeconds: undefined, distanceMeters: undefined, speedKph: undefined };
   if (value('offset') || value('increment') || value('loads')) {
-    out.loadProfile = { unit: value('profileUnit') || unit(), offset: Number(value('offset') || 0),
-      ...(value('loads') ? { loads: value('loads').split(',').map(v => Number(v.trim())) } : { increment: Number(value('increment')) }) };
+    out.loadProfile = { unit: value('profileUnit') || unit(), offset: Number(decimalText(value('offset')) || 0),
+      ...(value('loads') ? { loads: value('loads').split(',').map(v => Number(v.trim())) } : { increment: Number(decimalText(value('increment'))) }) };
   }
   if (WorkoutModel.timed({ metric })) {
-    for (const k of WorkoutModel.targetFields({ metric })) if (value(k)) out[k] = Number(value(k));
+    for (const k of WorkoutModel.targetFields({ metric })) if (value(k)) out[k] = Number(decimalText(value(k)));
   }
   const errors = WorkoutModel.errors({ ...out, metric });
   if (errors.length) throw new Error(tr('exercise.model.invalid', { fields: errors.join(', ') }));
@@ -1390,7 +1394,7 @@ function measurementGrid(e, ei) {
     <div class="row between"><button class="set-no-btn" data-action="set-warmup" data-ei="${ei}" data-si="${si}">${s.warmup ? 'W' : ''}${si + 1}</button>
     <button class="rpe-btn" data-action="rpe-pick" data-ei="${ei}" data-si="${si}">RPE ${s.rpe ?? '—'}</button>
     <button class="set-done-btn ${s.done ? 'success' : ''}" data-action="set-done" data-ei="${ei}" data-si="${si}">${s.done ? '✓' : '○'}</button></div>
-    <div class="measurement-fields">${fields.map(f => `<label class="field"><span>${esc(f === 'weight' ? unit() : modelLabel(f))}</span><input type="number" min="0" step="any" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="${f}" value="${s[f] ?? ''}"></label>`).join('')}</div>
+    <div class="measurement-fields">${fields.map(f => `<label class="field"><span>${esc(f === 'weight' ? unit() : modelLabel(f))}</span><input type="text" inputmode="decimal" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="${f}" value="${s[f] ?? ''}"></label>`).join('')}</div>
     <div class="muted small" data-measurement-summary="${ei}-${si}">${esc(measurementText(e, s))}</div>
     ${exerciseTimerControls(e, ei, s, si)}</div>`).join('');
 }
@@ -2426,7 +2430,7 @@ function viewActiveSession() {
       <div class="row" style="gap:12px">
         <label style="flex:1">
           <span class="small muted">${esc(tr("view_active_session.text.cmj_cm"))}</span>
-          <input type="number" step="0.1" min="0" max="100" data-bind="readiness-cmj"
+          <input type="text" inputmode="decimal" data-bind="readiness-cmj"
             value="${active.readiness?.cmjCm ?? ''}" placeholder="—">
         </label>
         <label style="flex:1">
@@ -2598,14 +2602,14 @@ function exerciseCard(e, ei, opts) {
       <div class="head">#</div><div class="head">cm</div><div class="head">✓</div>
       ${setLabels(e.sets).map(({ s, si, label }) => `
         <button class="set-no-btn${s.warmup ? ' warm' : ''}" data-action="set-warmup" data-ei="${ei}" data-si="${si}" title="${esc(tr("exercise_card.action.mark_warmup"))}">${label}</button>
-        <input class="${s.done ? 'set-row-done-i' : ''}${s.warmup ? ' warm-i' : ''}" type="number" inputmode="decimal" step="0.5" value="${s.heightCm != null ? s.heightCm : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="heightCm" ${s.done ? 'style="border-color:var(--green)"' : ''}>
+        <input class="${s.done ? 'set-row-done-i' : ''}${s.warmup ? ' warm-i' : ''}" type="text" inputmode="decimal" value="${s.heightCm != null ? s.heightCm : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="heightCm" ${s.done ? 'style="border-color:var(--green)"' : ''}>
         <button class="set-done-btn ${s.done ? 'success' : ''}" data-action="set-done" data-ei="${ei}" data-si="${si}">${s.done ? '✓' : '○'}</button>`).join('')}
     </div>` : `
     <div class="set-grid">
       <div class="head">#</div><div class="head"${isAddedLoad(e) ? ` title="${esc(tr('exercise.added_load.label', { unit: unit() }))}"` : ''}>${isAddedLoad(e) ? '+' : ''}${unit()}</div><div class="head">${esc(tr("exercise_card.text.reps"))}</div><div class="head">RPE</div><div class="head">✓</div>
       ${setLabels(e.sets).map(({ s, si, label }) => `
         <button class="set-no-btn${s.warmup ? ' warm' : ''}" data-action="set-warmup" data-ei="${ei}" data-si="${si}" title="${esc(tr("exercise_card.action.mark_warmup"))}">${label}</button>
-        <input class="${s.done ? 'set-row-done-i' : ''}${e.equipment === 'bodyweight' && !isAddedLoad(e) ? ' bw-weight-i' : ''}${s.warmup ? ' warm-i' : ''}" type="number" inputmode="decimal" step="any" min="0" value="${s.weight != null ? s.weight : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="weight" ${isAddedLoad(e) ? `aria-label="${esc(tr('exercise.added_load.label', { unit: unit() }))}"` : ''} ${s.done ? 'style="border-color:var(--green)"' : ''}>
+        <input class="${s.done ? 'set-row-done-i' : ''}${e.equipment === 'bodyweight' && !isAddedLoad(e) ? ' bw-weight-i' : ''}${s.warmup ? ' warm-i' : ''}" type="text" inputmode="decimal" value="${s.weight != null ? s.weight : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="weight" ${isAddedLoad(e) ? `aria-label="${esc(tr('exercise.added_load.label', { unit: unit() }))}"` : ''} ${s.done ? 'style="border-color:var(--green)"' : ''}>
         <input class="${s.warmup ? 'warm-i' : ''}" type="number" inputmode="numeric" value="${s.reps != null ? s.reps : ''}" data-bind="set" data-ei="${ei}" data-si="${si}" data-f="reps" ${s.done ? 'style="border-color:var(--green)"' : ''}>
         <button class="rpe-btn ${s.rpe != null ? '' : 'muted'}" data-action="rpe-pick" data-ei="${ei}" data-si="${si}" ${s.done ? 'style="border-color:var(--green)"' : ''}>${s.rpe != null ? s.rpe : '—'}</button>
         <button class="set-done-btn ${s.done ? 'success' : ''}" data-action="set-done" data-ei="${ei}" data-si="${si}">${s.done ? '✓' : '○'}</button>`).join('')}
@@ -2870,7 +2874,7 @@ function viewHistory() {
     <h2 class="section">${esc(tr("view_history.text.body_weight"))}</h2>
     <div class="card">
       <div class="row">
-        <input id="bw-input" type="number" inputmode="decimal" step="0.1" placeholder="${bwLast ? bwLast.weight : tr("history.weight.example")}" style="max-width:130px">
+        <input id="bw-input" type="text" inputmode="decimal" placeholder="${bwLast ? bwLast.weight : tr("history.weight.example")}" style="max-width:130px">
         <span class="muted">${unit()}</span>
         <button class="primary grow" data-action="bw-add">${esc(tr("view_history.text.log_today"))}</button>
       </div>
@@ -3257,7 +3261,7 @@ function exEditModal(dayId, i, selection = null) {
         <span class="field-hint">${esc(tr("ex_edit_modal.text.extra_ramp_rows_seeded_from_the_working_weight"))}</span></label>
     </div>
     <div class="row">
-      <label class="field grow"><span id="f-weight-label">${esc(isAddedLoad(e) ? tr('exercise.added_load.label', { unit: unit() }) : tr("exercise.form.weight", { unit: unit() }))}</span><input id="f-weight" type="number" inputmode="decimal" step="any" value="${e.weight}">
+      <label class="field grow"><span id="f-weight-label">${esc(isAddedLoad(e) ? tr('exercise.added_load.label', { unit: unit() }) : tr("exercise.form.weight", { unit: unit() }))}</span><input id="f-weight" type="text" inputmode="decimal" value="${e.weight}">
         <span class="field-hint" id="f-weight-hint">${esc(ladderHint(equipment, isAddedLoad(e)))}</span></label>
       <label class="field grow"><span>${esc(tr("ex_edit_modal.text.target_rpe"))}</span><button type="button" id="f-rpe" class="rpe-btn" data-action="edit-rpe-pick" data-v="${e.targetRpe != null ? e.targetRpe : ''}">${e.targetRpe != null ? e.targetRpe : '—'}</button></label>
     </div>
@@ -3269,7 +3273,7 @@ function exEditModal(dayId, i, selection = null) {
       <select id="f-equipment" data-bind="edit-equipment">${EQUIPMENT_TYPES.map(t => `<option value="${t}" ${t === equipment ? 'selected' : ''}>${esc(equipmentLabel(t, 'edit'))}</option>`).join('')}</select>
     </label>
     ${addedLoadToggle('f', e, equipment)}
-    <label class="field${BAR_WEIGHT_EQUIPMENT.has(equipment) ? '' : ' hidden'}" id="f-barweight-row"><span>${esc(tr("ex_edit_modal.text.bar_weight", { unit: unit() }))}</span><input id="f-barweight" type="number" inputmode="decimal" step="0.5" placeholder="${esc(tr("ex_edit_modal.placeholder.default", { resolvedBarWeight_equipment_: resolvedBarWeight({ equipment, barWeight: null }) }))}" value="${e.barWeight != null ? e.barWeight : ''}"></label>
+    <label class="field${BAR_WEIGHT_EQUIPMENT.has(equipment) ? '' : ' hidden'}" id="f-barweight-row"><span>${esc(tr("ex_edit_modal.text.bar_weight", { unit: unit() }))}</span><input id="f-barweight" type="text" inputmode="decimal" placeholder="${esc(tr("ex_edit_modal.placeholder.default", { resolvedBarWeight_equipment_: resolvedBarWeight({ equipment, barWeight: null }) }))}" value="${e.barWeight != null ? e.barWeight : ''}"></label>
     <label class="field"><span>${esc(tr("exercise.form.measurement"))}</span>
       <select id="f-metric" data-bind="model-metric" data-prefix="f">${modelOptions(e.metric)}</select>
     </label>
@@ -3292,7 +3296,7 @@ function exEditModal(dayId, i, selection = null) {
           const barWeightRaw = mval('f-barweight');
           const eqVal = document.getElementById('f-equipment').value;
           const metricVal = document.getElementById('f-metric').value;
-          const barVal = barWeightRaw ? parseFloat(barWeightRaw) : null;
+          const barVal = barWeightRaw ? parseDecimal(barWeightRaw) : null;
           const wVal = mnum('f-weight');
           let metadata;
           try { metadata = readModelFields('f', metricVal); } catch (err) { toast(err.message, 'err'); return; }
@@ -3495,7 +3499,7 @@ function sessionAddExerciseModal() {
       <label class="field grow"><span>${esc(tr("exercise.form.reps"))}</span><input id="a-reps" value="8-12"></label>
     </div>
     <div class="row">
-      <label class="field grow"><span id="a-weight-label">${esc(tr("exercise.form.weight", { unit: unit() }))}</span><input id="a-weight" type="number" inputmode="decimal" step="any" value="0">
+      <label class="field grow"><span id="a-weight-label">${esc(tr("exercise.form.weight", { unit: unit() }))}</span><input id="a-weight" type="text" inputmode="decimal" value="0">
         <span class="field-hint" id="a-weight-hint">${esc(ladderHint('barbell'))}</span></label>
       <label class="field grow"><span>${esc(tr("session_add_exercise_modal.text.rest_sec"))}</span><input id="a-rest" type="number" inputmode="numeric" value="120"></label>
     </div>
@@ -3746,17 +3750,17 @@ function stepperInfo(el) {
   const ex = active && active.exercises[+el.dataset.ei];
   if (!ex || (ex.equipment === 'bodyweight' && !ex.loadProfile && !WorkoutModel.timed(ex) && !isAddedLoad(ex))) return null;
   if (ex.loadProfile?.unit === unit()) {
-    const current = parseFloat(el.value) || 0;
+    const current = parseDecimal(el.value) || 0;
     return { kind: 'weight', label: unit(), down: Math.max(0, current - WorkoutModel.nextLoad(ex.loadProfile, current, -1)), up: Math.max(0, WorkoutModel.nextLoad(ex.loadProfile, current, 1) - current) };
   }
   if (ex.loadProfile) return null; // A profile expressed in another unit is not a usable ladder.
   if (isAddedLoad(ex)) {
-    const step = ADDED_LOAD_STEP[unit()] || 1.25, current = parseFloat(el.value) || 0;
+    const step = ADDED_LOAD_STEP[unit()] || 1.25, current = parseDecimal(el.value) || 0;
     return { kind: 'added', label: '+' + unit(), down: Math.min(step, Math.max(0, current)), up: step };
   }
   if (WorkoutModel.timed(ex) && ex.equipment === 'bodyweight') return { kind: 'weight', label: unit(), down: 2.5, up: 2.5 };
   if (unit() !== 'kg') return { kind: 'weight', label: unit(), down: 2.5, up: 2.5 };
-  const cur = parseFloat(el.value) || 0;
+  const cur = parseDecimal(el.value) || 0;
   const bar = resolvedBarWeight(ex);
   // Clamp both directions to >= 0. When `cur` sits below the ladder base (e.g. an
   // undeclared-equipment exercise still carrying the 'barbell' default and its
@@ -3804,7 +3808,7 @@ document.getElementById('stepper-bar').addEventListener('pointerdown', e => {
   const info = stepperInfo(stepperTarget);
   if (!info) return;
   const dir = parseInt(btn.dataset.step, 10);
-  const cur = parseFloat(stepperTarget.value);
+  const cur = parseDecimal(stepperTarget.value);
   const curN = isNaN(cur) ? 0 : cur;
   let next;
   if (info.kind === 'weight' && unit() === 'kg') {
@@ -4806,7 +4810,7 @@ document.addEventListener('click', e => {
       break;
     }
     case 'bw-add': {
-      const v = parseFloat(document.getElementById('bw-input').value);
+      const v = parseDecimal(document.getElementById('bw-input').value);
       if (!v || v <= 0) { toast(tr("action_bw-add.message.enter_a_weight_first"), 'err'); break; }
       const prevBw = [...bodyWeight];
       bodyWeight = bodyWeight.filter(b => b.date !== today());
@@ -4980,7 +4984,7 @@ document.addEventListener('input', e => {
     const s = active.exercises[+el.dataset.ei].sets[+el.dataset.si];
     const prev = s[el.dataset.f];
     const prevDomVal = el.value;
-    const v = parseFloat(el.value);
+    const v = parseDecimal(el.value);
     s[el.dataset.f] = isNaN(v) ? null : v;
     const summary = document.querySelector(`[data-measurement-summary="${el.dataset.ei}-${el.dataset.si}"]`);
     if (summary) summary.textContent = measurementText(active.exercises[+el.dataset.ei], s);
@@ -5001,7 +5005,7 @@ document.addEventListener('input', e => {
     const prevMethod = active.readiness.method;
     const prevFlightTime = active.readiness.flightTimeMs;
     const prevAttempts = active.readiness.cmjAttempts;
-    const v = parseFloat(el.value);
+    const v = parseDecimal(el.value);
     active.readiness.cmjCm = isNaN(v) ? null : v;
     // A typed value supersedes any earlier video measurement — drop its metadata so a
     // stale method/flight time/attempt list can't ride along with a hand-entered number.
